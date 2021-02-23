@@ -1,0 +1,109 @@
+Video-Streaming;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Stimulus-ID;Assessment;Tinit [ms];RUL [kbps];RDL [kbps];DUL [ms];DDL [ms];Stimulus in picture;Codec;;;;Video;Link;Assessment;
+VS-A-1;Basic set;720;80;50000;22;22;Reference;Auto;;;;"tagesschau 20:00 Uhr, 08.10.2018 
+Excerpt from 00:02 (min:sec) to 00:14 (min:sec).
+(Alternative excerpt (t.b.d.): from 00:00 to 00:20).
+Resulution: Auto, 720p, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=cJGBIgWML18;Throughput HD;
+VS-A-2;Basic set;720;55;10000;22;22;Assessment;Auto;;;;;;;
+VS-A-3;Basic set;720;50;5000;22;22;Assessment;Auto;;;;;;;
+VS-A-4;Basic set;860;41;2000;46;46;Assessment;Auto;;;;;;;
+VS-A-5;Basic set;1800;39;1000;200;200;Assessment;Auto;;;;;;;
+VS-A-6;Basic set;2900;37;750;240;240;Assessment;Auto;;;;;;;
+VS-A-7;Basic set;4000;35;500;305;305;Assessment;Auto;;;;;;;
+VS-A-8;Basic set;5000;34;200;400;400;Assessment;Auto;;;;;;;
+VS-A-9;Basic set;5600;33;100;440;440;Assessment;Auto;;;;;;;
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Stimulus-ID;Assessment;Tinit [ms];RUL [kbps];RDL [kbps];DUL [ms];DDL [ms];Stimulus in picture;Codec;;;;Video;Link;Assessment;
+VS-B-1;Basic set;720;80;50000;16;16;Reference;Auto;;;;"Beethoven: Symphony no. 5 in C Minor, op. 67 | Christian Thielemann (Full HD 1080p)
+Excerpt from appr. 00:00:57 (h:min:sec) to 00:01:14 (h:min:sec).
+(Alternative excerpt (t.b.d.): from 00:00:57 to 00:01:18).
+Resolution: Auto, 1080p, 720p, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=yTL8j-JU_ow;Throughput (Full-HD);
+VS-B-2;Basic set;720;63;20000;16;16;Assessment;Auto;;;;;;;
+VS-B-3;Basic set;720;55;10000;16;16;Assessment;Auto;;;;;;;
+VS-B-4;Basic set;720;50;5000;16;16;Assessment;Auto;;;;;;;
+VS-B-5;Basic set;3300;45;2000;160;160;Assessment;Auto;;;;;;;
+VS-B-6;Basic set;6450;42;1000;220;220;Assessment;Auto;;;;;;;
+VS-B-7;Basic set;7500;41;750;235;235;Assessment;Auto;;;;;;;
+VS-B-8;Basic set;9200;41;500;260;260;Assessment;Auto;;;;;;;
+VS-B-9;Basic set;11600;40;100;400;400;Assessment;Auto;;;;;;;
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Stimulus-ID;Assessment;Tinit [ms];RUL [kbps];RDL [kbps];DUL [ms];DDL [ms];Stimulus in picture;Codec;;;;Video;Link;Assessment;
+VS-C-1;Basic set;720;100;50000;20;20;Reference;Auto;;;;"Film “Trois couleurs bleu”:
+Excerpt from appr. 00:20 (min:sec) to 00:33 (min:sec).
+(Alternative excerpt (t.b.d.): from 00:20 to 00:28 or from 00:20 to 00:38).
+Resolution: Auto, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=Hxu6my_t4pM;Throughput;
+VS-C-2;Basic set;720;100;10000;20;20;Assessment;Auto;;;;;;;
+VS-C-3;Basic set;720;100;5000;50;50;Assessment;Auto;;;;;;;
+VS-C-4;Basic set;6000;80;2000;400;400;Anchor 1;Auto;;;;;;;
+VS-C-5;Basic set;14000;50;1000;700;700;Anchor 2;Auto;;;;;;;
+VS-C-6;Basic set;15500;40;750;750;750;Assessment;Auto;;;;;;;
+VS-C-7;Basic set;17000;40;500;800;800;Assessment;Auto;;;;;;;
+VS-C-8;Basic set;19000;40;200;850;850;Assessment;Auto;;;;;;;
+VS-C-9;Basic set;20000;40;100;900;900;Assessment;Auto;;;;;;;
+;;;;;;;;;;;;;;;
+Noch 1 Stimulus frei definierbar.;;;;;;;;;;;;;;;
+Stimulus-ID;Assessment;Tinit [ms];RUL [kbps];RDL [kbps];DUL [ms];DDL [ms];Stimulus in picture;Codec;;;;Video;Link;Assessment;
+VS-D-1;Time to start;720;80;2000;400;400;Reference;Auto;;;;"Film “Trois couleurs bleu”:
+Excerpt from appr. 00:20 (min:sec) to 00:33 (min:sec).
+(Alternative excerpt (t.b.d.): from 00:20 to 00:28 or from 00:20 to 00:38).
+Resolution: Auto, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=Hxu6my_t4pM;Time to start;
+VS-D-2;Time to start;1000;80;2000;400;400;Assessment;Auto;;;;;;;
+VS-D-3;Time to start;2000;80;2000;400;400;Assessment;Auto;;;;;;;
+VS-D-4;Time to start;3000;80;2000;400;400;Assessment;Auto;;;;;;;
+VS-C-4;Time to start;6000;80;2000;400;400;Anchor 1;Auto;;;;;;;
+VS-D-5;Time to start;9000;80;2000;400;400;Assessment;Auto;;;;;;;
+VS-D-6;Time to start;14000;80;2000;400;400;Assessment;Auto;;;;;;;
+VS-D-7;Time to start;19000;80;2000;400;400;Assessment;Auto;;;;;;;
+VS-D-8;Time to start;24000;80;2000;400;400;Assessment;Auto;;;;;;;
+VS-C-5;Time to start;14000;50;1000;700;700;Anchor 2;Auto;;;;;;;
+Anmerkung zum Einfügen von Rebuffering-Unterbrechungen: Um ein möglichst realistisches Verhalten zu erzeugen, soll die Rebuffering-Unterbrechung nach Möglichkeit durch Drosseln der Verbindung erfolgen. Die für die Stimuli VS-E-x und VS-F-x definierte Anzahl und Dauer der Rebuffering-Phasen soll als Anhaltspunkt genommen werden, die exakten Werte für die Anzahl und Dauer der Unterbrechungen soll aus den Messungen ermittelt werden.;;;;;;;;;;;;;;;
+Noch 1 Stimulus frei definierbar.;;;;;;;;;;;;;;;
+Stimulus-ID;Assessment;Tinit [ms];RUL [kbps];RDL [kbps];DUL [ms];DDL [ms];Num. Rebuffering;Rebuffering duration  [ms];Stimulus in picture;Codec;;Video;Link;Assessment;
+VS-C-4;Num. Rebuffering;6000;80;2000;400;400;0;n/a;Reference/Anchor 1;Auto;;"Film “Trois couleurs bleu”:
+Excerpt from appr. 00:20 (min:sec) to 00:33 (min:sec).
+(Alternative excerpt (t.b.d.): from 00:20 to 00:28 or from 00:20 to 00:38).
+Resolution: Auto, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=Hxu6my_t4pM;Number of rebuffering phases;
+VS-E-1;Num. Rebuffering;6000;80;2000;400;400;1;4000;Anchor 3;Auto;;;;;
+VS-E-2;Num. Rebuffering;6000;80;2000;400;400;2;4000;Assessment;Auto;;;;;
+VS-E-3;Num. Rebuffering;6000;80;2000;400;400;3;4000;Assessment;Auto;;;;;
+VS-E-4;Num. Rebuffering;6000;80;2000;400;400;4;4000;Assessment;Auto;;;;;
+VS-E-5;Num. Rebuffering;6000;80;2000;400;400;5;4000;Assessment;Auto;;;;;
+VS-E-6;Num. Rebuffering;6000;80;2000;400;400;6;4000;Assessment;Auto;;;;;
+VS-E-7;Num. Rebuffering;6000;80;2000;400;400;7;4000;Assessment;Auto;;;;;
+VS-E-8;Num. Rebuffering;6000;80;2000;400;400;8;4000;Assessment;Auto;;;;;
+VS-C-5;Num. Rebuffering;14000;50;1000;700;700;1;4000;Anchor 2;Auto;;;;;
+;;;;;;;;;;;;;;;
+Noch 1 Stimulus frei definierbar.;;;;;;;;;;;;;;;
+Stimulus-ID;Assessment;Tinit [ms];RUL [kbps];RDL [kbps];DUL [ms];DDL [ms];Num. Rebuffering;Rebuffering duration  [ms];Stimulus in picture;Codec;;Video;Link;Assessment;
+VS-F-1;Reb. Duration;6000;80;2000;400;400;1;200;Reference;Auto;;"Film “Trois couleurs bleu”:
+Excerpt from appr. 00:20 (min:sec) to 00:33 (min:sec).
+(Alternative excerpt (t.b.d.): from 00:20 to 00:28 or from 00:20 to 00:38).
+Resolution: Auto, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=Hxu6my_t4pM;Duration of rebuffering phases;
+VS-F-2;Reb. Duration;6000;80;2000;400;400;1;500;Assessment;Auto;;;;;
+VS-F-3;Reb. Duration;6000;80;2000;400;400;1;1000;Assessment;Auto;;;;;
+VS-F-4;Reb. Duration;6000;80;2000;400;400;1;2000;Assessment;Auto;;;;;
+VS-F-5;Reb. Duration;6000;80;2000;400;400;1;3000;Assessment;Auto;;;;;
+VS-E-1;Reb. Duration;6000;80;2000;400;400;1;4000;Anchor 3;Auto;;;;;
+VS-F-6;Reb. Duration;6000;80;2000;400;400;1;5000;Assessment;Auto;;;;;
+VS-F-7;Reb. Duration;6000;80;2000;400;400;1;10000;Assessment;Auto;;;;;
+VS-F-8;Reb. Duration;6000;80;2000;400;400;1;20000;Assessment;Auto;;;;;
+VS-C-5;Reb. Duration;14000;50;1000;700;700;1;8000;Anchor 2;Auto;;;;;
+;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+Stimulus-ID;Assessment;Tinit [ms];RUL [kbps];RDL [kbps];DUL [ms];DDL [ms];Stimulus in picture;Codec;;;;Video;Link;Assessment;
+VS-G-1;Fixed codec;720;100;50000;20;20;Reference;640 p x 480 p;;;;"Film “Trois couleurs bleu”:
+Excerpt from appr. 00:20 (min:sec) to 00:33 (min:sec).
+(Alternative excerpt (t.b.d.): from 00:20 to 00:28 or from 00:20 to 00:38).
+Resolution: Auto, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=Hxu6my_t4pM;Deactivation of the dynamic adaptation of video resolution;
+VS-G-2;Fixed codec;720;100;10000;20;20;Assessment;640 p x 480 p;;;;;;;
+VS-G-3;Fixed codec;720;100;5000;50;50;Assessment;640 p x 480 p;;;;;;;
+VS-G-4;Fixed codec;6000;80;2000;400;400;Var. Anchor 1;640 p x 480 p;;;;;;;
+VS-G-5;Fixed codec;14000;50;1000;700;700;Var. Anchor 2;640 p x 480 p;;;;;;;
+VS-G-6;Fixed codec;15500;40;750;750;750;Assessment;640 p x 480 p;;;;;;;
+VS-G-7;Fixed codec;17000;40;500;800;800;Assessment;640 p x 480 p;;;;;;;
+VS-G-8;Fixed codec;19000;40;200;850;850;Assessment;640 p x 480 p;;;;;;;
+VS-G-9;Fixed codec;20000;40;100;900;900;Assessment;640 p x 480 p;;;;;;;
+;;;;;;;;;;;;;;;

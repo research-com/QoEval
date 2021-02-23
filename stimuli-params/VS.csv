@@ -1,0 +1,10 @@
+Stimulus-ID;Assessment;Tinit [ms];RUL [kbps];RDL [kbps];DUL [ms];DDL [ms];Stimulus in picture;Codec
+VS-A-1;Basic set;720;80;50000;22;22;Reference;Auto
+VS-A-2;Basic set;720;55;10000;22;22;Assessment;Auto
+VS-A-3;Basic set;720;50;5000;22;22;Assessment;Auto
+VS-A-4;Basic set;860;41;2000;46;46;Assessment;Auto
+VS-A-5;Basic set;1800;39;1000;200;200;Assessment;Auto
+VS-A-6;Basic set;2900;37;750;240;240;Assessment;Auto
+VS-A-7;Basic set;4000;35;500;305;305;Assessment;Auto
+VS-A-8;Basic set;5000;34;200;400;400;Assessment;Auto
+VS-A-9;Basic set;5600;33;100;440;440;Assessment;Auto
