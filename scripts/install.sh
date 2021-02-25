@@ -2,6 +2,9 @@
 #
 # script to install the dependencies required for QoEmu
 
+# Versions
+NDK_VERSION="23.0.7123448"
+
 # configuration settings
 SHELL="terminator git git-lfs"
 OS_TOOLS="net-tools htop qemu-kvm bridge-utils cpu-checker"
@@ -51,7 +54,7 @@ then
 else
    echo "Modifying $BASHRC to include the necessary paths..."
    echo "$PATHMOD_ID" >> $BASHRC
-   NEWPATH='$PATH':$SCRIPT_DIR:'$HOME/android-studio/bin:$HOME/Android/Sdk/tools/bin:$HOME/Android/Sdk/platform-tools'
+   NEWPATH='$PATH':$SCRIPT_DIR:'$HOME/android-studio/bin:$HOME/Android/Sdk/tools/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/ndk/'$NDK_VERSION
    echo "export PATH=$NEWPATH" >> $BASHRC
 fi
 
