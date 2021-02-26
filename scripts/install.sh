@@ -54,9 +54,12 @@ then
 else
    echo "Modifying $BASHRC to include the necessary paths..."
    echo "$PATHMOD_ID" >> $BASHRC
-   NEWPATH='$PATH':$SCRIPT_DIR:'$HOME/android-studio/bin:$HOME/Android/Sdk/tools/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/ndk/'$NDK_VERSION
+   NEWPATH='$PATH':$SCRIPT_DIR:'$HOME/android-studio/bin:$HOME/Android/Sdk/tools/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/emulator:$HOME/Android/Sdk/ndk/'$NDK_VERSION
    echo "export PATH=$NEWPATH" >> $BASHRC
 fi
+
+# Disable assistive_technologies property
+sed -i -e '/^assistive_technologies=/s/^/#/' /etc/java-*-openjdk/accessibility.properties
 
 echo ""
 echo "Please manually install Android Studio to its default location ('$HOME/android-studio')."
