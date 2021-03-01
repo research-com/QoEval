@@ -9,7 +9,7 @@ NDK_VERSION="23.0.7123448"
 SHELL="terminator git git-lfs"
 OS_TOOLS="net-tools htop qemu-kvm bridge-utils cpu-checker"
 MONITORING="wireshark wireshark-qt wireshark-doc"
-VIDEO_REC="ffmpeg vlc-bin"
+VIDEO_REC="ffmpeg vlc-bin wmctrl x11-utils"
 REMOTE_ACCESS="openssh-server"
 JAVA="openjdk-8-jre"
 BROWSER="firefox"
@@ -54,7 +54,7 @@ then
 else
    echo "Modifying $BASHRC to include the necessary paths..."
    echo "$PATHMOD_ID" >> $BASHRC
-   NEWPATH='$PATH':$SCRIPT_DIR:'$HOME/android-studio/bin:$HOME/Android/Sdk/tools/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/emulator:$HOME/Android/Sdk/ndk/'$NDK_VERSION
+   NEWPATH='$PATH':$SCRIPT_DIR:'$HOME/pycharm/bin:$HOME/android-studio/bin:$HOME/Android/Sdk/tools/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/emulator:$HOME/Android/Sdk/ndk/'$NDK_VERSION
    echo "export PATH=$NEWPATH" >> $BASHRC
 fi
 
@@ -63,6 +63,7 @@ sed -i -e '/^assistive_technologies=/s/^/#/' /etc/java-*-openjdk/accessibility.p
 
 echo ""
 echo "Please manually install Android Studio to its default location ('$HOME/android-studio')."
+echo "For Python development, we recommend to install PyCharm to $HOME/pycharm."
 echo ""
 echo "It can be downloaded at $ANDROIDSTUDIO_DL"
 echo
