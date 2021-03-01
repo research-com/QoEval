@@ -3,6 +3,8 @@
 ## Python script to read parameters and control netem
 * netem tools
 * needs to be synchronized with device control
+* add dynamic delay
+* realize t_init via iptables?
 
 
 ## Python and Control Device
