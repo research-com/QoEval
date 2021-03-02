@@ -115,7 +115,7 @@ class Emulator:
         if not is_acceleration_available():
             log.warning("Accelerated emulation is NOT available, emulation will be too slow.")
         output = subprocess.run(shlex.split(
-            f"{EMU_NAME} -avd {AVD_NAME} -accel auto -gpu host "),
+            f"{EMU_NAME} -avd {self.avd_name} -accel auto -gpu host "),
             stdout=subprocess.PIPE,
             universal_newlines=True)
 
