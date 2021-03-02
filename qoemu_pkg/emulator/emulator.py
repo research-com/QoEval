@@ -109,7 +109,7 @@ class Emulator:
 
     def launch_emulator(self):
         log.info("Launching emulator...")
-        delete_avd(self.avd_name)  # enable this line to reset upon each start
+        # delete_avd(self.avd_name)  # enable this line to reset upon each start
         if not is_avd_available(self.avd_name):
             create_avd(self.avd_name)
         if not is_acceleration_available():
