@@ -12,6 +12,7 @@ MONITORING="wireshark wireshark-qt wireshark-doc"
 VIDEO_REC="ffmpeg vlc-bin wmctrl x11-utils"
 REMOTE_ACCESS="openssh-server"
 JAVA="openjdk-8-jre"
+PYTHON="python3-venv"
 BROWSER="firefox"
 
 USER="qoe-user"
@@ -42,6 +43,7 @@ usermod -a -G wireshark $USER
 $APT install $VIDEO_REC
 $APT install $REMOTE_ACCESS
 $APT install $JAVA
+$APT install $PYTHON
 $APT install $BROWSER
 
 usermod -a -G kvm $USER
