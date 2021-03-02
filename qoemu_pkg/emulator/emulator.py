@@ -109,13 +109,13 @@ class Emulator:
 
     def launch_emulator(self):
         log.info("Launching emulator...")
-        delete_avd(self.avd_name)  # enable this line to reset upon each start
+        # delete_avd(self.avd_name)  # enable this line to reset upon each start
         if not is_avd_available(self.avd_name):
             create_avd(self.avd_name)
         if not is_acceleration_available():
             log.warning("Accelerated emulation is NOT available, emulation will be too slow.")
         output = subprocess.run(shlex.split(
-            f"{EMU_NAME} -avd {AVD_NAME} -accel auto -gpu host "),
+            f"{EMU_NAME} -avd {self.avd_name} -accel auto -gpu host "),
             stdout=subprocess.PIPE,
             universal_newlines=True)
 

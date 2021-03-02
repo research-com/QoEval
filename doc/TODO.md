@@ -43,6 +43,7 @@
 
 ### Python related
 * Xlib to get window dimensions for recording: https://unix.stackexchange.com/questions/5999/setting-the-window-dimensions-of-a-running-application
+* Screen recording in Windows: https://github.com/coderman64/screen-recorder
 
 
 ## Audio-Recording of Emulator Window
