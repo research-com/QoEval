@@ -12,7 +12,7 @@ MONITORING="wireshark wireshark-qt wireshark-doc"
 VIDEO_REC="ffmpeg vlc-bin wmctrl x11-utils"
 REMOTE_ACCESS="openssh-server"
 JAVA="openjdk-8-jre"
-PYTHON="python3-venv"
+PYTHON="python3-venv python3-pip"
 BROWSER="firefox"
 
 USER="qoe-user"
