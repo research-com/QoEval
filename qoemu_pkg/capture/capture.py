@@ -17,7 +17,6 @@ FFMPEG_RATE = "30"  # rate in FPS
 FFMPEG_REC_TIME = "00:00:30"
 DISPLAY = "1"
 
-
 # Define data structures and tuples
 WinGeo = namedtuple('WinGeo', 'x y height width')
 
@@ -74,11 +73,14 @@ class Capture:
             win = parent
         return WinGeo(x, y, geom.height, geom.width)
 
-    def get_window_position(self, title):
+    def get_window(self, title):
         """
-        Returns the (x, y, height, width) of a window with the specified title relative to the top-left
-        of the screen.
+        Get resource object of window which has the specified title (fragment)
+
+        :param title: title of window to search
+        :return: resource object of window if found, None otherwise
         """
+
         log.debug(f"getting window information for window with title \"{title}\"")
         window_ids = self._root.get_full_property(self._display.intern_atom('_NET_CLIENT_LIST'),
                                                   Xlib.X.AnyPropertyType).value
@@ -89,13 +91,43 @@ class Capture:
             pid = prop.value[0]  # PID
             log.debug(f"Window ID: {pid} Title: {name}")
             if name and not name.isspace() and name.find(title) != -1:
-                # found the window - now get its coordinates and dimensions
-                return self.get_absolute_geometry(window)
+                # found the window
+                return window
         log.error(f"Window with title \"{title}\" not found")
-        return WinGeo(0, 0, 0, 0)
+        return None
+
+    def get_window_position(self, window):
+        """
+        Returns the (x, y, height, width) of a window with the specified title relative to the top-left
+        of the screen.
+
+        :param window: window object
+        :return: WinGeo object with window coordinates
+        """
+
+        if window:
+            return self.get_absolute_geometry(window)
+        else:
+            return None
+
+    def bring_window_to_foreground(self, window):
+        """
+        Bring a window to the foreground of the current display
+        :param window: Resource object of the window
+        :return: True if successful, False otherwise
+        """
+        # window.raise_window()
+        window.set_input_focus(Xlib.X.RevertToParent, Xlib.X.CurrentTime)
+        window.configure(stack_mode=Xlib.X.Above)
+        self._display.sync()
 
     def start_recording(self, output_filename):
-        window_pos = self.get_window_position("Android Emulator")
+        window = self.get_window("Android Emulator")
+        if not window:
+            log.error(f"Emulator window not found - cannot start recording")
+            return
+        self.bring_window_to_foreground(window)
+        window_pos = self.get_window_position(window)
         log.info(f'Found emulator window at {window_pos.x},{window_pos.y} dim {window_pos.width},{window_pos.height}')
         command = f"{FFMPEG} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
                   f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -y {output_filename}.mp4"
