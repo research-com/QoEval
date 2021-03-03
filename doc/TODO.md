@@ -17,13 +17,16 @@
 * check if suitable device is available, create it if not available
 * see https://developer.android.com/studio/command-line/avdmanager
 
-### Start Emulator
-* see https://developer.android.com/studio/run/emulator-commandline
-* example: emulator -avd Pixel_3a_API_30_x86
+### Youtube Video
+* start video at a specific position: simply at time to start as parameter: https://www.howtogeek.com/285220/how-to-share-youtube-videos-starting-at-a-certain-point/ 
 
 ### Further Info
 * [List of Commands via ADB](https://riptutorial.com/android/example/3958/send-text--key-pressed-and-touch-events-to-android-device-via-adb)
 * [input and sendevent/getevent](https://stackoverflow.com/questions/4386449/send-touch-events-to-a-device-via-adb)
+
+## Start Emulator
+* see https://developer.android.com/studio/run/emulator-commandline
+* example: emulator -avd Pixel_3a_API_30_x86
 
 ## Screen-Recording of Emulator Window
 * Window can be identified by window title
@@ -48,7 +51,8 @@
 
 ## Audio-Recording of Emulator Window
 * get source index: pacmd list-sources     - look for index of monitor
-* -i [nr] in ffmpeg
+* -i [nr]  or -i [name] in ffmpeg
+* see https://trac.ffmpeg.org/wiki/Capture/PulseAudio
 
 ### Links / Further Info
 * https://pythonprogramming.altervista.org/record-the-screen-with-ffmpeg-and-python/
@@ -57,6 +61,20 @@
 ### Add parameter values to meta-data of recorded video
 
 # Misc
+
+## Sound Chip in QoE local i7 server
+```
+qoe-user@qoemu-01:~$ cat /proc/asound/card
+card0/ card1/ cards  
+qoe-user@qoemu-01:~$ cat /proc/asound/cards
+ 0 [PCH            ]: HDA-Intel - HDA Intel PCH
+                      HDA Intel PCH at 0xdf240000 irq 136
+ 1 [NVidia         ]: HDA-Intel - HDA NVidia
+                      HDA NVidia at 0xdf080000 irq 17
+qoe-user@qoemu-01:~$ head -n 1 /proc/asound/card0/codec*
+Codec: Realtek ALC887-VD
+qoe-user@qoemu-01:~$ 
+```
 
 ## Native Development Kit - Compiling from Command Line
 

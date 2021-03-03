@@ -15,6 +15,10 @@ FFMPEG = "ffmpeg"
 FFMPEG_FORMAT = "x11grab"
 FFMPEG_RATE = "30"  # rate in FPS
 FFMPEG_REC_TIME = "00:00:30"
+# AUDIO_DEVICE config: use "pacmd list-sources" to get a list of sources
+AUDIO_DEVICE = "alsa_output.pci-0000_00_1f.3.analog-stereo.monitor"
+# AUDIO_DEVICE = "nx_audio_in.monitor"
+# AUDIO_DEVICE = "default"
 DISPLAY = "1"
 
 # Define data structures and tuples
@@ -121,7 +125,11 @@ class Capture:
         window.configure(stack_mode=Xlib.X.Above)
         self._display.sync()
 
-    def start_recording(self, output_filename):
+    def start_recording(self, output_filename, audio=True):
+        if audio:
+            audio_param = f"-f pulse -thread_queue_size 4096 -i {AUDIO_DEVICE} -ac 2"
+        else:
+            audio_param = ""
         window = self.get_window("Android Emulator")
         if not window:
             log.error(f"Emulator window not found - cannot start recording")
@@ -129,7 +137,7 @@ class Capture:
         self.bring_window_to_foreground(window)
         window_pos = self.get_window_position(window)
         log.info(f'Found emulator window at {window_pos.x},{window_pos.y} dim {window_pos.width},{window_pos.height}')
-        command = f"{FFMPEG} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
+        command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
                   f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -y {output_filename}.mp4"
         log.debug(f"cmd: {command}")
         output = subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
