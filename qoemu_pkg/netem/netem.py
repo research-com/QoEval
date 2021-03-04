@@ -1,6 +1,7 @@
 import logging as log
 import shlex
 import subprocess
+import os
 
 MAX_CONNECTIONS = 3
 
@@ -17,7 +18,8 @@ class Connection:
         name : str
             The name of the connection
         device_name : str
-            The name of the actual network device to be used by the connection
+            The name of the actual network device to be used by the connection.
+            Will be set to None if the connection could not be initialized.
 
         Attributes
         ----------
@@ -49,25 +51,52 @@ class Connection:
         self.rdl = rdl
         self.dul = dul
         self.ddl = ddl
+
+        log.debug(f"locating tc")
+        output = subprocess.run(['which', "tc"], stdout=subprocess.PIPE,
+                                universal_newlines=True)
+        if len(output.stdout) == 0:
+            log.error(f"Cannot initialize connection: tc not found.")
+            raise RuntimeError('External component not found.')
+
+        log.debug(f"locating netem")
+        output = subprocess.run(shlex.split("find /lib/modules/ -type f -name '*netem*'"),
+                                stdout=subprocess.PIPE,
+                                universal_newlines=True)
+        if len(output.stdout) == 0:
+            log.error(f"Cannot initialize connection: netem not found.")
+            raise RuntimeError('External component not found.')
+
+        log.debug(f"checking for sudo privileges")
+        if os.geteuid() != 0:
+            log.error(f"Cannot initialize connection: No sudo privileges")
+            self.device = None
+            return
+
         output = subprocess.run(['ifconfig'], stdout=subprocess.PIPE,
                                 universal_newlines=True)
         if device_name not in output.stdout:
-            log.error(f"Cannot initialize connection: {self.name}: Device does not exist")
+            log.error(f"Cannot initialize connection: '{self.name}': Device does not exist")
             self.device = None
         elif device_name in used_devices:
-            log.error(f"Cannot initialize connection: {self.name}: Device already in use")
+            log.error(f"Cannot initialize connection: '{self.name}': Device already in use")
             self.device = None
         else:
             used_devices.append(device_name)
             self._init()
 
     def _get_ifb(self):
-        """Tries to set up a virtual device for this connection"""
+        """Tries to set up a virtual device for this connection
+
+            Returns
+            -------
+            bool
+                Returns True if ifb device could be created False otherwise"""
         global ifb_is_initialized
         if not ifb_is_initialized:
             _init_ifb(MAX_CONNECTIONS)
 
-        log.debug(f"Setting up virtual device for connection: {self.name}")
+        log.debug(f"Setting up virtual device for connection: '{self.name}'")
         output = subprocess.run(['ifconfig'], stdout=subprocess.PIPE,
                                 universal_newlines=True)
         for i in range(MAX_CONNECTIONS):
@@ -76,11 +105,12 @@ class Connection:
                 _init_ifb_device(i)
                 break
             log.error("No virtual device available. Could not initialize connection")
-            return
+            return False
+        return True
 
     def _redirect(self):
         """Sets up the tc rules to redirect incoming traffic to the virtual device"""
-        log.debug(f"Initializing tc redirection rules for connection: {self.name}")
+        log.debug(f"Initializing tc redirection rules for connection: '{self.name}'")
         subprocess.run(shlex.split(f"tc qdisc add dev {self.device} ingress"))
         subprocess.run(shlex.split(f"tc filter add dev {self.device} parent ffff: "
                                    f"protocol all u32 match u32 0 0 flowid 1:1 "
@@ -88,25 +118,26 @@ class Connection:
 
     def _add_netem_qdiscs(self):
         """Add the netem qdiscs to both devices"""
-        log.debug(f"Adding netem qdiscs to both devices for connection: {self.name}")
+        log.debug(f"Adding netem qdiscs to both devices for connection: '{self.name}'")
         subprocess.run(shlex.split(f"tc qdisc add dev {self.device} root netem"))
         subprocess.run(shlex.split(f"tc qdisc add dev {self.virtual_device} root netem"))
 
     def _init(self):
         """Initiates the connection, so that it can be used"""
-        self._get_ifb()
-        self._redirect()
-        self._add_netem_qdiscs()
+        if self._get_ifb():
+            self._redirect()
+            self._add_netem_qdiscs()
+            log.info(f"Connection: '{self.name}' initialized")
 
     def _update_outgoing(self):
         """Updates the netem qdisc for outgoing traffic for this connection"""
-        log.debug(f"Changing egress netem qdisc for connection: {self.name}")
+        log.debug(f"Changing egress netem qdisc for connection: '{self.name}'")
         subprocess.run(
             shlex.split(f"tc qdisc change dev {self.device} root netem rate {self.rul}kbit delay {self.dul}ms"))
 
     def _update_incoming(self):
         """Updates the netem qdisc for incoming traffic for this connection"""
-        log.debug(f"Changing ingress netem qdisc for connection: {self.name}")
+        log.debug(f"Changing ingress netem qdisc for connection: '{self.name}'")
         subprocess.run(shlex.split(
             f"tc qdisc change dev {self.virtual_device} root netem rate {self.rdl}kbit delay {self.ddl}ms"))
 
@@ -140,14 +171,14 @@ class Connection:
         """(Re)enables the netem qdiscs for this connection"""
 
         if self.device is None or self.virtual_device is None:
-            log.error(f"Cannot enable netem for connection: {self.name}: It is missing a device")
+            log.error(f"Cannot enable netem for connection: '{self.name}': It is missing a device")
             return
 
         if None in [self.t_init, self.rul, self.rdl, self.dul, self.ddl]:
-            log.error(f"Cannot enable netem for connection: {self.name}:: Not all parameters are set")
+            log.error(f"Cannot enable netem for connection: '{self.name}':: Not all parameters are set")
             return
 
-        log.debug(f"Enabling netem for connection: {self.name}")
+        log.debug(f"Enabling netem for connection: '{self.name}'")
         self._update_incoming()
         self._update_outgoing()
 
@@ -155,10 +186,10 @@ class Connection:
         """Disables the netem qdiscs for this connection."""
 
         if self.device is None or self.virtual_device is None:
-            log.error(f"Cannot disable netem for connection: {self.name}: It is missing a device")
+            log.error(f"Cannot disable netem for connection: '{self.name}': It is missing a device")
             return
 
-        log.debug(f"Disabling netem for connection: {self.name}")
+        log.debug(f"Disabling netem for connection: '{self.name}'")
         subprocess.run(shlex.split(f"tc qdisc change dev {self.device} root netem"))
         subprocess.run(shlex.split(f"tc qdisc change dev {self.virtual_device} root netem"))
 
@@ -166,10 +197,10 @@ class Connection:
         """Removes all tc rules and virtual devices for this connection"""
 
         if self.device is None:
-            log.error(f"Cannot cleanup connection: {self.name}: No device associated")
+            log.error(f"Cannot cleanup connection: '{self.name}': No device associated")
             return
 
-        log.info(f"Cleaning up connection: {self.name}")
+        log.info(f"Cleaning up connection: '{self.name}'")
         log.debug(f"Removing tc rules for device: {self.device}")
         subprocess.run(shlex.split(f"tc qdisc del dev {self.device} root"))
         subprocess.run(shlex.split(f"tc qdisc del dev {self.device} ingress"))
@@ -211,7 +242,7 @@ def _init_ifb_device(ifb_id):
 def cleanup_ifb():
     """Removes the ifb module from kernel"""
     subprocess.run(shlex.split(f"modprobe -r ifb"))
-    log.info("Removed ifb module from kernel")
+    log.debug("Removed ifb module from kernel")
     global ifb_is_initialized
     ifb_is_initialized = False
 
@@ -229,5 +260,4 @@ def cleanup():
     """Removes ifb module and all tc rules for actual devices"""
     cleanup_actual_devices()
     cleanup_ifb()
-
-
+    log.info("Cleaned up all tc rules for actual devices and removed ifb module")
