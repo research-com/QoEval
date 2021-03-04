@@ -13,8 +13,7 @@ file = []
 file_loaded = False
 
 
-def load_file(file_path='../../stimuli-params/full.csv', is_relative_path=True):
-
+def load_file(file_path=CSV_FILENAME, is_relative_path=True):
     """
        Loads the specified file globally. If no file is specified it will load CSV_FILENAME.
 
@@ -62,7 +61,6 @@ def get_type_ids():
     if not file_loaded:
         log.error("No file loaded")
         return
-
 
     type_ids = []
 
@@ -166,7 +164,6 @@ def get_entry_ids(type_id, table_id):
 
 
 def get_link(type_id, table_id, entry_id):
-
     """
         Returns the link belonging to the specified entry
 
@@ -421,7 +418,6 @@ def get_entries(type_id_filter=None, table_id_filter=None):
 
     entries = []
 
-
     for type_id in get_type_ids():
 
         if type_id_filter is not None and type_id != type_id_filter:
@@ -442,5 +438,3 @@ def get_entries(type_id_filter=None, table_id_filter=None):
                                      get_codec(type_id, table_id, entry_id),
                                      *get_parameters(type_id, table_id, entry_id)))
     return entries
-
-
