@@ -8,6 +8,8 @@
 
 
 ## Python and Control Device
+* AndroidViewClient: https://github.com/dtmilano/AndroidViewClient
+
 * monkeyrunner API via Python: https://developer.android.com/studio/test/monkeyrunner/
   * https://www.thegeekstuff.com/2014/08/monkeyrunner-android/
 * monkey tool via adb: monkey -p com.google.android.youtube -c android.intent.category.LAUNCHER 1 
@@ -43,6 +45,7 @@
     * gst-launch-1.0 ximagesrc xid=0x03c00005 ! videoconvert ! autovideosink
   * help: You can see the options supported by GStreamer elements using the gst-inspect-1.0 program, e.g.:
     `gst-inspect-1.0 ximagesrc`
+* alternative: use emulator console to record https://developer.android.com/studio/run/emulator-console
 
 ### Python related
 * Xlib to get window dimensions for recording: https://unix.stackexchange.com/questions/5999/setting-the-window-dimensions-of-a-running-application
@@ -57,6 +60,9 @@
 ### Links / Further Info
 * https://pythonprogramming.altervista.org/record-the-screen-with-ffmpeg-and-python/
 
+
+## Emulator console
+* Can be controlled (after auth) via tcp connection: https://developer.android.com/studio/run/emulator-console 
 
 ### Add parameter values to meta-data of recorded video
 
