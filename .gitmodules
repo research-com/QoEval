@@ -1,3 +1,0 @@
-[submodule "adb-control"]
-	path = adb-control
-	url = https://sam-dev.cs.hm.edu/qoemu/android-touch-record-replay
