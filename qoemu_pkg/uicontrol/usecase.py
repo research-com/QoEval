@@ -7,8 +7,8 @@ from com.dtmilano.android.adb.adbclient import Device
 # define available types of use-cases (used for factory)
 class UseCaseType(Enum):
     YOUTUBE = "_Youtube"
-    WEB = "_Web"
-    APP_START = "_AppStart"
+    WEB_BROWSING = "_WebBrowsing"
+    APP_LAUNCH = "_AppLaunch"
 
 
 class UseCaseState(Enum):

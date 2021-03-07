@@ -2,6 +2,8 @@ import logging as log
 
 from qoemu_pkg.uicontrol.usecase import UseCaseType, UseCase
 from youtube import _Youtube
+from applaunch import _AppLaunch
+from webbrowsing import _WebBrowsing
 
 
 class UseCaseFactory:

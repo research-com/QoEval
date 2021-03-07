@@ -74,7 +74,22 @@ if __name__ == '__main__':
     # Tagesschau Intro:
     # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/5lEd5D2J27Y?t=8")
     # Beethoven
-    ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/TpWpqs864y0?t=3819")
+    # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/TpWpqs864y0?t=3819")
+    # ui_control.prepare_use_case()
+    # ui_control.execute_use_case()
+    # time.sleep(20)
+    # ui_control.shutdown_use_case()
+
+    # set and execute a launch app use-case (see applaunch.py)
+    # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="de.spiegel.android.app.spon",
+    #                        activity=".activities.SplashScreenActivity")
+    # ui_control.prepare_use_case()
+    # ui_control.execute_use_case()
+    # time.sleep(5)
+    # ui_control.shutdown_use_case()
+
+    # open a webbpage
+    ui_control.set_use_case(UseCaseType.WEB_BROWSING, url="https://news.google.de")
     ui_control.prepare_use_case()
     ui_control.execute_use_case()
     time.sleep(20)
