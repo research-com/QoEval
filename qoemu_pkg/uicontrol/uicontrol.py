@@ -6,8 +6,8 @@
 import time
 import logging as log
 import com.dtmilano.android.viewclient
-from qoemu_pkg.uicontrol.usecase import UseCaseType, UseCaseState
-from qoemu_pkg.uicontrol.usecasefactory import UseCaseFactory
+from qoemu_pkg.uicontrol import UseCaseType, UseCaseState
+from qoemu_pkg.uicontrol import UseCaseFactory
 
 
 class UiControl:
