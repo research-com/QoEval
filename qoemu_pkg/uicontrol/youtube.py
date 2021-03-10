@@ -11,6 +11,7 @@ YOUTUBE_URL_PREPARE = "https://youtu.be/nLyC7U850Xs"  # Youtube video used in pr
 _ID_PLAYER = "com.google.android.youtube:id/watch_player"
 _ID_PAUSE = "com.google.android.youtube:id/player_control_play_pause_replay_button"
 _ID_FULLSCREEN = "com.google.android.youtube:id/fullscreen_button"
+_ID_NO_FULLSCREEN_INDICATOR = "com.google.android.youtube:id/channel_navigation_container"
 
 
 def _touch_player_window(vc):
@@ -73,15 +74,18 @@ class _Youtube(UseCase):
         # ViewClient.sleep(3)
         # vc.traverse()
 
-        _touch_player_window(vc)
-        _touch_pause_button(vc)
+        no_fullscreen_view = vc.findViewById(_ID_NO_FULLSCREEN_INDICATOR)
+        if no_fullscreen_view:
+            log.debug("currently not in fullscreen mode - switching to fullscreen")
+            _touch_player_window(vc)
+            _touch_pause_button(vc)
 
-        com.dtmilano.android.viewclient.ViewClient.sleep(3)
+            com.dtmilano.android.viewclient.ViewClient.sleep(3)
 
-        _touch_fullscreen_button(vc)
+            _touch_fullscreen_button(vc)
 
-        log.debug("Waiting...")
-        com.dtmilano.android.viewclient.ViewClient.sleep(3)
+            log.debug("Waiting...")
+            com.dtmilano.android.viewclient.ViewClient.sleep(3)
 
         # pausing youtube app
         _touch_player_window(vc)

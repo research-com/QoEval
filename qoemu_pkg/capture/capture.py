@@ -4,11 +4,13 @@
 """
 
 import logging as log
+import os
 import subprocess
 import shlex
 import Xlib
 import Xlib.display
 from collections import namedtuple
+from qoemu_pkg.configuration import video_capture_path
 
 # Define constants
 FFMPEG = "ffmpeg"
@@ -137,8 +139,9 @@ class Capture:
         self.bring_window_to_foreground(window)
         window_pos = self.get_window_position(window)
         log.info(f'Found emulator window at {window_pos.x},{window_pos.y} dim {window_pos.width},{window_pos.height}')
+        dest = os.path.join(video_capture_path, output_filename)
         command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
-                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -y {output_filename}.mp4"
+                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -y {dest}.mp4"
         log.debug(f"cmd: {command}")
         output = subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                 universal_newlines=True)
