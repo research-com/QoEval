@@ -173,6 +173,12 @@ class Emulator:
             self.read_avd_config()
         self.config['hw.lcd.density'] = '480'
         self.config['hw.keyboard'] = 'yes'
+        self.config['hw.gpu.enabled'] = 'yes'
+        self.config['hw.gpu.mode'] = 'host'
+        self.config['fastboot.forceColdBoot'] = 'yes'
+        self.config['fastboot.forceFastBoot'] = 'no'
+        self.config['hw.cpu.ncore'] = '4'
+        self.config['hw.ramSize'] = '4096'
         self.write_avd_config()
 
     def get_orientation(self):
@@ -234,5 +240,5 @@ if __name__ == '__main__':
     # executed directly as a script
     print("Emulator control")
     emu = Emulator()
-    # emu.delete_avd()
-    emu.launch_emulator(orientation=EmulatorOrientation.LANDSCAPE, playstore=True)
+    emu.delete_avd()
+    emu.launch_emulator(orientation=EmulatorOrientation.LANDSCAPE, playstore=False)

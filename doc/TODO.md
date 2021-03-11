@@ -47,6 +47,13 @@
     `gst-inspect-1.0 ximagesrc`
 * alternative: use emulator console to record https://developer.android.com/studio/run/emulator-console
 
+## Screen-Recording of real device
+### ADB
+https://programmer.group/adb-screen-capture-and-recording-commands.html
+
+### copy to host
+adb pull /sdcard/somedir
+
 ### Python related
 * Xlib to get window dimensions for recording: https://unix.stackexchange.com/questions/5999/setting-the-window-dimensions-of-a-running-application
 * Screen recording in Windows: https://github.com/coderman64/screen-recorder

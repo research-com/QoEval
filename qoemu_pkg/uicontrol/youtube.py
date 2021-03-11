@@ -91,6 +91,13 @@ class _Youtube(UseCase):
         _touch_player_window(vc)
         _touch_pause_button(vc)
 
+        # set to medium volume (note: there seems to be no way to set a specific absolute value)
+        log.info("Setting audio volume")
+        for x in range(15):
+            self.device.press('KEYCODE_VOLUME_DOWN')
+        for x in range(9):
+            self.device.press('KEYCODE_VOLUME_UP')
+
         log.info("Prepared to start target video...")
         com.dtmilano.android.viewclient.ViewClient.sleep(5)
 

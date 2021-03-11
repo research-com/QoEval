@@ -77,7 +77,7 @@ if __name__ == '__main__':
     ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/TpWpqs864y0?t=3819")
     ui_control.prepare_use_case()
     ui_control.execute_use_case()
-    time.sleep(30)
+    time.sleep(60)
     ui_control.shutdown_use_case()
 
     # set and execute a launch app use-case (see applaunch.py)

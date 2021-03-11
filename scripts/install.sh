@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 # script to install the dependencies required for QoEmu
+#
+# Note: A NVIDIA graphics card is required (tested on GTX1060)
 
 # Versions
 NDK_VERSION="23.0.7123448"
@@ -13,6 +15,7 @@ VIDEO_REC="ffmpeg vlc-bin wmctrl x11-utils"
 REMOTE_ACCESS="openssh-server"
 JAVA="openjdk-8-jre"
 PYTHON="python3-venv python3-pip"
+VULKAN="nvidia-driver-460 nvidia-settings vulkan-utils vulkan-tools"
 BROWSER="firefox"
 
 USER="qoe-user"
@@ -32,9 +35,18 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# add PPA for NVIDIA proprietary drivers
+add-apt-repository ppa:oibaf/graphics-drivers
+
+# update and upgrade packages
 $APT update
+$APT upgrade
+
+# install all dependencies
 $APT install $SHELL
 $APT install $OS_TOOLS &&
+
+$APT install $VULKAN
 
 $APT install $MONITORING
 usermod -a -G wireshark $USER
