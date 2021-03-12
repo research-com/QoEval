@@ -89,6 +89,11 @@ Codec: Realtek ALC887-VD
 qoe-user@qoemu-01:~$ 
 ```
 
+Added to `/etc/modprobe.de/alsa-base.conf`: 
+```
+options snd-hda-intel model=generic power_save=0 power_save_controller=N
+```
+
 ## Native Development Kit - Compiling from Command Line
 
 * https://www.codeproject.com/Articles/1071782/Building-an-Android-Command-Line-Application-Using
