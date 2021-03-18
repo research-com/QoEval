@@ -29,6 +29,7 @@ APT="apt-get -y"
 PATHMOD_ID="# QoE path setup"
 BASHRC="/home/$USER/.bashrc"
 ANDROIDSTUDIO_DL="https://developer.android.com/studio"
+GENYMOTION_DL="https://www.genymotion.com/"
 
 if [[ $EUID -ne 0 ]]; then
   echo "Only a root user can run this script!" 2>&1
@@ -68,7 +69,7 @@ then
 else
    echo "Modifying $BASHRC to include the necessary paths..."
    echo "$PATHMOD_ID" >> $BASHRC
-   NEWPATH='$PATH':$SCRIPT_DIR:'$HOME/pycharm/bin:$HOME/android-studio/bin:$HOME/Android/Sdk/tools/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/emulator:$HOME/Android/Sdk/ndk/'$NDK_VERSION
+   NEWPATH='$PATH':$SCRIPT_DIR:'$HOME/pycharm/bin:$HOME/android-studio/bin:$HOME/Android/Sdk/tools/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/emulator:$HOME/Android/Sdk/ndk/'$NDK_VERSION:'$HOME/genymotion/genymotion'
    echo "export PATH=$NEWPATH" >> $BASHRC
 fi
 
@@ -80,6 +81,10 @@ echo "Please manually install Android Studio to its default location ('$HOME/and
 echo "For Python development, we recommend to install PyCharm to $HOME/pycharm."
 echo ""
 echo "It can be downloaded at $ANDROIDSTUDIO_DL"
+echo ""
+echo ""
+echo "For improved emulation, you can also Genymotion. It can be downloaded at $GENYMOTION_DL"
+echo "Genymotion requires a separate, commercial license if not being used for education."
 echo
 echo "Note: You need to reboot the machine for all group changes to take effect."
 

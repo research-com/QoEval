@@ -56,7 +56,7 @@ class UiControl:
     def execute_use_case(self):
         if not self._current_use_case:
             raise RuntimeError('Cannot execute use case - not prepared.')
-        self._current_use_case.execute()
+        self._current_use_case.execute(30)
 
     def shutdown_use_case(self):
         if not self._current_use_case:

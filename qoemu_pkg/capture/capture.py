@@ -23,6 +23,9 @@ AUDIO_DEVICE = "alsa_output.pci-0000_00_1f.3.analog-stereo.monitor"
 # AUDIO_DEVICE = "default"
 DISPLAY = "1"
 
+SDK_EMULATOR_WINDOW_TITLE = "Android Emulator"
+GENYMOTION_EMULATOR_WINDOW_TITLE = "- Genymotion"
+
 # Define data structures and tuples
 WinGeo = namedtuple('WinGeo', 'x y height width')
 
@@ -138,7 +141,14 @@ class Capture:
             # audio_param = f"-f alsa -i hw:0 -ac 2"
         else:
             audio_param = ""
-        window = self.get_window("Android Emulator")
+        window = self.get_window(SDK_EMULATOR_WINDOW_TITLE)
+        if window:
+            # standard emulator has no UI elements within the window
+            right_border = 0
+        else:
+            window = self.get_window(GENYMOTION_EMULATOR_WINDOW_TITLE)
+            # define border in order not to capture Genymotion UI
+            right_border = 50
         if not window:
             log.error(f"Emulator window not found - cannot start recording")
             return
@@ -155,7 +165,8 @@ class Capture:
         #           f"-c:v libx264 -qp 0 -pix_fmt yuv444p -preset ultrafast -y {dest}.avi"
 
         # lossless 2: -qscale 0 -vcodec huffyuv
-        command = f"{FFMPEG} -thread_queue_size 1024 {audio_param} -thread_queue_size 1024 -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
+        command = f"{FFMPEG} -thread_queue_size 1024 {audio_param} -thread_queue_size 1024 " + \
+                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width-right_border}x{window_pos.height} " + \
                   f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} "+ \
                   f"-acodec pcm_s16le -ar 44100 "+ \
                   f"-qscale 0 -vcodec huffyuv -y {dest}.avi"

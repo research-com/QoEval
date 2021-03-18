@@ -29,7 +29,7 @@ class UseCase:
     def prepare(self):
         pass
 
-    def execute(self):
+    def execute(self,duration: int):
         pass
 
     def shutdown(self):

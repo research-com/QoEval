@@ -1,7 +1,8 @@
 import com.dtmilano.android.viewclient
 
 import logging as log
-from usecase import UseCase, UseCaseState
+import time
+from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
 
 # Links
 YOUTUBE_URL_PREPARE = "https://youtu.be/nLyC7U850Xs"  # Youtube video used in preparation process
@@ -105,7 +106,7 @@ class _Youtube(UseCase):
 
         self.state = UseCaseState.PREPARED
 
-    def execute(self):
+    def execute(self, duration: int):
         if self.state != UseCaseState.PREPARED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.PREPARED')
 
@@ -115,7 +116,7 @@ class _Youtube(UseCase):
         log.info(f"Starting target youtube video: {self.url}")
 
         self.device.shell(f"am start -a android.intent.action.VIEW \"{self.url}\"")
-
+        time.sleep(duration)
         self.state = UseCaseState.EXECUTED
 
     def shutdown(self):

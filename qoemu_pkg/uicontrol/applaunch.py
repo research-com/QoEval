@@ -16,7 +16,7 @@ Requires package name and activity name
 
 """
 import logging as log
-from usecase import UseCase, UseCaseState
+from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
 
 
 class _AppLaunch(UseCase):
@@ -38,7 +38,7 @@ class _AppLaunch(UseCase):
         else:
             self.state = UseCaseState.PREPARED
 
-    def execute(self):
+    def execute(self, duration: int):
         if self.state != UseCaseState.PREPARED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.PREPARED')
 
