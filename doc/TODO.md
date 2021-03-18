@@ -47,6 +47,13 @@
     `gst-inspect-1.0 ximagesrc`
 * alternative: use emulator console to record https://developer.android.com/studio/run/emulator-console
 
+## Screen-Recording of real device
+### ADB
+https://programmer.group/adb-screen-capture-and-recording-commands.html
+
+### copy to host
+adb pull /sdcard/somedir
+
 ### Python related
 * Xlib to get window dimensions for recording: https://unix.stackexchange.com/questions/5999/setting-the-window-dimensions-of-a-running-application
 * Screen recording in Windows: https://github.com/coderman64/screen-recorder
@@ -80,6 +87,11 @@ qoe-user@qoemu-01:~$ cat /proc/asound/cards
 qoe-user@qoemu-01:~$ head -n 1 /proc/asound/card0/codec*
 Codec: Realtek ALC887-VD
 qoe-user@qoemu-01:~$ 
+```
+
+Added to `/etc/modprobe.de/alsa-base.conf`: 
+```
+options snd-hda-intel model=generic power_save=0 power_save_controller=N
 ```
 
 ## Native Development Kit - Compiling from Command Line

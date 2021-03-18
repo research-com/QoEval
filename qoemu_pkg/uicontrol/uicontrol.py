@@ -6,8 +6,8 @@
 import time
 import logging as log
 import com.dtmilano.android.viewclient
-from qoemu_pkg.uicontrol import UseCaseType, UseCaseState
-from qoemu_pkg.uicontrol import UseCaseFactory
+from qoemu_pkg.uicontrol.usecase import UseCaseType, UseCaseState
+from qoemu_pkg.uicontrol.usecasefactory import UseCaseFactory
 
 
 class UiControl:
@@ -56,7 +56,7 @@ class UiControl:
     def execute_use_case(self):
         if not self._current_use_case:
             raise RuntimeError('Cannot execute use case - not prepared.')
-        self._current_use_case.execute()
+        self._current_use_case.execute(30)
 
     def shutdown_use_case(self):
         if not self._current_use_case:
@@ -74,11 +74,11 @@ if __name__ == '__main__':
     # Tagesschau Intro:
     # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/5lEd5D2J27Y?t=8")
     # Beethoven
-    # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/TpWpqs864y0?t=3819")
-    # ui_control.prepare_use_case()
-    # ui_control.execute_use_case()
-    # time.sleep(20)
-    # ui_control.shutdown_use_case()
+    ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/TpWpqs864y0?t=3819")
+    ui_control.prepare_use_case()
+    ui_control.execute_use_case()
+    time.sleep(60)
+    ui_control.shutdown_use_case()
 
     # set and execute a launch app use-case (see applaunch.py)
     # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="de.spiegel.android.app.spon",
@@ -89,8 +89,8 @@ if __name__ == '__main__':
     # ui_control.shutdown_use_case()
 
     # open a webbpage
-    ui_control.set_use_case(UseCaseType.WEB_BROWSING, url="https://news.google.de")
-    ui_control.prepare_use_case()
-    ui_control.execute_use_case()
-    time.sleep(20)
-    ui_control.shutdown_use_case()
+    # ui_control.set_use_case(UseCaseType.WEB_BROWSING, url="https://news.google.de")
+    # ui_control.prepare_use_case()
+    # ui_control.execute_use_case()
+    # time.sleep(20)
+    # ui_control.shutdown_use_case()

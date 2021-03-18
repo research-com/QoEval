@@ -4,11 +4,13 @@
 """
 
 import logging as log
+import os
 import subprocess
 import shlex
 import Xlib
 import Xlib.display
 from collections import namedtuple
+from qoemu_pkg.configuration import video_capture_path
 
 # Define constants
 FFMPEG = "ffmpeg"
@@ -21,6 +23,9 @@ AUDIO_DEVICE = "alsa_output.pci-0000_00_1f.3.analog-stereo.monitor"
 # AUDIO_DEVICE = "default"
 DISPLAY = "1"
 
+SDK_EMULATOR_WINDOW_TITLE = "Android Emulator"
+GENYMOTION_EMULATOR_WINDOW_TITLE = "- Genymotion"
+
 # Define data structures and tuples
 WinGeo = namedtuple('WinGeo', 'x y height width')
 
@@ -30,6 +35,9 @@ def check_env():
     check_ext(FFMPEG)
     check_ffmpeg_features()
 
+    if not os.path.exists(video_capture_path):
+        log.debug(f"output directory \"{video_capture_path}\" does not exist - trying to create it")
+        os.makedirs(video_capture_path)
 
 def check_ext(name):
     log.debug(f"locating {name}")
@@ -127,22 +135,48 @@ class Capture:
 
     def start_recording(self, output_filename, audio=True):
         if audio:
+            # pulse:
             audio_param = f"-f pulse -thread_queue_size 4096 -i {AUDIO_DEVICE} -ac 2"
+            # alsa
+            # audio_param = f"-f alsa -i hw:0 -ac 2"
         else:
             audio_param = ""
-        window = self.get_window("Android Emulator")
+        window = self.get_window(SDK_EMULATOR_WINDOW_TITLE)
+        if window:
+            # standard emulator has no UI elements within the window
+            right_border = 0
+        else:
+            window = self.get_window(GENYMOTION_EMULATOR_WINDOW_TITLE)
+            # define border in order not to capture Genymotion UI
+            right_border = 50
         if not window:
             log.error(f"Emulator window not found - cannot start recording")
             return
         self.bring_window_to_foreground(window)
         window_pos = self.get_window_position(window)
         log.info(f'Found emulator window at {window_pos.x},{window_pos.y} dim {window_pos.width},{window_pos.height}')
-        command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
-                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -y {output_filename}.mp4"
+        dest = os.path.join(video_capture_path, output_filename)
+        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
+        #           f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -c:v libxvid " \
+        #           f"-preset ultrafast -y {dest}.avi"
+        # lossless 1: -c:v libx264 -qp 0 -pix_fmt yuv444p -preset ultrafast
+        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
+        #           f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} "+ \
+        #           f"-c:v libx264 -qp 0 -pix_fmt yuv444p -preset ultrafast -y {dest}.avi"
+
+        # lossless 2: -qscale 0 -vcodec huffyuv
+        command = f"{FFMPEG} -thread_queue_size 1024 {audio_param} -thread_queue_size 1024 " + \
+                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width-right_border}x{window_pos.height} " + \
+                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} "+ \
+                  f"-acodec pcm_s16le -ar 44100 "+ \
+                  f"-qscale 0 -vcodec huffyuv -y {dest}.avi"
+
         log.debug(f"cmd: {command}")
         output = subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                 universal_newlines=True)
 
+        # TODO: check if we need re-encoding
+        # ffmpeg -i output_huffy.avi -c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 -preset slow output_recoded.avi
 
 if __name__ == '__main__':
     # executed directly as a script

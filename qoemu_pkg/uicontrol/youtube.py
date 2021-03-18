@@ -1,7 +1,8 @@
 import com.dtmilano.android.viewclient
 
 import logging as log
-from usecase import UseCase, UseCaseState
+import time
+from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
 
 # Links
 YOUTUBE_URL_PREPARE = "https://youtu.be/nLyC7U850Xs"  # Youtube video used in preparation process
@@ -11,6 +12,7 @@ YOUTUBE_URL_PREPARE = "https://youtu.be/nLyC7U850Xs"  # Youtube video used in pr
 _ID_PLAYER = "com.google.android.youtube:id/watch_player"
 _ID_PAUSE = "com.google.android.youtube:id/player_control_play_pause_replay_button"
 _ID_FULLSCREEN = "com.google.android.youtube:id/fullscreen_button"
+_ID_NO_FULLSCREEN_INDICATOR = "com.google.android.youtube:id/channel_navigation_container"
 
 
 def _touch_player_window(vc):
@@ -73,26 +75,38 @@ class _Youtube(UseCase):
         # ViewClient.sleep(3)
         # vc.traverse()
 
-        _touch_player_window(vc)
-        _touch_pause_button(vc)
+        no_fullscreen_view = vc.findViewById(_ID_NO_FULLSCREEN_INDICATOR)
+        if no_fullscreen_view:
+            log.debug("currently not in fullscreen mode - switching to fullscreen")
+            _touch_player_window(vc)
+            _touch_pause_button(vc)
 
-        com.dtmilano.android.viewclient.ViewClient.sleep(3)
+            com.dtmilano.android.viewclient.ViewClient.sleep(3)
 
-        _touch_fullscreen_button(vc)
+            _touch_fullscreen_button(vc)
 
-        log.debug("Waiting...")
-        com.dtmilano.android.viewclient.ViewClient.sleep(3)
+            log.debug("Waiting...")
+            com.dtmilano.android.viewclient.ViewClient.sleep(3)
 
         # pausing youtube app
         _touch_player_window(vc)
         _touch_pause_button(vc)
+
+        # set to medium volume (note: there seems to be no way to set a specific absolute value)
+        set_audio=False
+        if (set_audio):
+            log.info("Setting audio volume")
+            for x in range(15):
+                self.device.press('KEYCODE_VOLUME_DOWN')
+            for x in range(9):
+                self.device.press('KEYCODE_VOLUME_UP')
 
         log.info("Prepared to start target video...")
         com.dtmilano.android.viewclient.ViewClient.sleep(5)
 
         self.state = UseCaseState.PREPARED
 
-    def execute(self):
+    def execute(self, duration: int):
         if self.state != UseCaseState.PREPARED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.PREPARED')
 
@@ -102,7 +116,7 @@ class _Youtube(UseCase):
         log.info(f"Starting target youtube video: {self.url}")
 
         self.device.shell(f"am start -a android.intent.action.VIEW \"{self.url}\"")
-
+        time.sleep(duration)
         self.state = UseCaseState.EXECUTED
 
     def shutdown(self):
