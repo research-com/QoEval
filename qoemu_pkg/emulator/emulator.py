@@ -6,6 +6,7 @@
 
 import logging as log
 import subprocess
+import ipaddress
 from enum import Enum
 
 
@@ -141,7 +142,10 @@ class Emulator:
     def set_orientation(self, orientation: EmulatorOrientation):
         pass
 
-    def launch_emulator(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
+    def get_ip_address(self) -> ipaddress:
+        pass
+
+    def launch(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
         """
         Launche the emulator
 
@@ -151,3 +155,8 @@ class Emulator:
         """
         log.error("Launching emulator is not implemented for the Emulator base class")
 
+    def shutdown(self):
+        """
+        Shutdown the emulator
+        """
+        log.error("Shutting down the emulator is not implemented for the Emulator base class")

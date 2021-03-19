@@ -2,15 +2,17 @@
 """
     Emulator control for the Genymotion Desktop emulator
 """
+import time
 
 from qoemu_pkg.emulator.emulator import check_ext, Emulator, EmulatorOrientation
 from qoemu_pkg.configuration import vd_path
 
 import logging as log
-import configparser
 import os
 import subprocess
 import shlex
+import ipaddress
+import re
 
 VD_MANAGER_NAME = "gmtool"
 GM_SHELL = "genymotion-shell"
@@ -105,7 +107,27 @@ class GenymotionEmulator(Emulator):
         output.check_returncode()
         self.__orientation = orientation
 
-    def launch_emulator(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
+    def get_ip_address(self) -> ipaddress:
+        output = subprocess.run(shlex.split(
+            f"{GM_SHELL} -c \"devices list\""),
+            stdout=subprocess.PIPE,
+            universal_newlines=True)
+        output.check_returncode()
+        # log.debug(output.stdout)
+        pattern = r"\*\s+\|\s+On.\|\s+virtual\s+\|\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+        matcher = re.compile(pattern)
+        match = (matcher.search(output.stdout))
+        if match:
+            ip_addr_text = match.group(1)
+            log.debug(f"emulator ip address: {ip_addr_text}")
+            ip_address = ipaddress.ip_address(ip_addr_text)
+        else:
+            ip_address = None
+            log.error("Cannot determine ip addess of emulator.")
+
+        return ip_address
+
+    def launch(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
         log.info("Launching emulator...")
         # delete_avd(self.vd_name)  # enable this line to reset upon each start
         if not self.is_vd_available(self.vd_name):
@@ -120,7 +142,12 @@ class GenymotionEmulator(Emulator):
             f"{VD_MANAGER_NAME} admin start {self.vd_name}"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
+        output.check_returncode()
         self.set_orientation(orientation)
+
+    def shutdown(self):
+        log.debug("Emulator shutdown.")
+        subprocess.run(shlex.split(f"{VD_MANAGER_NAME} admin stop {self.vd_name}"),)
 
 
 if __name__ == '__main__':
@@ -128,4 +155,7 @@ if __name__ == '__main__':
     print("Emulator control")
     emu = GenymotionEmulator()
     # emu.delete_vd()
-    emu.launch_emulator(orientation=EmulatorOrientation.LANDSCAPE, playstore=False)
+    emu.launch(orientation=EmulatorOrientation.LANDSCAPE, playstore=False)
+    print (f"Started emulator with IP address: {emu.get_ip_address()}")
+    time.sleep(20)
+    emu.shutdown()
