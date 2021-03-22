@@ -27,7 +27,9 @@ SCRIPT_DIR="$(dirname $(readlink -f $0))"
 APT="apt-get -y"
 # APT="echo"
 PATHMOD_ID="# QoE path setup"
+SUDOERMOD_ID="# QoE sudo commands"
 BASHRC="/home/$USER/.bashrc"
+SUDOERS="/etc/sudoers"
 ANDROIDSTUDIO_DL="https://developer.android.com/studio"
 GENYMOTION_DL="https://www.genymotion.com/"
 
@@ -71,6 +73,18 @@ else
    echo "$PATHMOD_ID" >> $BASHRC
    NEWPATH='$PATH':$SCRIPT_DIR:'$HOME/pycharm/bin:$HOME/android-studio/bin:$HOME/Android/Sdk/tools/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/emulator:$HOME/Android/Sdk/ndk/'$NDK_VERSION:'$HOME/genymotion/genymotion'
    echo "export PATH=$NEWPATH" >> $BASHRC
+fi
+
+# adding required commands to sudoers file
+if grep -Fxq "$SUDOERMOD_ID" $SUDOERS
+then
+   echo "$SUDOERS seems to be updated - modification skipped"
+else
+   echo "Modifying $SUDOERS to include the necessary paths..."
+   echo "$SUDOERMOD_ID" >> $SUDOERS
+   echo "$USER  ALL=(ALL) NOPASSWD: /usr/sbin/tc" >> $SUDOERS
+   echo "$USER  ALL=(ALL) NOPASSWD: /usr/sbin/ip" >> $SUDOERS
+   echo "$USER  ALL=(ALL) NOPASSWD: /usr/sbin/modprobe" >> $SUDOERS
 fi
 
 # Disable assistive_technologies property
