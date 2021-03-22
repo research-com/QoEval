@@ -1,34 +1,11 @@
 # TODO
 
-## Python script to read parameters and control netem
-* netem tools
-* needs to be synchronized with device control
-* add dynamic delay
-* realize t_init via iptables?
-
-
-## Python and Control Device
-* AndroidViewClient: https://github.com/dtmilano/AndroidViewClient
-
-* monkeyrunner API via Python: https://developer.android.com/studio/test/monkeyrunner/
-  * https://www.thegeekstuff.com/2014/08/monkeyrunner-android/
-* monkey tool via adb: monkey -p com.google.android.youtube -c android.intent.category.LAUNCHER 1 
-* uiautomatorviewer (sdk tool) to get x,y
-
-### Script using avdmanager to create suitable virtual device
-* check if suitable device is available, create it if not available
-* see https://developer.android.com/studio/command-line/avdmanager
-
-### Youtube Video
-* start video at a specific position: simply at time to start as parameter: https://www.howtogeek.com/285220/how-to-share-youtube-videos-starting-at-a-certain-point/ 
 
 ### Further Info
 * [List of Commands via ADB](https://riptutorial.com/android/example/3958/send-text--key-pressed-and-touch-events-to-android-device-via-adb)
 * [input and sendevent/getevent](https://stackoverflow.com/questions/4386449/send-touch-events-to-a-device-via-adb)
 
-## Start Emulator
-* see https://developer.android.com/studio/run/emulator-commandline
-* example: emulator -avd Pixel_3a_API_30_x86
+
 
 ## Screen-Recording of Emulator Window
 * Window can be identified by window title

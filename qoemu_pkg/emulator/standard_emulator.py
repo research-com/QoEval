@@ -5,7 +5,7 @@
 import ipaddress
 import time
 
-from qoemu_pkg.emulator.emulator import check_ext, Emulator, EmulatorOrientation
+from qoemu_pkg.emulator.emulator import check_ext, Emulator, EmulatorOrientation, ADB_NAME
 from qoemu_pkg.configuration import vd_path
 
 import logging as log
@@ -23,7 +23,6 @@ VD_NAME = "qoemu_" + DEVICE_NAME + "_" + TARGET_NAME.replace("-", "_") + "_x86"
 EMU_NAME = "emulator"
 VD_MANAGER_NAME = "avdmanager"
 SDK_MANAGER_NAME = "sdkmanager"
-ADB_NAME = "adb"
 AVD_INI_FILE = f"{vd_path}/config.ini"
 
 
@@ -189,25 +188,6 @@ class StandardEmulator(Emulator):
             self.config['skin.path.backup'] = '_no_skin'
         self.__write_avd_config()
 
-    def get_ip_address(self) -> ipaddress:
-        output = subprocess.run(shlex.split(
-            f"{ADB_NAME} shell ifconfig wlan0"),
-            stdout=subprocess.PIPE,
-            universal_newlines=True)
-        # log.debug(output.stdout)
-        pattern = r"\s*inet addr:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*"
-        matcher = re.compile(pattern)
-        match = (matcher.search(output.stdout))
-        if match:
-            ip_addr_text = match.group(1)
-            log.debug(f"emulator ip address: {ip_addr_text}")
-            ip_address = ipaddress.ip_address(ip_addr_text)
-        else:
-            ip_address = None
-            log.debug("Cannot determine ip addess of emulator.")
-
-        return ip_address
-
     def launch(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
         log.info("Launching emulator...")
         # delete_avd(self.avd_name)  # enable this line to reset upon each start
@@ -248,7 +228,7 @@ if __name__ == '__main__':
     # executed directly as a script
     print("Emulator control")
     emu = StandardEmulator()
-    emu.delete_vd()
+    # emu.delete_vd()
     emu.launch(orientation=EmulatorOrientation.LANDSCAPE, playstore=False)
     ipaddr = emu.get_ip_address()
     print(f"Emulator IP address: {ipaddr}")

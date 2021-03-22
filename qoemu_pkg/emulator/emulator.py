@@ -9,6 +9,7 @@ import subprocess
 import ipaddress
 from enum import Enum
 
+ADB_NAME = "adb"
 
 def check_ext(name):
     log.debug(f"locating {name}")
@@ -143,7 +144,23 @@ class Emulator:
         pass
 
     def get_ip_address(self) -> ipaddress:
-        pass
+        output = subprocess.run(shlex.split(
+            f"{ADB_NAME} shell ifconfig wlan0"),
+            stdout=subprocess.PIPE,
+            universal_newlines=True)
+        # log.debug(output.stdout)
+        pattern = r"\s*inet addr:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*"
+        matcher = re.compile(pattern)
+        match = (matcher.search(output.stdout))
+        if match:
+            ip_addr_text = match.group(1)
+            log.debug(f"emulator ip address: {ip_addr_text}")
+            ip_address = ipaddress.ip_address(ip_addr_text)
+        else:
+            ip_address = None
+            log.debug("Cannot determine ip addess of emulator.")
+
+        return ip_address
 
     def launch(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
         """
