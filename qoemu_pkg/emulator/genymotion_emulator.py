@@ -19,7 +19,7 @@ GM_SHELL = "genymotion-shell"
 TEMPLATE_UUID = "c259202b-6605-44eb-978c-040b2edbc364" # "Google Pixel 3 - 10.0 - API 29 - 1080x2160"
 DEVICE_NAME = "pixel"
 VD_NAME = "qoemu_" + DEVICE_NAME + "_" + "_Genymotion" + "_x86"
-STANDARD_OPTIONS="--virtualkeyboard=on --nbcpu=6 --ram=4096 --network-mode=bridge"
+STANDARD_OPTIONS="--virtualkeyboard=on --nbcpu=6 --ram=4096 --network-mode=nat"
 
 class GenymotionEmulator(Emulator):
     def __init__(self):

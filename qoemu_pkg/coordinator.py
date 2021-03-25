@@ -34,13 +34,16 @@ class Coordinator:
             self.emulator = GenymotionEmulator()
         if emulator_type == EmulatorType.SDK_EMULATOR:
             self.emulator = StandardEmulator()
-        self.netem = Connection("coord1", DEVICE_NAME)
         self._is_prepared = False
+        self.netem = None
 
     def prepare(self, stimuli_id: str):
-        # TODO: read parameters, instantiate and start network emulation
-        self.netem.change_parameters(t_init=500, rul=100, rdl=100, dul=50, ddl=50)
+        # self.emulator.delete_vd()
         self.emulator.launch(orientation=EmulatorOrientation.LANDSCAPE)
+        # TODO: read parameters, instantiate and start network emulation
+        self.netem = Connection("coord1", DEVICE_NAME,t_init=500, rul=1000, rdl=1000, dul=25, ddl=20,
+                                exclude_ports=[22,5000,5002])  # exclude ports used for nomachine/ssh remote control
+                                # android_ip=self.emulator.get_ip_address())
         # set and execute a Youtube use case
         # Tagesschau Intro:
         # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/5lEd5D2J27Y?t=8")
@@ -53,14 +56,16 @@ class Coordinator:
         if not self._is_prepared:
             log.error("Cannot execute campaign - not prepared.")
             return
+
         # execute concurrently in separate threads
         ui_control_thread = threading.Thread(target=self.ui_control.execute_use_case, args=())
         capture_thread = threading.Thread(target=self.capture.start_recording, args=('output',))
+        self.netem.enable_netem()
         ui_control_thread.start()
         capture_thread.start()
         capture_thread.join()
         ui_control_thread.join()
-
+        self.netem.disable_netem()
 
     def finish(self):
         if self.netem:
@@ -70,16 +75,16 @@ class Coordinator:
             log.error("Cannot finish campaign - not prepared.")
             return
         self.ui_control.shutdown_use_case()
-
+        self.emulator.shutdown()
 
 if __name__ == '__main__':
     # executed directly as a script
     print("Coordinator main started")
     coordinator = Coordinator()
     coordinator.prepare('some id')
-    #wait_countdown(5)
-    #coordinator.execute()
-    wait_countdown(60)
+    wait_countdown(5)
+    coordinator.execute()
+    wait_countdown(20)
     coordinator.finish()
 
     print("Done.")
