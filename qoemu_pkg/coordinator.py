@@ -41,7 +41,7 @@ class Coordinator:
         # self.emulator.delete_vd()
         self.emulator.launch(orientation=EmulatorOrientation.LANDSCAPE)
         # TODO: read parameters, instantiate and start network emulation
-        self.netem = Connection("coord1", DEVICE_NAME,t_init=500, rul=1000, rdl=1000, dul=25, ddl=20,
+        self.netem = Connection("coord1", DEVICE_NAME,t_init=1000, rul=1000, rdl=1000, dul=25, ddl=20,
                                 exclude_ports=[22,5000,5002])  # exclude ports used for nomachine/ssh remote control
                                 # android_ip=self.emulator.get_ip_address())
         # set and execute a Youtube use case

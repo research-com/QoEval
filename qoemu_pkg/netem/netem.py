@@ -2,6 +2,8 @@ import ipaddress
 import logging as log
 import shlex
 import subprocess
+import threading
+import time
 from typing import List
 
 MAX_CONNECTIONS = 1
@@ -58,6 +60,7 @@ class Connection:
         self.name = name
         self.virtual_device = None
         self.t_init = t_init
+        self._t_init_active = False
         self.rul = rul
         self.rdl = rdl
         self.dul = dul
@@ -224,18 +227,27 @@ class Connection:
     def _update_outgoing(self):
         """Updates the netem qdisc for outgoing traffic for this connection"""
         log.debug(f"Changing egress netem qdisc for connection: '{self.name}'")
-        # if self.android_ip:
         parent_id = "parent 1:2"
-        #else:
-        #    parent_id = "root"
-        subprocess.run(
-            shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} {parent_id} netem rate {self.rul}kbit delay {self.dul}ms"))
+        if not self._t_init_active:
+            subprocess.run(
+                shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
+                            f"{parent_id} netem rate {self.rul}kbit delay {self.dul}ms loss 0%")).check_returncode()
+        else:
+            subprocess.run(
+                shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
+                            f"{parent_id} netem loss 100%")).check_returncode()
 
     def _update_incoming(self):
         """Updates the netem qdisc for incoming traffic for this connection"""
         log.debug(f"Changing ingress netem qdisc for connection: '{self.name}'")
-        subprocess.run(shlex.split(
-            f"{self.__CMD_TC} qdisc change dev {self.virtual_device} root netem rate {self.rdl}kbit delay {self.ddl}ms"))
+        if not self._t_init_active:
+            subprocess.run(shlex.split(
+                f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
+                f"root netem rate {self.rdl}kbit delay {self.ddl}ms loss 0%")).check_returncode()
+        else:
+            subprocess.run(shlex.split(
+                f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
+                f"root netem loss 100%")).check_returncode()
 
     def change_parameters(self, t_init=None, rul=None, rdl=None, dul=None, ddl=None):
         """
@@ -280,8 +292,12 @@ class Connection:
             return
 
         log.debug(f"Enabling netem for connection: '{self.name}'")
-        self._update_incoming()
-        self._update_outgoing()
+        if(self.t_init > 0):
+            self._t_init_thread = threading.Thread(target=self._emulate_t_init, args=())
+            self._t_init_thread.start()
+        else:
+            self._update_incoming()
+            self._update_outgoing()
 
     def disable_netem(self):
         """Disables the netem qdiscs for this connection."""
@@ -340,6 +356,21 @@ class Connection:
         log.debug(f"Adding ifb{ifb_id}")
         subprocess.run(shlex.split(f"{self.__CMD_IP} link set dev ifb{ifb_id} up"))
 
+    def _emulate_t_init(self):
+        """Emulate T_init phase where data communication is not possible"""
+        if self._t_init_active:
+            raise RuntimeError('T_init emulation already active.')
+        if self.t_init <= 0:
+            return
+        self._t_init_active = True
+        log.debug("T_init active")
+        self._update_incoming()
+        self._update_outgoing()
+        time.sleep(self.t_init/1000.0)
+        self._t_init_active = False
+        self._update_incoming()
+        self._update_outgoing()
+        log.debug("T_init done")
 
     def cleanup_ifb(self):
         """Removes the ifb module from kernel"""
