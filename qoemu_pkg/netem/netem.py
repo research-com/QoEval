@@ -249,22 +249,22 @@ class Connection:
                 f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
                 f"root netem loss 100%")).check_returncode()
 
-    def change_parameters(self, t_init=None, rul=None, rdl=None, dul=None, ddl=None):
+    def change_parameters(self, t_init:float=None, rul:float=None, rdl:float=None, dul:float=None, ddl:float=None):
         """
                 Sets the parameters for this connection and updates the netem qdiscs.
 
 
                 Parameters
                 ----------
-                t_init : int
+                t_init : float
                     t_init in ms
-                rul : int
+                rul : float
                     rul in kbit/s
-                rdl : int
+                rdl : float
                     rdl in kbit/s
-                dul : int
+                dul : float
                     dul in ms
-                ddl : int
+                ddl : float
                     ddl in ms
                 """
         if t_init:

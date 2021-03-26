@@ -9,8 +9,9 @@ from qoemu_pkg.uicontrol.applaunch import _AppLaunch
 __all__ = ['_Youtube', '_WebBrowsing', '_AppLaunch']
 
 class UseCaseFactory:
-    def __init__(self, device):
+    def __init__(self, device, serialno):
         self._device = device
+        self._serialno = serialno
 
     def create_use_case(self, uc_type: UseCaseType, **kwargs) -> UseCase:
         """
@@ -20,4 +21,4 @@ class UseCaseFactory:
         """
         target_class = uc_type.value
         log.debug(f"Creating use case of type {target_class}")
-        return globals()[target_class](self._device, **kwargs)
+        return globals()[target_class](self._device, self._serialno, **kwargs)

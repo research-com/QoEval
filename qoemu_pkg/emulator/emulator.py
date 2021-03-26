@@ -9,7 +9,7 @@ import subprocess
 import ipaddress
 from enum import Enum
 
-ADB_NAME = "adb"
+ADB_NAME = "adb -e"   #-e selects emulator, -d usb-connected device, -s serialnr
 
 def check_ext(name):
     log.debug(f"locating {name}")
@@ -30,6 +30,7 @@ class EmulatorType(Enum):
     NONE = 'none'
     SDK_EMULATOR = 'emulator'
     GENYMOTION = 'genymotion'
+    REAL_DEVICE = 'realdevice'
 
 class Emulator:
 

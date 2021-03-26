@@ -11,18 +11,20 @@ from qoemu_pkg.uicontrol.usecasefactory import UseCaseFactory
 
 
 class UiControl:
-    def __init__(self):
+    def __init__(self, serialno: str):
         log.basicConfig(level=log.DEBUG)
         self._device = None
+        self._serialno = serialno
         self._use_case_factory = None
         self._current_use_case = None
         self.is_connected = False
 
     def connect_device(self):
-        self._device, serialno = com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit(verbose=True)
+        self._device, self._serialno = \
+            com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit(serialno=self._serialno,verbose=True)
 
         if self._device.checkConnected():
-            log.info(f"ADB connected to device with serial: {serialno}")
+            log.info(f"ADB connected to device with serial: {self._serialno}")
             self.is_connected = True
         else:
             log.error("ADB NOT connected")
@@ -34,7 +36,7 @@ class UiControl:
         # return to home screen
         self._device.press('KEYCODE_HOME', 'DOWN_AND_UP')
 
-        self._use_case_factory = UseCaseFactory(self._device)
+        self._use_case_factory = UseCaseFactory(self._device, self._serialno)
 
     def set_use_case(self, use_case_type: UseCaseType, **kwargs: object):
         if not self.is_connected:

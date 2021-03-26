@@ -13,7 +13,7 @@ file = []
 file_loaded = False
 
 
-def load_file(file_path=CSV_FILENAME, is_relative_path=True):
+def load_parameter_file(file_path=CSV_FILENAME, is_relative_path=True):
     """
        Loads the specified file globally. If no file is specified it will load CSV_FILENAME.
 
@@ -386,9 +386,15 @@ def get_parameters(type_id, table_id, entry_id):
         log.error("No file loaded")
         return
 
+    parameter_names = ['t_init', 'rul', 'rdl', 'dul', 'ddl']
+
     for line in file:
         if line.startswith(f"{type_id}-{table_id}-{entry_id}"):
-            return line.split(";")[2:7]
+            parameter_values_str = line.split(";")[2:7]
+            parameter_values = [float(i) for i in parameter_values_str]
+            it_name = iter(parameter_names)
+            it_value = iter(parameter_values)
+            return dict(zip(it_name,it_value))
 
 
 def get_entries(type_id_filter=None, table_id_filter=None):
