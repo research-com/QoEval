@@ -52,8 +52,8 @@ def _touch_fullscreen_button(vc):
 
 
 class _Youtube(UseCase):
-    def __init__(self, device, **kwargs):
-        super().__init__(device)
+    def __init__(self, device, serialno, **kwargs):
+        super().__init__(device, serialno)
         self.url = kwargs.get("url")
 
     def prepare(self):
@@ -71,7 +71,7 @@ class _Youtube(UseCase):
         self.device.shell(f"am start -a android.intent.action.VIEW \"{YOUTUBE_URL_PREPARE}\"")
 
         vc = com.dtmilano.android.viewclient.ViewClient(
-            *com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit())
+            *com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit(serialno=self.serialno))
         # ViewClient.sleep(3)
         # vc.traverse()
 

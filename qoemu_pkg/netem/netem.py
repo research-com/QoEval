@@ -1,13 +1,15 @@
+import ipaddress
 import logging as log
 import shlex
 import subprocess
-import os
+import threading
+import time
+from typing import List
 
-MAX_CONNECTIONS = 3
+MAX_CONNECTIONS = 1
 
 used_devices = []
 ifb_is_initialized = False
-
 
 class Connection:
     """
@@ -29,34 +31,56 @@ class Connection:
             The name of the actual device that the connection uses
         virtual_device : str
             The name of the virutal device that the connection uses
-        t_init : int
+        t_init : float
             the initial delay in ms of the connection
-        rul : int
+        rul : float
             upload rate limit in kbps of the connection
-        rdl : int
+        rdl : float
             download rate limit in kbps of the connection
-        dul : int
+        dul : float
             upload delay in ms of the connection
-        ddl : int
+        ddl : float
             download delay in ms of the connection
+
+        android_ip : ipaddress
+            IP address of android device (emulator or real device). If specified, emulation is limited to this
+            specific ip address (source and destination).
+        exclude_ports : List[int]
+            List of ports to be excluded from network emulation (e.g. for an ssh control connection)
         """
 
-    def __init__(self, name, device_name, t_init=None, rul=None, rdl=None, dul=None, ddl=None):
+    __CMD_TC = "sudo tc"
+    __CMD_IP = "sudo ip"
+    __CMD_MODPROBE = "sudo modprobe"
+
+    def __init__(self, name, device_name, t_init: float = None, rul: float = None, rdl:float = None, dul:float = None,
+                 ddl:float = None, android_ip:ipaddress = None, exclude_ports: List[int] = None):
         global used_devices
         self.device = device_name
         self.name = name
         self.virtual_device = None
         self.t_init = t_init
+        self._t_init_active = False
         self.rul = rul
         self.rdl = rdl
         self.dul = dul
         self.ddl = ddl
+        self.exclude_ports = exclude_ports
+        self.android_ip = android_ip
+
+        if(android_ip):
+            log.debug(f"network emulation is applied only for IP address: {self.android_ip}")
+        else:
+            if self.exclude_ports and len(self.exclude_ports)>0:
+                log.debug(f"network emulation is applied to all traffic except for traffic to/from ports: {self.exclude_ports}")
+            else:
+                log.debug(f"no android_ip specified, network emulation is applied to all traffic on {self.device}")
 
         log.debug(f"locating tc")
-        output = subprocess.run(['which', "tc"], stdout=subprocess.PIPE,
+        output = subprocess.run(shlex.split(self.__CMD_TC), stderr=subprocess.PIPE,
                                 universal_newlines=True)
-        if len(output.stdout) == 0:
-            log.error(f"Cannot initialize connection: tc not found.")
+        if output.returncode != 0:
+            log.error(f"Cannot initialize connection: tc not found - please check if install.sh has modified sudoers correctly.")
             raise RuntimeError('External component not found.')
 
         log.debug(f"locating netem")
@@ -67,11 +91,17 @@ class Connection:
             log.error(f"Cannot initialize connection: netem not found.")
             raise RuntimeError('External component not found.')
 
-        log.debug(f"checking for sudo privileges")
-        if os.geteuid() != 0:
-            log.error(f"Cannot initialize connection: No sudo privileges")
-            self.device = None
-            return
+        # We should not execute the complete python script with superuser privileges
+        # instead, the install.sh script modifies /etc/sudoers to allow us to
+        # execute tc, ip, modprobe without asking for a password
+
+        # log.debug(f"checking for sudo privileges")
+        # if os.geteuid() != 0:
+        #     log.error(f"Cannot initialize connection: No sudo privileges")
+        #     self.device = None
+        #     raise RuntimeError('Cannot setup network emulation - missing privileges.')
+
+        self.reset_device()    # should not be necessary when implementation is completed
 
         output = subprocess.run(['ifconfig'], stdout=subprocess.PIPE,
                                 universal_newlines=True)
@@ -94,7 +124,7 @@ class Connection:
                 Returns True if ifb device could be created False otherwise"""
         global ifb_is_initialized
         if not ifb_is_initialized:
-            _init_ifb(MAX_CONNECTIONS)
+            self._init_ifb(MAX_CONNECTIONS)
 
         log.debug(f"Setting up virtual device for connection: '{self.name}'")
         output = subprocess.run(['ifconfig'], stdout=subprocess.PIPE,
@@ -102,68 +132,151 @@ class Connection:
         for i in range(MAX_CONNECTIONS):
             if f"ifb{i}" not in output.stdout:
                 self.virtual_device = f"ifb{i}"
-                _init_ifb_device(i)
-                break
-            log.error("No virtual device available. Could not initialize connection")
-            return False
-        return True
+                log.debug(f"Initializing a new ifb device: ifb{i}")
+                self._init_ifb_device(i)
+                return True
+        log.error("No virtual device available. Could not initialize connection")
+        return False
 
-    def _redirect(self):
+    def _redirect_incoming(self):
         """Sets up the tc rules to redirect incoming traffic to the virtual device"""
-        log.debug(f"Initializing tc redirection rules for connection: '{self.name}'")
-        subprocess.run(shlex.split(f"tc qdisc add dev {self.device} ingress"))
-        subprocess.run(shlex.split(f"tc filter add dev {self.device} parent ffff: "
-                                   f"protocol all u32 match u32 0 0 flowid 1:1 "
+        log.debug(f"Initializing incoming tc redirection rules for connection: '{self.name}'")
+        output = subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} ingress handle fffff:"))
+        output.check_returncode()
+
+        if self.android_ip:
+            filter_match = f"match ip dst {self.android_ip}/32"
+        else:
+            filter_match = "match u32 0 0"
+
+        # for each excluded port, we add a high(er) prio pass action
+        remaining_prio = 1
+        if self.exclude_ports:
+            for p in self.exclude_ports:
+                output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} parent ffff: "
+                                                    f"protocol all priority {remaining_prio} "
+                                                    f"u32 match ip sport {p} 0xffff "
+                                                    f"action pass"))
+                output.check_returncode()
+                output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} parent ffff: "
+                                                    f"protocol all priority {remaining_prio} "
+                                                    f"u32 match ip dport {p} 0xffff "
+                                                    f"action pass"))
+                output.check_returncode()
+                remaining_prio = remaining_prio + 1
+
+        output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} parent ffff: "
+                                   f"protocol all priority {remaining_prio} u32 {filter_match} flowid 1:1 "
                                    f"action mirred egress redirect dev {self.virtual_device}"))
+        output.check_returncode()
+
+    def _redirect_outgoing(self):
+        """Sets up the tc rules to redirect outgoing traffic to the virtual device"""
+        log.debug(f"Initializing outgoing tc redirection rules for connection: '{self.name}'")
+        # for each excluded port, we add a high(er) prio action to handle traffic in 1:1 (no netem)
+        remaining_prio = 1
+        if self.exclude_ports:
+            for p in self.exclude_ports:
+                output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} parent 1: "
+                                                    f"protocol all priority {remaining_prio} "
+                                                    f"u32 match ip sport {p} 0xffff "
+                                                    f"flowid 1:1"))
+                output.check_returncode()
+                output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} parent 1: "
+                                                    f"protocol all priority {remaining_prio} "
+                                                    f"u32 match ip dport {p} 0xffff "
+                                                    f"flowid 1:1"))
+                output.check_returncode()
+                remaining_prio = remaining_prio + 1
+
+        if self.android_ip:
+            # only traffic originating from emulator ip is handled by netem
+             log.debug(f"Emulation enabled specifically for IP: {self.android_ip}")
+             output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} protocol ip "
+                                                 f"priority {remaining_prio} parent 1: u32 "
+                                                 f"match ip src {self.android_ip}/32 flowid 1:2"))
+             output.check_returncode()
+        else:
+            # all other traffic is handled in 1:2 by netem
+            output = subprocess.run(shlex.split(
+                f"{self.__CMD_TC} filter add dev {self.device} protocol ip priority {remaining_prio} "
+                f"parent 1: u32 match u32 0 0 flowid 1:2"))
+            output.check_returncode()
 
     def _add_netem_qdiscs(self):
         """Add the netem qdiscs to both devices"""
         log.debug(f"Adding netem qdiscs to both devices for connection: '{self.name}'")
-        subprocess.run(shlex.split(f"tc qdisc add dev {self.device} root netem"))
-        subprocess.run(shlex.split(f"tc qdisc add dev {self.virtual_device} root netem"))
+
+        # setup a simple priority queue - all traffic from emulator will be handled by 1:2 which has netem
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} root handle 1: prio bands 2 priomap 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0")).check_returncode()
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} parent 1:1 handle 10: prio")).check_returncode()
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} parent 1:2 handle 20: netem")).check_returncode()
+
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.virtual_device} root netem")).check_returncode()
 
     def _init(self):
         """Initiates the connection, so that it can be used"""
         if self._get_ifb():
-            self._redirect()
+            self._redirect_incoming()
             self._add_netem_qdiscs()
+            self._redirect_outgoing()
             log.info(f"Connection: '{self.name}' initialized")
+        else:
+            raise RuntimeError('Uable to initialize device.')
 
     def _update_outgoing(self):
         """Updates the netem qdisc for outgoing traffic for this connection"""
         log.debug(f"Changing egress netem qdisc for connection: '{self.name}'")
-        subprocess.run(
-            shlex.split(f"tc qdisc change dev {self.device} root netem rate {self.rul}kbit delay {self.dul}ms"))
+        parent_id = "parent 1:2"
+        if not self._t_init_active:
+            subprocess.run(
+                shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
+                            f"{parent_id} netem rate {self.rul}kbit delay {self.dul}ms loss 0%")).check_returncode()
+        else:
+            subprocess.run(
+                shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
+                            f"{parent_id} netem loss 100%")).check_returncode()
 
     def _update_incoming(self):
         """Updates the netem qdisc for incoming traffic for this connection"""
         log.debug(f"Changing ingress netem qdisc for connection: '{self.name}'")
-        subprocess.run(shlex.split(
-            f"tc qdisc change dev {self.virtual_device} root netem rate {self.rdl}kbit delay {self.ddl}ms"))
+        if not self._t_init_active:
+            subprocess.run(shlex.split(
+                f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
+                f"root netem rate {self.rdl}kbit delay {self.ddl}ms loss 0%")).check_returncode()
+        else:
+            subprocess.run(shlex.split(
+                f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
+                f"root netem loss 100%")).check_returncode()
 
-    def change_parameters(self, t_init, rul, rdl, dul, ddl):
+    def change_parameters(self, t_init:float=None, rul:float=None, rdl:float=None, dul:float=None, ddl:float=None):
         """
                 Sets the parameters for this connection and updates the netem qdiscs.
 
 
                 Parameters
                 ----------
-                t_init : int
+                t_init : float
                     t_init in ms
-                rul : int
+                rul : float
                     rul in kbit/s
-                rdl : int
+                rdl : float
                     rdl in kbit/s
-                dul : int
+                dul : float
                     dul in ms
-                ddl : int
+                ddl : float
                     ddl in ms
                 """
-        self.t_init = t_init
-        self.rul = rul
-        self.rdl = rdl
-        self.dul = dul
-        self.ddl = ddl
+        if t_init:
+            self.t_init = t_init
+        if rul:
+            self.rul = rul
+        if rdl:
+            self.rdl = rdl
+        if dul:
+            self.dul = dul
+        if ddl:
+            self.ddl = ddl
         self._update_outgoing()
         self._update_incoming()
 
@@ -179,8 +292,12 @@ class Connection:
             return
 
         log.debug(f"Enabling netem for connection: '{self.name}'")
-        self._update_incoming()
-        self._update_outgoing()
+        if(self.t_init > 0):
+            self._t_init_thread = threading.Thread(target=self._emulate_t_init, args=())
+            self._t_init_thread.start()
+        else:
+            self._update_incoming()
+            self._update_outgoing()
 
     def disable_netem(self):
         """Disables the netem qdiscs for this connection."""
@@ -190,8 +307,9 @@ class Connection:
             return
 
         log.debug(f"Disabling netem for connection: '{self.name}'")
-        subprocess.run(shlex.split(f"tc qdisc change dev {self.device} root netem"))
-        subprocess.run(shlex.split(f"tc qdisc change dev {self.virtual_device} root netem"))
+        params = "rate 1000Gbit loss 0.0% delay 0ms duplicate 0% reorder 0% 0%"
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} parent 1:2 netem {params}")).check_returncode()
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.virtual_device} root netem {params}")).check_returncode()
 
     def cleanup(self):
         """Removes all tc rules and virtual devices for this connection"""
@@ -202,62 +320,85 @@ class Connection:
 
         log.info(f"Cleaning up connection: '{self.name}'")
         log.debug(f"Removing tc rules for device: {self.device}")
-        subprocess.run(shlex.split(f"tc qdisc del dev {self.device} root"))
-        subprocess.run(shlex.split(f"tc qdisc del dev {self.device} ingress"))
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} root"))
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} ingress"))
         log.debug(f"Removing virtual device: {self.virtual_device}")
-        subprocess.run(shlex.split(f"ip link set dev {self.virtual_device} down"))
+        subprocess.run(shlex.split(f"{self.__CMD_IP} link set dev {self.virtual_device} down"))
         used_devices.remove(self.device)
 
 
-def _init_ifb(numifbs):
-    """
-            Adds the ifb module to the kernel with numifbs devices available
-
-            Parameters
-            ----------
-            numifbs : int
-                number of ifb's available
-
-            """
-    log.debug("Adding ifb module to kernel")
-    subprocess.run(shlex.split(f"modprobe ifb numifbs={numifbs}"))
-    global ifb_is_initialized
-    ifb_is_initialized = True
-
-
-def _init_ifb_device(ifb_id):
-    """
-                Adds the ifb device with the specified id
+    def _init_ifb(self, numifbs):
+        """
+                Adds the ifb module to the kernel with numifbs devices available
 
                 Parameters
                 ----------
-                ifb_id : int
-                    id of the ifb device to be added
+                numifbs : int
+                    number of ifb's available
 
                 """
-    log.debug(f"Adding ifb{ifb_id}")
-    subprocess.run(shlex.split(f"ip link set dev ifb{ifb_id} up"))
+        log.debug("Adding ifb module to kernel")
+        subprocess.run(shlex.split(f"{self.__CMD_MODPROBE} ifb numifbs={numifbs}"))
+        global ifb_is_initialized
+        ifb_is_initialized = True
 
 
-def cleanup_ifb():
-    """Removes the ifb module from kernel"""
-    subprocess.run(shlex.split(f"modprobe -r ifb"))
-    log.debug("Removed ifb module from kernel")
-    global ifb_is_initialized
-    ifb_is_initialized = False
+    def _init_ifb_device(self, ifb_id):
+        """
+                    Adds the ifb device with the specified id
+
+                    Parameters
+                    ----------
+                    ifb_id : int
+                        id of the ifb device to be added
+
+                    """
+        log.debug(f"Adding ifb{ifb_id}")
+        subprocess.run(shlex.split(f"{self.__CMD_IP} link set dev ifb{ifb_id} up"))
+
+    def _emulate_t_init(self):
+        """Emulate T_init phase where data communication is not possible"""
+        if self._t_init_active:
+            raise RuntimeError('T_init emulation already active.')
+        if self.t_init <= 0:
+            return
+        self._t_init_active = True
+        log.debug("T_init active")
+        self._update_incoming()
+        self._update_outgoing()
+        time.sleep(self.t_init/1000.0)
+        self._t_init_active = False
+        self._update_incoming()
+        self._update_outgoing()
+        log.debug("T_init done")
+
+    def cleanup_ifb(self):
+        """Removes the ifb module from kernel"""
+        subprocess.run(shlex.split(f"{self.__CMD_MODPROBE} -r ifb"))
+        log.debug("Removed ifb module from kernel")
+        global ifb_is_initialized
+        ifb_is_initialized = False
 
 
-def cleanup_actual_devices():
-    """Removes tc rules from all actual devices"""
-    for device in used_devices:
-        log.debug(f"Removing tc rules for device: {device}")
-        subprocess.run(shlex.split(f"tc qdisc del dev {device} root"))
-        subprocess.run(shlex.split(f"tc qdisc del dev {device} ingress"))
-        used_devices.remove(device)
+    def cleanup_actual_devices(self):
+        """Removes tc rules from all actual devices"""
+        for device in used_devices:
+            log.debug(f"Removing tc rules for device: {device}")
+            subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {device} root"))
+            subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {device} ingress"))
+            used_devices.remove(device)
 
 
-def cleanup():
-    """Removes ifb module and all tc rules for actual devices"""
-    cleanup_actual_devices()
-    cleanup_ifb()
-    log.info("Cleaned up all tc rules for actual devices and removed ifb module")
+    def cleanup(self):
+        """Removes ifb module and all tc rules for actual devices"""
+        self.cleanup_actual_devices()
+        self.cleanup_ifb()
+        log.info("Cleaned up all tc rules for actual devices and removed ifb module")
+
+    def reset_device(self):
+        """Resets all qdiscs and removes all virtual devices"""
+        log.debug(f"Reset device: {self.device}")
+        # delete possibly existing qdiscs but ignore errors - might simply not have qdiscs
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} root"), stderr=subprocess.PIPE)
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} ingress"), stderr=subprocess.PIPE)
+        self.cleanup_ifb()

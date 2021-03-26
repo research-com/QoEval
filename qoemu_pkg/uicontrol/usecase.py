@@ -20,10 +20,13 @@ class UseCaseState(Enum):
 
 
 class UseCase:
-    def __init__(self, device_to_use):
+    def __init__(self, device_to_use, serialno):
         # noinspection PyUnresolvedReferences
         log.basicConfig(level=log.DEBUG)
         self.device = device_to_use
+        self.serialno = serialno
+        if self.serialno == None:
+            raise RuntimeError("no serial")
         self.state = UseCaseState.CREATED
 
     def prepare(self):

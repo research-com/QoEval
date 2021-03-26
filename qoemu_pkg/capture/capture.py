@@ -133,7 +133,7 @@ class Capture:
         window.configure(stack_mode=Xlib.X.Above)
         self._display.sync()
 
-    def start_recording(self, output_filename, audio=True):
+    def start_recording(self, output_filename: str, duration: str=FFMPEG_REC_TIME, audio: bool=True):
         if audio:
             # pulse:
             audio_param = f"-f pulse -thread_queue_size 4096 -i {AUDIO_DEVICE} -ac 2"
@@ -156,6 +156,7 @@ class Capture:
         window_pos = self.get_window_position(window)
         log.info(f'Found emulator window at {window_pos.x},{window_pos.y} dim {window_pos.width},{window_pos.height}')
         dest = os.path.join(video_capture_path, output_filename)
+        dest_tmp = os.path.join(video_capture_path, 'captured_raw')
         # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
         #           f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -c:v libxvid " \
         #           f"-preset ultrafast -y {dest}.avi"
@@ -167,16 +168,19 @@ class Capture:
         # lossless 2: -qscale 0 -vcodec huffyuv
         command = f"{FFMPEG} -thread_queue_size 1024 {audio_param} -thread_queue_size 1024 " + \
                   f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width-right_border}x{window_pos.height} " + \
-                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} "+ \
+                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {duration} "+ \
                   f"-acodec pcm_s16le -ar 44100 "+ \
-                  f"-qscale 0 -vcodec huffyuv -y {dest}.avi"
+                  f"-qscale 0 -vcodec huffyuv -y {dest_tmp}.avi"
 
         log.debug(f"cmd: {command}")
-        output = subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                                universal_newlines=True)
+        subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
+                                universal_newlines=True).check_returncode()
 
-        # TODO: check if we need re-encoding
-        # ffmpeg -i output_huffy.avi -c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 -preset slow output_recoded.avi
+        # re-encoding to compressed format (we do not delete the raw dest_tmp on purpose, so it can be compared later)
+        command = f"{FFMPEG} -i {dest_tmp}.avi -c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 -y {dest}.avi"
+        log.debug(f"re-encoding cmd: {command}")
+        subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
+                                universal_newlines=True).check_returncode()
 
 if __name__ == '__main__':
     # executed directly as a script

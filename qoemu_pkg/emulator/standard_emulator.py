@@ -2,8 +2,10 @@
 """
     Emulator control for the emulator which is part of the standard Android SDK
 """
+import ipaddress
+import time
 
-from qoemu_pkg.emulator.emulator import check_ext, Emulator, EmulatorOrientation
+from qoemu_pkg.emulator.emulator import check_ext, Emulator, EmulatorOrientation, ADB_NAME
 from qoemu_pkg.configuration import vd_path
 
 import logging as log
@@ -11,6 +13,7 @@ import configparser
 import os
 import subprocess
 import shlex
+import re
 
 # Define constants
 TARGET_NAME = "android-30"
@@ -185,7 +188,7 @@ class StandardEmulator(Emulator):
             self.config['skin.path.backup'] = '_no_skin'
         self.__write_avd_config()
 
-    def launch_emulator(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
+    def launch(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
         log.info("Launching emulator...")
         # delete_avd(self.avd_name)  # enable this line to reset upon each start
         if not self.is_vd_available(self.vd_name):
@@ -207,15 +210,27 @@ class StandardEmulator(Emulator):
             self.create_vd(playstore=playstore)
         if not self.is_acceleration_available():
             log.warning("Accelerated emulation is NOT available, emulation will be too slow.")
-        output = subprocess.run(shlex.split(
+        output = subprocess.Popen(shlex.split(
             f"{EMU_NAME} -avd {self.vd_name} -accel auto -gpu host "),
             stdout=subprocess.PIPE,
             universal_newlines=True)
+        while output.poll() is None and self.get_ip_address() is None:
+            log.debug("Emulator does not yet have a valid IP address - waiting...")
+            time.sleep(5)
+        log.debug("Emulator has been launched.")
+
+    def shutdown(self):
+        log.debug("Emulator shutdown.")
+        subprocess.run(shlex.split(f"{ADB_NAME} emu kill"))
 
 
 if __name__ == '__main__':
     # executed directly as a script
     print("Emulator control")
     emu = StandardEmulator()
-    emu.delete_vd()
-    emu.launch_emulator(orientation=EmulatorOrientation.LANDSCAPE, playstore=False)
+    # emu.delete_vd()
+    emu.launch(orientation=EmulatorOrientation.LANDSCAPE, playstore=False)
+    ipaddr = emu.get_ip_address()
+    print(f"Emulator IP address: {ipaddr}")
+    time.sleep(20)
+    emu.shutdown()

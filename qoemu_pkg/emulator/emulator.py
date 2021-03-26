@@ -6,8 +6,13 @@
 
 import logging as log
 import subprocess
+import ipaddress
+import shlex
+import re
 from enum import Enum
 
+ADB_NAME = "adb -e"   #-e selects emulator, -d usb-connected device, -s serialnr
+MEASUREMENT_TEST_HOST = "www.youtube.de"
 
 def check_ext(name):
     log.debug(f"locating {name}")
@@ -28,6 +33,7 @@ class EmulatorType(Enum):
     NONE = 'none'
     SDK_EMULATOR = 'emulator'
     GENYMOTION = 'genymotion'
+    REAL_DEVICE = 'realdevice'
 
 class Emulator:
 
@@ -141,7 +147,43 @@ class Emulator:
     def set_orientation(self, orientation: EmulatorOrientation):
         pass
 
-    def launch_emulator(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
+    def get_ip_address(self) -> ipaddress:
+        output = subprocess.run(shlex.split(
+            f"{ADB_NAME} shell ifconfig wlan0"),
+            stdout=subprocess.PIPE,
+            universal_newlines=True)
+        # log.debug(output.stdout)
+        pattern = r"\s*inet addr:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*"
+        matcher = re.compile(pattern)
+        match = (matcher.search(output.stdout))
+        if match:
+            ip_addr_text = match.group(1)
+            log.debug(f"emulator ip address: {ip_addr_text}")
+            ip_address = ipaddress.ip_address(ip_addr_text)
+        else:
+            ip_address = None
+            log.debug("Cannot determine ip addess of emulator.")
+
+        return ip_address
+
+    def measure_rtt(self) -> float:
+        log.error(f"Measuring delay bias (target host: {MEASUREMENT_TEST_HOST})...")
+        output = subprocess.run(shlex.split(
+            f"{ADB_NAME} shell ping -c 5 {MEASUREMENT_TEST_HOST}"),
+            stdout=subprocess.PIPE,
+            universal_newlines=True)
+        pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})\sms"
+        matcher = re.compile(pattern)
+        match = (matcher.search(output.stdout))
+        if match:
+            avg_delay = match.group(2)
+            log.debug(f"measured delay bias avg: {avg_delay}ms  min: {match.group(1)}ms   max: {match.group(3)}ms")
+        else:
+            log.error(output)
+            raise RuntimeError("Measuring delay bias failed.")
+        return float(avg_delay)
+
+    def launch(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
         """
         Launche the emulator
 
@@ -151,3 +193,8 @@ class Emulator:
         """
         log.error("Launching emulator is not implemented for the Emulator base class")
 
+    def shutdown(self):
+        """
+        Shutdown the emulator
+        """
+        log.error("Shutting down the emulator is not implemented for the Emulator base class")
