@@ -61,12 +61,18 @@ class Coordinator:
         params = get_parameters(type_id, table_id, entry_id)
         log.debug(f"Preparing with parameters: {params}")
         self.output_filename = self._get_video_id(type_id, table_id, entry_id)
+
         # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided if use-case requires play services
         self.emulator.launch(orientation=EmulatorOrientation.LANDSCAPE)
         # [t_init, rul, rdl, dul, ddl]
+        delay_bias_ul_dl = self.emulator.measure_rtt() / 2    # can only measure RTT, assume 50%/50% ul vs. dl
+        if delay_bias_ul_dl > params['dul'] or delay_bias_ul_dl > params['ddl']:
+            raise RuntimeError(f"Delay bias of {delay_bias_ul_dl}ms exceeds delay parameter! Cannot emulate.")
 
-        self.netem = Connection("coord1", NET_DEVICE_NAME, t_init=params['t_init'], rul=params['rul'],
-                                rdl=params['rdl'], dul=params['dul'], ddl=params['ddl'],
+        self.netem = Connection("coord1", NET_DEVICE_NAME, t_init=params['t_init'],
+                                rul=params['rul'], rdl=params['rdl'],
+                                dul=(params['dul']-delay_bias_ul_dl),
+                                ddl=(params['ddl']-delay_bias_ul_dl),
                                 exclude_ports=[22, 5000, 5002])  # exclude ports used for nomachine/ssh remote control
         # android_ip=self.emulator.get_ip_address())
         # set and execute a Youtube use case
@@ -114,11 +120,15 @@ if __name__ == '__main__':
     # print(get_link('VS', 'A', '1'))
     # print(get_start('VS', 'A', '1'))
     # print(get_end('VS', 'A', '1'))
-    coordinator = Coordinator()
-    coordinator.prepare('VS', 'A', '1')
-    wait_countdown(5)
-    coordinator.execute()
-    wait_countdown(20)
-    coordinator.finish()
+    ids_to_evaluate = get_entry_ids('VS', 'A')
+    # for id in ids_to_evaluate:
+    for id in ['1','2']:
+        coordinator = Coordinator()
+        coordinator.prepare('VS', 'A', id)
+        wait_countdown(5)
+        coordinator.execute()
+        wait_countdown(10)
+        coordinator.finish()
+        wait_countdown(5)
 
     print("Done.")
