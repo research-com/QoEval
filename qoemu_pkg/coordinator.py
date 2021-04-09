@@ -18,7 +18,7 @@ import time
 import sys
 
 NET_DEVICE_NAME = "enp0s31f6"             # TODO: get from config file
-ADB_DEVICE_SERIAL ="192.168.56.144:5555"  # TODO: get from config file / auto-detect
+ADB_DEVICE_SERIAL ="192.168.56.146:5555"  # TODO: get from config file / auto-detect
 COORDINATOR_RELEASE = "0.1"
 
 
@@ -29,6 +29,11 @@ def wait_countdown(time_in_sec: int):
         sys.stdout.flush()
     sys.stdout.write("\r                                              \n")
 
+
+def convert_to_seconds(time_str: str)->float:
+    ts = time.strptime(time_str, "%H:%M:%S")
+    s = ts.tm_hour * 3600 + ts.tm_min * 60 + ts.tm_sec
+    return s
 
 class Coordinator:
     def __init__(self):
@@ -79,18 +84,27 @@ class Coordinator:
         # Tagesschau Intro:
         # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/5lEd5D2J27Y?t=8")
         # Beethoven
-        self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=get_link(type_id, table_id, entry_id))
+
+        # append ?t=[start time in seconds] to link and create use-case
+        s = convert_to_seconds(get_start(type_id, table_id, entry_id))
+        url = f"{get_link(type_id, table_id, entry_id)}"
+        if "?" in url:
+            url = f"{url}&t={s}"
+        else:
+            url = f"{url}?t={s}"
+        self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url)
         self.ui_control.prepare_use_case()
         self._is_prepared = True
 
-    def execute(self):
+    def execute(self, capture_time:str='00:00:30'):
         if not self._is_prepared:
             log.error("Cannot execute campaign - not prepared.")
             return
 
         # execute concurrently in separate threads
-        ui_control_thread = threading.Thread(target=self.ui_control.execute_use_case, args=())
-        capture_thread = threading.Thread(target=self.capture.start_recording, args=(self.output_filename, '00:00:20'))
+        uc_duration = convert_to_seconds(capture_time) + 2  # add 2s safety margin
+        ui_control_thread = threading.Thread(target=self.ui_control.execute_use_case, args=(uc_duration,))
+        capture_thread = threading.Thread(target=self.capture.start_recording, args=(self.output_filename, capture_time))
         self.netem.enable_netem()
         ui_control_thread.start()
         capture_thread.start()
@@ -115,18 +129,19 @@ if __name__ == '__main__':
     load_parameter_file('../stimuli-params/full.csv')
     print(get_type_ids())
     print(get_table_ids('VS'))
-    print(get_entry_ids('VS', 'A'))
+    print(get_entry_ids('VS', 'B'))
 
-    # print(get_link('VS', 'A', '1'))
-    # print(get_start('VS', 'A', '1'))
-    # print(get_end('VS', 'A', '1'))
-    ids_to_evaluate = get_entry_ids('VS', 'A')
+#    print(get_link('VS', 'A', '1'))
+#    print(get_start('VS', 'A', '1'))
+#    print(get_end('VS', 'A', '1'))
+
+    ids_to_evaluate = get_entry_ids('VS', 'B')
     # for id in ids_to_evaluate:
-    for id in ['1','2']:
+    for id in ['1','6']: #,'2']:
         coordinator = Coordinator()
-        coordinator.prepare('VS', 'A', id)
+        coordinator.prepare('VS', 'B', id)
         wait_countdown(5)
-        coordinator.execute()
+        coordinator.execute('00:02:00')
         wait_countdown(10)
         coordinator.finish()
         wait_countdown(5)

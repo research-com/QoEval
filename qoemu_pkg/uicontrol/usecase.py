@@ -1,3 +1,4 @@
+import time
 from enum import Enum
 import logging as log
 # noinspection PyUnresolvedReferences
@@ -9,6 +10,7 @@ class UseCaseType(Enum):
     YOUTUBE = "_Youtube"
     WEB_BROWSING = "_WebBrowsing"
     APP_LAUNCH = "_AppLaunch"
+    UI_TRACING = "_UiTracing"    # a special use-case for tracing user-interface elements
 
 
 class UseCaseState(Enum):
@@ -27,13 +29,14 @@ class UseCase:
         self.serialno = serialno
         if self.serialno == None:
             raise RuntimeError("no serial")
+        self.time_end = None
         self.state = UseCaseState.CREATED
 
     def prepare(self):
         pass
 
-    def execute(self,duration: int):
-        pass
+    def execute(self,duration: float):
+        self.time_end = time.time() + duration
 
     def shutdown(self):
         pass

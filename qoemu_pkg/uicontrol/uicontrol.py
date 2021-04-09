@@ -55,10 +55,10 @@ class UiControl:
             raise RuntimeError('Cannot prepare use case - must be set first.')
         self._current_use_case.prepare()
 
-    def execute_use_case(self):
+    def execute_use_case(self, duration: float):
         if not self._current_use_case:
             raise RuntimeError('Cannot execute use case - not prepared.')
-        self._current_use_case.execute(30)
+        self._current_use_case.execute(duration)
 
     def shutdown_use_case(self):
         if not self._current_use_case:
@@ -70,7 +70,7 @@ class UiControl:
 if __name__ == '__main__':
     # executed directly as a script
     print("QoE User Interface control")
-    ui_control = UiControl()
+    ui_control = UiControl("192.168.56.146:5555")
 
     # set and execute a Youtube use case
     # Tagesschau Intro:
@@ -78,21 +78,29 @@ if __name__ == '__main__':
     # Beethoven
     ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/TpWpqs864y0?t=3819")
     ui_control.prepare_use_case()
-    ui_control.execute_use_case()
-    time.sleep(60)
+    ui_control.execute_use_case(30)
     ui_control.shutdown_use_case()
 
     # set and execute a launch app use-case (see applaunch.py)
     # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="de.spiegel.android.app.spon",
     #                        activity=".activities.SplashScreenActivity")
     # ui_control.prepare_use_case()
-    # ui_control.execute_use_case()
+    # ui_control.execute_use_case(60)
     # time.sleep(5)
     # ui_control.shutdown_use_case()
 
     # open a webbpage
     # ui_control.set_use_case(UseCaseType.WEB_BROWSING, url="https://news.google.de")
     # ui_control.prepare_use_case()
-    # ui_control.execute_use_case()
+    # ui_control.execute_use_case(60)
     # time.sleep(20)
     # ui_control.shutdown_use_case()
+
+    # ui_control.set_use_case(UseCaseType.UI_TRACING,
+    #                         elements=["com.google.android.youtube:id/watch_player",
+    #                                  "com.google.android.youtube:id/player_control_play_pause_replay_button",
+    #                                  "com.google.android.youtube:id/player_overflow_button",
+    #                                  "com.google.android.youtube:id/list_item_text_secondary"])
+    #ui_control.prepare_use_case()
+    #ui_control.execute_use_case(600)
+    #ui_control.shutdown_use_case()
