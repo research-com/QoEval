@@ -198,6 +198,11 @@ def get_link(type_id, table_id, entry_id):
                 if line.startswith(f"{type_id}-{table_id}"):
                     return link
 
+            if line.startswith("Stimulus-ID"):
+                # new table - previously detected link is invalid
+                link = None
+                link_found = False
+
             if line.startswith("Resolution"):
                 link = line.split(";")[1]
                 link_found = True
