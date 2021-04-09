@@ -1,5 +1,7 @@
 """Module for parsing .csv stimuli-parameter files"""
 
+# TODO: Refactor to reduce redundant code when detecting url, start, end
+
 from collections import namedtuple
 import os
 from parse import *
@@ -261,6 +263,11 @@ def get_start(type_id, table_id, entry_id):
             if line.startswith(f"{type_id}-{table_id}"):
                 return start
 
+        if line.startswith("Stimulus-ID"):
+            # new table - previously detected start is invalid
+            start = None
+            start_found = False
+
         if line.startswith("Excerpt"):
             if "appr." in line:
                 search_string_start = "appr. {} ("
@@ -313,6 +320,11 @@ def get_end(type_id, table_id, entry_id):
                 return end
             if line.startswith(f"{type_id}"):
                 end_found = False
+
+        if line.startswith("Stimulus-ID"):
+            # new table - previously detected end is invalid
+            start = None
+            start_found = False
 
         if line.startswith("Excerpt"):
             if "h:min" in line:
