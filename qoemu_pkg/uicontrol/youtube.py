@@ -2,6 +2,7 @@ import com.dtmilano.android.viewclient
 
 import logging as log
 import time
+from com.dtmilano.android.adb import adbclient
 from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
 
 # Links
@@ -13,7 +14,14 @@ _ID_PLAYER = "com.google.android.youtube:id/watch_player"
 _ID_PAUSE = "com.google.android.youtube:id/player_control_play_pause_replay_button"
 _ID_FULLSCREEN = "com.google.android.youtube:id/fullscreen_button"
 _ID_NO_FULLSCREEN_INDICATOR = "com.google.android.youtube:id/channel_navigation_container"
+_ID_AUTONAV = "com.google.android.youtube:id/autonav_toggle_button"
+_ID_OVERFLOW = "com.google.android.youtube:id/player_overflow_button"
+_ID_RESOLUTION = "com.google.android.youtube:id/list_item_text_secondary"
 
+_SHOW_RESOLUTION_TIMESPAN = 15
+
+
+# TODO: redundant code - refactor
 
 def _touch_player_window(vc):
     # find and touch Youtube player window
@@ -21,7 +29,7 @@ def _touch_player_window(vc):
     player_view = vc.findViewById(_ID_PLAYER)
     if player_view:
         log.debug(f"View {_ID_PLAYER} found!")
-        log.debug(player_view.__tinyStr__())
+        # log.debug(player_view.__tinyStr__())
         player_view.touch()
     else:
         log.error(f"View {_ID_PLAYER} NOT found!")
@@ -34,7 +42,8 @@ def _touch_pause_button(vc):
     play_pause_view = vc.findViewById(_ID_PAUSE)
     if play_pause_view:
         log.debug(f"play_pause_view {_ID_PAUSE} found!")
-        log.debug(play_pause_view.__tinyStr__())
+        # log.debug(play_pause_view.__tinyStr__())
+        # log.debug(f"Pause Center {play_pause_view.getCenter()}")
         play_pause_view.touch()
     else:
         log.error(f"play_pause_view {_ID_PAUSE} NOT found!")
@@ -44,22 +53,40 @@ def _touch_fullscreen_button(vc):
     full_screen_view = vc.findViewById(_ID_FULLSCREEN)
     if full_screen_view:
         log.debug("fullscreen_button found!")
-        log.debug(full_screen_view.__tinyStr__())
+        # log.debug(full_screen_view.__tinyStr__())
         _touch_player_window(vc)  # TODO: check if correct
         full_screen_view.touch()
     else:
         log.error("fullscreen_button NOT found!")
 
 
+def _touch_overflow_button(vc):
+    vc.dump(window=-1, sleep=0)
+    # overflow_view = vc.findViewById(_ID_OVERFLOW)
+    # workaround: overflow is out of vision on emulator(?) - position is reported as 0,0
+    #             therefore, we locate the AUTONAV button and touch with an appropriate offset
+    autonav_view = vc.findViewById(_ID_AUTONAV)
+    if autonav_view:
+        log.debug(f"AUTONAV Position and Size: {autonav_view.getPositionAndSize()}")
+        delta_x = autonav_view.getPositionAndSize()[3]
+        log.debug(f"delta_x to touch overflow button based on AUTONAV position is {delta_x} pixels")
+        autonav_view.touch(adbclient.DOWN_AND_UP, delta_x)
+    else:
+        log.error("overflow_view NOT found!")
+
+
 class _Youtube(UseCase):
     def __init__(self, device, serialno, **kwargs):
         super().__init__(device, serialno)
         self.url = kwargs.get("url")
+        self.show_resolution = True
+        self._vc = None
 
     def prepare(self):
         """
         Prepare the device for youtube playback
         """
+        log.debug(f"prepare: Youtube use-case for device with serialno: {self.serialno}")
         if self.state != UseCaseState.CREATED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.CREATED')
 
@@ -69,31 +96,31 @@ class _Youtube(UseCase):
         # device.shell(f"am broadcast -a {intent_name}")
         # start some arbitrary video so we can switch to fullscreen mode while playing
         self.device.shell(f"am start -a android.intent.action.VIEW \"{YOUTUBE_URL_PREPARE}\"")
-
-        vc = com.dtmilano.android.viewclient.ViewClient(
+        time.sleep(1)
+        self._vc = com.dtmilano.android.viewclient.ViewClient(
             *com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit(serialno=self.serialno))
         # ViewClient.sleep(3)
         # vc.traverse()
 
-        no_fullscreen_view = vc.findViewById(_ID_NO_FULLSCREEN_INDICATOR)
+        no_fullscreen_view = self._vc.findViewById(_ID_NO_FULLSCREEN_INDICATOR)
         if no_fullscreen_view:
             log.debug("currently not in fullscreen mode - switching to fullscreen")
-            _touch_player_window(vc)
-            _touch_pause_button(vc)
+            _touch_player_window(self._vc)
+            _touch_pause_button(self._vc)
 
             com.dtmilano.android.viewclient.ViewClient.sleep(3)
 
-            _touch_fullscreen_button(vc)
+            _touch_fullscreen_button(self._vc)
 
             log.debug("Waiting...")
             com.dtmilano.android.viewclient.ViewClient.sleep(3)
 
         # pausing youtube app
-        _touch_player_window(vc)
-        _touch_pause_button(vc)
+        _touch_player_window(self._vc)
+        _touch_pause_button(self._vc)
 
         # set to medium volume (note: there seems to be no way to set a specific absolute value)
-        set_audio=False
+        set_audio = False
         if (set_audio):
             log.info("Setting audio volume")
             for x in range(15):
@@ -106,7 +133,7 @@ class _Youtube(UseCase):
 
         self.state = UseCaseState.PREPARED
 
-    def execute(self, duration: int):
+    def execute(self, duration: float):
         if self.state != UseCaseState.PREPARED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.PREPARED')
 
@@ -116,7 +143,19 @@ class _Youtube(UseCase):
         log.info(f"Starting target youtube video: {self.url}")
 
         self.device.shell(f"am start -a android.intent.action.VIEW \"{self.url}\"")
-        time.sleep(duration)
+
+        if self.show_resolution:
+            time.sleep(duration - _SHOW_RESOLUTION_TIMESPAN)
+            log.debug("Showing overflow")
+            # pausing youtube app
+            _touch_player_window(self._vc)
+            _touch_pause_button(self._vc)
+            time.sleep(1)
+            # self._vc.traverse()
+            _touch_overflow_button(self._vc)
+            time.sleep(_SHOW_RESOLUTION_TIMESPAN)
+        else:
+            time.sleep(duration)
         self.state = UseCaseState.EXECUTED
 
     def shutdown(self):

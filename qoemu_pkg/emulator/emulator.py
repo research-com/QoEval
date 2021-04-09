@@ -179,7 +179,7 @@ class Emulator:
             avg_delay = match.group(2)
             log.debug(f"measured delay bias avg: {avg_delay}ms  min: {match.group(1)}ms   max: {match.group(3)}ms")
         else:
-            log.error(output)
+            log.error(output.stdout)
             raise RuntimeError("Measuring delay bias failed.")
         return float(avg_delay)
 

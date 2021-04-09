@@ -177,7 +177,7 @@ if __name__ == '__main__':
     # executed directly as a script
     print("Emulator control")
     emu = GenymotionEmulator()
-    emu.delete_vd()
+    # emu.delete_vd()
     emu.launch(orientation=EmulatorOrientation.LANDSCAPE, playstore=False)
     print (f"Started emulator with IP address: {emu.get_ip_address()}")
     time.sleep(20)

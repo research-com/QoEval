@@ -24,7 +24,7 @@ class _WebBrowsing(UseCase):
 
         self.state = UseCaseState.PREPARED
 
-    def execute(self, duration: int):
+    def execute(self, duration: float):
         if self.state != UseCaseState.PREPARED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.PREPARED')
 
