@@ -303,7 +303,6 @@ class Plot:
         self._create_bar_plot()
         self._arrange_xticks()
         self._label_axes()
-        self._set_size()
 
     def _parse_data(self):
         """
