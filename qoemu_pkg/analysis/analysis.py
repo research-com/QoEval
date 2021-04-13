@@ -5,6 +5,25 @@ Analysis module, using pyshark and matplotlib
 This module can sniff and collect traffic data on two interfaces (one for outgoing and one for incoming traffic)
 and plot it.
 
+Example usage:
+
+Counting packets/bytes on "ifb0" (outgoing) and "ifb1" (incoming) for 10s with a resolution interval of 20ms
+with a BPF to filter packets from/to the ip address 8.8.8.8
+
+    coll = analysis.DataCollector("ifb0", "ifb1", 10, 20, bpf_filter="host 8.8.8.8")
+    coll.init()
+    coll.start()
+
+Showing a live plot of incoming packet count during the collection of the data:
+
+    live_plt = analysis.LivePlot(coll, "p", "in")
+    live_plt.show()
+
+Plotting data from .csv file, second 2 to 5, packet count in/out, saving it as pdf with a resolution of 1600*600 pixels
+
+    plt = analysis.Plot(coll.filename, 2, 5, "p")
+    plt.save_pdf(1600, 600)
+
 """
 import logging as log
 import subprocess
@@ -245,7 +264,7 @@ class Plot:
                  start: int,
                  end: int,
                  packets_bytes: str,
-                 direction: str,
+                 direction: str = "in/out",
                  tick_interval: int = 10,
                  label_frequency: int = 10,
                  resolution_mult: int = 1,
@@ -258,7 +277,7 @@ class Plot:
         :param start: time in seconds from which point on the data should be plotted
         :param end: time in seconds to which point the data should be plotted
         :param packets_bytes: "p" or "b" to plot packets or bytes respectively
-        :param direction: "in", "out" or ""(both) to plot incoming, outgoing or both
+        :param direction: "in", "out" or any other string to plot incoming, outgoing or both
         :param tick_interval: Interval in ms between x ticks
         :param label_frequency: Frequency of labelled x ticks (i.e. every n-th tick will be labeled)
         :param resolution_mult: multiplier by which the plot will decrease the resolution of the data
