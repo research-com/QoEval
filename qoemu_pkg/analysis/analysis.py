@@ -104,8 +104,8 @@ class DataCollector:
         self.start_time = None
         self.is_initialized = False
         self.has_started = False
-        self.counter_1 = Counter()
-        self.counter_2 = Counter()
+        self.counter_out = Counter()
+        self.counter_in = Counter()
         self.data = {
             "time": [],
             "p_out": [],
@@ -159,29 +159,29 @@ class DataCollector:
         """
         resets all packet and byte counts in the Counter objects to 0
         """
-        self.counter_1.packets = 0
-        self.counter_1.packets_out = 0
-        self.counter_1.packets_in = 0
-        self.counter_1.bytes = 0
-        self.counter_1.bytes_out = 0
-        self.counter_1.bytes_in = 0
+        self.counter_out.packets = 0
+        self.counter_out.packets_out = 0
+        self.counter_out.packets_in = 0
+        self.counter_out.bytes = 0
+        self.counter_out.bytes_out = 0
+        self.counter_out.bytes_in = 0
         if self.interface_in is not None:
-            self.counter_2.packets = 0
-            self.counter_2.packets_out = 0
-            self.counter_2.packets_in = 0
-            self.counter_2.bytes = 0
-            self.counter_2.bytes_out = 0
-            self.counter_2.bytes_in = 0
+            self.counter_in.packets = 0
+            self.counter_in.packets_out = 0
+            self.counter_in.packets_in = 0
+            self.counter_in.bytes = 0
+            self.counter_in.bytes_out = 0
+            self.counter_in.bytes_in = 0
 
     def _write_to_data(self):
         """
         appends the current relevant packet and byte counts to the data object
         """
         self.data["time"].append(time.time() - self.start_time)
-        self.data["p_out"].append(self.counter_1.packets_out)
-        self.data["b_out"].append(self.counter_1.bytes_out)
-        self.data["p_in"].append(self.counter_2.packets_in)
-        self.data["b_in"].append(self.counter_2.bytes_in)
+        self.data["p_out"].append(self.counter_out.packets_out)
+        self.data["b_out"].append(self.counter_out.bytes_out)
+        self.data["p_in"].append(self.counter_in.packets_in)
+        self.data["b_in"].append(self.counter_in.bytes_in)
 
     # writes data to file every period
     def _write_thread(self):
@@ -206,30 +206,30 @@ class DataCollector:
 
         return
 
-    def init(self):
+    def activate_capture(self):
         """
         Starts threads counting packets/bytes. Sleeps for 1 seconds afterwards to ensure they are active.
         """
         # create daemons
-        count_thread_1 = threading.Thread(target=self._count_thread,
-                                          args=([self.interface_out, self.counter_1]))
-        count_thread_1.setDaemon(True)
-        count_thread_1.start()
+        count_thread_out = threading.Thread(target=self._count_thread,
+                                            args=([self.interface_out, self.counter_out]))
+        count_thread_out.setDaemon(True)
+        count_thread_out.start()
 
-        count_thread_2 = threading.Thread(target=self._count_thread,
-                                          args=([self.interface_in, self.counter_2]))
-        count_thread_2.setDaemon(True)
-        count_thread_2.start()
+        count_thread_in = threading.Thread(target=self._count_thread,
+                                           args=([self.interface_in, self.counter_in]))
+        count_thread_in.setDaemon(True)
+        count_thread_in.start()
 
         time.sleep(1)
         self.is_initialized = True
 
     def start(self):
         """
-        Starts collection of data
+        Starts collection of data. "activate_capture" needs to be called first.
         """
         if not self.is_initialized:
-            log.error("LiveCapture not yet initialized.")
+            log.error("Packet capture not yet activated.")
 
         write_thread = threading.Thread(target=self._write_thread, args=())
         write_thread.setDaemon(True)
@@ -238,7 +238,7 @@ class DataCollector:
 
 
 class Plot:
-    """Creates and saves plots based on existing data files."""
+    """Offers methods to create a plots based on existing .csv data files."""
 
     def __init__(self,
                  filename: str,
@@ -252,7 +252,7 @@ class Plot:
                  x_size=1400,
                  y_size=600):
         """
-        Creating this object will create a plot with the given parameters, show it and save it to disk.
+        Creating this object will create a plot with the given parameters
 
         :param filename: Name of the file containing the data
         :param start: time in seconds from which point on the data should be plotted
@@ -262,8 +262,8 @@ class Plot:
         :param tick_interval: Interval in ms between x ticks
         :param label_frequency: Frequency of labelled x ticks (i.e. every n-th tick will be labeled)
         :param resolution_mult: multiplier by which the plot will decrease the resolution of the data
-        :param x_size: x size of plot in pixels
-        :param y_size: y size of plot in pixels
+        :param x_size: the default x size of plot in pixels
+        :param y_size: the default y size of plot in pixels
         """
         self.filename = filename
         self.start = start
@@ -276,15 +276,27 @@ class Plot:
         self.x_size = x_size
         self.y_size = y_size
 
-        self.x = []
-        self.y = []
+        self.x_values = []
+        self.y_values = []
+        self.fig = plt.figure()
 
-        self.temp_y_sum = 0
+        self._parse_data()
+        self._create_bar_plot()
+        self._arrange_xticks()
+        self._label_axes()
+        self._set_size()
+
+    def _parse_data(self):
+        """
+        Reads .csv file and saves relevant data to self.x_values and self.y_values
+        """
 
         df = pd.read_csv(self.filename)
 
         df = df[df["time"] >= self.start]
         df = df[df["time"] <= self.end]
+
+        t_sum = 0  # used when summing up multiple rows of data
 
         for index, row in df.iterrows():
 
@@ -304,19 +316,35 @@ class Plot:
                     t = row["b_in"] + row["b_out"]
 
             if (index + 1) % self.resolution_mult == 0:
-                self.x.append(row["time"])
-                self.temp_y_sum += t  # change here for other data
-                self.y.append(self.temp_y_sum)
-                self.temp_y_sum = 0
+                self.x_values.append(row["time"])
+                t_sum += t
+                self.y_values.append(t_sum)
+                t_sum = 0
 
             else:
-                self.temp_y_sum += t  # change here for other data
+                t_sum += t
 
-        self.bar_collection = plt.bar(self.x, self.y, align='edge',
-                                      width=self.tick_interval / 1000 * 0.5 * self.resolution_mult)
+    def _create_bar_plot(self):
+        """ Creates a bar plot with the parsed x and y values"""
+        axes = self.fig.gca()
 
-        # label axis:
-        plt.xlabel("Time in seconds")
+        axes.bar(self.x_values, self.y_values, align='edge',
+                 width=self.tick_interval / 1000 * 0.5 * self.resolution_mult)
+
+    def _arrange_xticks(self):
+        """ Arranges the x-ticks of the plot"""
+        axes = self.fig.gca()
+        axes.set_xticks(np.arange(self.start, self.end + self.tick_interval / 1000,
+                                  float(self.tick_interval / 1000)))
+
+        axes.xaxis.set_major_locator(plt.MultipleLocator(self.tick_interval * self.label_frequency / 1000))
+        axes.xaxis.set_minor_locator(plt.MultipleLocator(self.tick_interval / 1000))
+        axes.tick_params(which='major', length=5, labelsize="large")
+        axes.tick_params(which='minor', length=2)
+
+    def _label_axes(self):
+        """ Labels the axes of the plot"""
+        self.fig.gca().set_xlabel("Time in seconds")
         if self.packets_bytes == "p":
             s1 = "Packets "
         else:
@@ -327,26 +355,32 @@ class Plot:
             s2 = "out"
         else:
             s2 = "in/out"
-        plt.ylabel(f"{s1}{s2}")
+        self.fig.gca().set_ylabel(f"{s1}{s2}")
 
-        # xticks configuration:
-        plt.xticks(np.arange(self.start, self.end + self.tick_interval / 1000,
-                             float(self.tick_interval / 1000)))
-        ax = plt.gca()
-        ax.xaxis.set_major_locator(plt.MultipleLocator(self.tick_interval * self.label_frequency / 1000))
-        ax.xaxis.set_minor_locator(plt.MultipleLocator(self.tick_interval / 1000))
-        ax.tick_params(which='major', length=5, labelsize="large")
-        ax.tick_params(which='minor', length=2)
+    def _set_size(self, x, y):
+        """Sets the size of the plot"""
+        dpi = self.fig.get_dpi()
+        self.fig.set_size_inches(x / float(dpi), y / float(dpi))
 
-        # save plot as pdf and png:
-        g = plt.gcf()
-        dpi = g.get_dpi()
-        g.set_size_inches(self.x_size / float(dpi), self.y_size / float(dpi))
-        plt.savefig(f'{self.filename}.pdf')
-        plt.savefig(f'{self.filename}.png')
+    def save_pdf(self, x_size=None, y_size=None):
+        """Saves the plot as a pdf file in the given resolution or the default resolution"""
+        if x_size is None:
+            x_size = self.x_size
+        if y_size is None:
+            y_size = self.y_size
+        self._set_size(x_size, y_size)
 
-        # show plot:
-        # plt.show()
+        self.fig.savefig(f'{self.filename}.pdf')
+
+    def save_png(self, x_size=None, y_size=None):
+        """Saves the plot as a png file in the given resolution or the default resolution"""
+        if x_size is None:
+            x_size = self.x_size
+        if y_size is None:
+            y_size = self.y_size
+        self._set_size(x_size, y_size)
+
+        self.fig.savefig(f'{self.filename}.png')
 
 
 class LivePlot:
