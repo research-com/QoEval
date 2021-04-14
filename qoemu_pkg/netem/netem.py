@@ -29,7 +29,7 @@ class Connection:
             The name of the connection
         device : str
             The name of the actual device that the connection uses
-        virtual_device : str
+        virtual_device_in : str
             The name of the virutal device that the connection uses
         t_init : float
             the initial delay in ms of the connection
@@ -58,7 +58,8 @@ class Connection:
         global used_devices
         self.device = device_name
         self.name = name
-        self.virtual_device = None
+        self.virtual_device_in = None
+        self.virtual_device_out = None
         self.t_init = t_init
         self._t_init_active = False
         self.rul = rul
@@ -116,26 +117,32 @@ class Connection:
             self._init()
 
     def _get_ifb(self):
-        """Tries to set up a virtual device for this connection
+        """Tries to set up virtual devices for this connection
 
             Returns
             -------
             bool
-                Returns True if ifb device could be created False otherwise"""
+                Returns True if ifb devices could be created False otherwise"""
         global ifb_is_initialized
         if not ifb_is_initialized:
-            self._init_ifb(MAX_CONNECTIONS)
+            self._init_ifb(MAX_CONNECTIONS * 2)
 
         log.debug(f"Setting up virtual device for connection: '{self.name}'")
         output = subprocess.run(['ifconfig'], stdout=subprocess.PIPE,
                                 universal_newlines=True)
-        for i in range(MAX_CONNECTIONS):
+        for i in range(MAX_CONNECTIONS * 2):
             if f"ifb{i}" not in output.stdout:
-                self.virtual_device = f"ifb{i}"
-                log.debug(f"Initializing a new ifb device: ifb{i}")
-                self._init_ifb_device(i)
+                if self.virtual_device_in is None:
+                    self.virtual_device_in = f"ifb{i}"
+                    log.debug(f"Initializing a new ifb device: ifb{i}")
+                    self._init_ifb_device(i)
+                    continue
+                if self.virtual_device_out is None:
+                    self.virtual_device_out = f"ifb{i}"
+                    log.debug(f"Initializing a new ifb device: ifb{i}")
+                    self._init_ifb_device(i)
                 return True
-        log.error("No virtual device available. Could not initialize connection")
+        log.error("Not enough virtual devices available. Could not initialize connection")
         return False
 
     def _redirect_incoming(self):
@@ -166,8 +173,8 @@ class Connection:
                 remaining_prio = remaining_prio + 1
 
         output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} parent ffff: "
-                                   f"protocol all priority {remaining_prio} u32 {filter_match} flowid 1:1 "
-                                   f"action mirred egress redirect dev {self.virtual_device}"))
+                                            f"protocol all priority {remaining_prio} u32 {filter_match} flowid 1:1 "
+                                            f"action mirred egress redirect dev {self.virtual_device_in}"))
         output.check_returncode()
 
     def _redirect_outgoing(self):
@@ -212,7 +219,7 @@ class Connection:
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} parent 1:1 handle 10: prio")).check_returncode()
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} parent 1:2 handle 20: netem")).check_returncode()
 
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.virtual_device} root netem")).check_returncode()
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.virtual_device_in} root netem")).check_returncode()
 
     def _init(self):
         """Initiates the connection, so that it can be used"""
@@ -247,16 +254,16 @@ class Connection:
         log.debug(f"Changing ingress netem qdisc for connection: '{self.name}'")
         if not self._t_init_active:
             subprocess.run(shlex.split(
-                f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
+                f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} "
                 f"root netem rate {self.rdl}kbit delay {self.ddl}ms loss 0%")).check_returncode()
         else:
             # Variant 1: emulate T_init by packet loss during T_init
             # subprocess.run(shlex.split(
-            #     f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
+            #     f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} "
             #     f"root netem loss 100%")).check_returncode()
             # Variant 2: emulate T_init by delaying packets (should be more realistic since T_init emulates connection setup)
             subprocess.run(shlex.split(
-                f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
+                f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} "
                 f"root netem rate {self.rdl}kbit delay {self.t_init}ms loss 0%")).check_returncode()
 
     def change_parameters(self, t_init:float=None, rul:float=None, rdl:float=None, dul:float=None, ddl:float=None):
@@ -293,7 +300,7 @@ class Connection:
     def enable_netem(self):
         """(Re)enables the netem qdiscs for this connection"""
 
-        if self.device is None or self.virtual_device is None:
+        if self.device is None or self.virtual_device_in is None:
             log.error(f"Cannot enable netem for connection: '{self.name}': It is missing a device")
             return
 
@@ -312,14 +319,14 @@ class Connection:
     def disable_netem(self):
         """Disables the netem qdiscs for this connection."""
 
-        if self.device is None or self.virtual_device is None:
+        if self.device is None or self.virtual_device_in is None:
             log.error(f"Cannot disable netem for connection: '{self.name}': It is missing a device")
             return
 
         log.debug(f"Disabling netem for connection: '{self.name}'")
         params = "rate 1000Gbit loss 0.0% delay 0ms duplicate 0% reorder 0% 0%"
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} parent 1:2 netem {params}")).check_returncode()
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.virtual_device} root netem {params}")).check_returncode()
+        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} root netem {params}")).check_returncode()
 
     def cleanup(self):
         """Removes all tc rules and virtual devices for this connection"""
@@ -332,10 +339,9 @@ class Connection:
         log.debug(f"Removing tc rules for device: {self.device}")
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} root"))
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} ingress"))
-        log.debug(f"Removing virtual device: {self.virtual_device}")
-        subprocess.run(shlex.split(f"{self.__CMD_IP} link set dev {self.virtual_device} down"))
+        log.debug(f"Removing virtual device: {self.virtual_device_in}")
+        subprocess.run(shlex.split(f"{self.__CMD_IP} link set dev {self.virtual_device_in} down"))
         used_devices.remove(self.device)
-
 
     def _init_ifb(self, numifbs):
         """
@@ -351,7 +357,6 @@ class Connection:
         subprocess.run(shlex.split(f"{self.__CMD_MODPROBE} ifb numifbs={numifbs}"))
         global ifb_is_initialized
         ifb_is_initialized = True
-
 
     def _init_ifb_device(self, ifb_id):
         """
@@ -389,7 +394,6 @@ class Connection:
         global ifb_is_initialized
         ifb_is_initialized = False
 
-
     def cleanup_actual_devices(self):
         """Removes tc rules from all actual devices"""
         for device in used_devices:
@@ -397,7 +401,6 @@ class Connection:
             subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {device} root"))
             subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {device} ingress"))
             used_devices.remove(device)
-
 
     def cleanup(self):
         """Removes ifb module and all tc rules for actual devices"""
