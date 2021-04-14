@@ -141,7 +141,7 @@ class Connection:
     def _redirect_incoming(self):
         """Sets up the tc rules to redirect incoming traffic to the virtual device"""
         log.debug(f"Initializing incoming tc redirection rules for connection: '{self.name}'")
-        output = subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} ingress handle fffff:"))
+        output = subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} ingress handle ffff:"))
         output.check_returncode()
 
         if self.android_ip:
