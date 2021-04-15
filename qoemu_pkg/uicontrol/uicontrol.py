@@ -70,7 +70,8 @@ class UiControl:
 if __name__ == '__main__':
     # executed directly as a script
     print("QoE User Interface control")
-    ui_control = UiControl("192.168.56.146:5555")
+    # ui_control = UiControl("192.168.56.146:5555")
+    ui_control = UiControl("11131FDD4003EW")
 
     # set and execute a Youtube use case
     # Tagesschau Intro:

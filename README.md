@@ -1,5 +1,14 @@
 # QoEmu V0.1
 
+## Hardware Device Control
+For controlling a real Android phone:
+* The phone must be connected to the qoemu host by an USB connection (used for
+  UI control and screen capturing)
+* USB debugging mode must be enabled on the phone
+* The qoemu host must be configured to act as a wireless hotspot for the phone.
+* For audio capturing, the phone must be connected via line-out or Bluetooth
+  to the qoemu host
+
 ## Device Emulation
 
 ### Genymotion Desktop
@@ -7,13 +16,7 @@ For device emulation, the Genymotion (see https://www.genymotion.com/desktop/) i
 developer of within a company, personal use is free of charge.
 
 The emulator has better performance and audio capabilities than the standard
-emulator. Furthermore, it allows to run the emulated device in bridge mode,
-so that it gets an individual IP address - which is required for limiting 
-network emulation to a specific device.
-
-**Notes:**
-* Since QoEmu creates a virtual device in bridge mode, a local DHCP server
-is required which assigns a valid IP address to the emulator.
+emulator. 
 
 ### Standard Emulator (included in Android SKD)
 As a fallback solution, the standard [Android emulation that is included

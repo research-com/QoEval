@@ -15,10 +15,10 @@ from qoemu_pkg.configuration import video_capture_path
 # Define constants
 FFMPEG = "ffmpeg"
 FFMPEG_FORMAT = "x11grab"
-FFMPEG_RATE = "30"  # rate in FPS
-FFMPEG_REC_TIME = "00:00:30"
+CAPTURE_FPS = "30"  # rate in FPS
+CAPTURE_DEFAULT_REC_TIME = "00:00:30"
 # AUDIO_DEVICE config: use "pacmd list-sources" to get a list of sources
-AUDIO_DEVICE = "alsa_output.pci-0000_00_1f.3.analog-stereo.monitor"
+AUDIO_DEVICE_EMU = "alsa_output.pci-0000_00_1f.3.analog-stereo.monitor"
 # AUDIO_DEVICE = "nx_audio_in.monitor"
 # AUDIO_DEVICE = "default"
 DISPLAY = "1"
@@ -133,10 +133,10 @@ class Capture:
         window.configure(stack_mode=Xlib.X.Above)
         self._display.sync()
 
-    def start_recording(self, output_filename: str, duration: str=FFMPEG_REC_TIME, audio: bool=True):
+    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
         if audio:
             # pulse:
-            audio_param = f"-f pulse -thread_queue_size 4096 -i {AUDIO_DEVICE} -ac 2"
+            audio_param = f"-f pulse -thread_queue_size 4096 -i {AUDIO_DEVICE_EMU} -ac 2"
             # alsa
             # audio_param = f"-f alsa -i hw:0 -ac 2"
         else:
@@ -167,9 +167,9 @@ class Capture:
 
         # lossless 2: -qscale 0 -vcodec huffyuv
         command = f"{FFMPEG} -thread_queue_size 1024 {audio_param} -thread_queue_size 1024 " + \
-                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width-right_border}x{window_pos.height} " + \
-                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {duration} "+ \
-                  f"-acodec pcm_s16le -ar 44100 "+ \
+                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {CAPTURE_FPS} -s {window_pos.width - right_border}x{window_pos.height} " + \
+                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {duration} " + \
+                  f"-acodec pcm_s16le -ar 44100 " + \
                   f"-qscale 0 -vcodec huffyuv -y {dest_tmp}.avi"
 
         log.debug(f"cmd: {command}")

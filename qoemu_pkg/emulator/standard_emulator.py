@@ -5,7 +5,7 @@
 import ipaddress
 import time
 
-from qoemu_pkg.emulator.emulator import check_ext, Emulator, EmulatorOrientation, ADB_NAME
+from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME
 from qoemu_pkg.configuration import vd_path
 
 import logging as log
@@ -33,7 +33,7 @@ def is_avd_config_readable() -> bool:
         return False
 
 
-class StandardEmulator(Emulator):
+class StandardEmulator(MobileDevice):
     def __init__(self):
         super().__init__()
         self.vd_name = VD_NAME
@@ -68,7 +68,7 @@ class StandardEmulator(Emulator):
         check_ext(SDK_MANAGER_NAME)
         self.envOk = True
 
-    def is_vd_available(self, name):
+    def is_device_available(self, name):
         log.debug(f"checking if AVD {name} is available")
         output = subprocess.run(shlex.split(f"{VD_MANAGER_NAME} list avd"), stdout=subprocess.PIPE,
                                 universal_newlines=True)
@@ -91,7 +91,7 @@ class StandardEmulator(Emulator):
                                 stdout=subprocess.PIPE,
                                 universal_newlines=True)
 
-    def is_device_available(self, name):
+    def is_device_ready(self, name):
         log.debug(f"checking if device {name} is available")
         output = subprocess.run(shlex.split(f"{VD_MANAGER_NAME} list device"), stdout=subprocess.PIPE,
                                 universal_newlines=True)
@@ -102,7 +102,7 @@ class StandardEmulator(Emulator):
                                 universal_newlines=True)
         return output.stdout.find("is installed and usable.") != -1
 
-    def create_vd(self, playstore=False):
+    def create_device(self, playstore=False):
         log.debug(f"Creating AVD {self.vd_name}")
         # check that the required target and device are available
         if not self.is_template_available(TARGET_NAME):
@@ -124,7 +124,7 @@ class StandardEmulator(Emulator):
         output.check_returncode()
         self.set_standard_parameters()
 
-    def delete_vd(self):
+    def delete_device(self):
         log.debug(f"Deleting AVD {self.vd_name}")
         output = subprocess.run(shlex.split(
             f"{VD_MANAGER_NAME} delete avd --name {self.vd_name}"),
@@ -166,11 +166,11 @@ class StandardEmulator(Emulator):
         if not self.config:
             self.__read_avd_config()
         if self.config.get('hw.initialOrientation', 'portrait') == 'landscape':
-            return EmulatorOrientation.LANDSCAPE
+            return MobileDeviceOrientation.LANDSCAPE
         else:
-            return EmulatorOrientation.PORTRAIT
+            return MobileDeviceOrientation.PORTRAIT
 
-    def set_orientation(self, orientation: EmulatorOrientation):
+    def set_orientation(self, orientation: MobileDeviceOrientation):
         if not self.config:
             self.__read_avd_config()
         self.config['hw.initialOrientation'] = orientation.value
@@ -188,15 +188,15 @@ class StandardEmulator(Emulator):
             self.config['skin.path.backup'] = '_no_skin'
         self.__write_avd_config()
 
-    def launch(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
+    def launch(self, orientation=MobileDeviceOrientation.PORTRAIT, playstore=False):
         log.info("Launching emulator...")
         # delete_avd(self.avd_name)  # enable this line to reset upon each start
-        if not self.is_vd_available(self.vd_name):
-            self.create_vd(playstore=playstore)
+        if not self.is_device_available(self.vd_name):
+            self.create_device(playstore=playstore)
         if not is_avd_config_readable():
             log.warning("AVD configuration is not readable - trying to reset AVD")
-            self.delete_vd()
-            self.create_vd(playstore=playstore)
+            self.delete_device()
+            self.create_device(playstore=playstore)
             if not is_avd_config_readable():
                 raise RuntimeError('AVD configuration unreadable and reset failed.')
         if self.get_orientation() != orientation:
@@ -206,8 +206,8 @@ class StandardEmulator(Emulator):
             log.debug(f"Modifying playstore setting - new setting is \"{playstore}\"")
             self.set_playstore_enabled(playstore)
             # this requires a re-creation of the avd since we need different packages
-            self.delete_vd()
-            self.create_vd(playstore=playstore)
+            self.delete_device()
+            self.create_device(playstore=playstore)
         if not self.is_acceleration_available():
             log.warning("Accelerated emulation is NOT available, emulation will be too slow.")
         output = subprocess.Popen(shlex.split(
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     print("Emulator control")
     emu = StandardEmulator()
     # emu.delete_vd()
-    emu.launch(orientation=EmulatorOrientation.LANDSCAPE, playstore=False)
+    emu.launch(orientation=MobileDeviceOrientation.LANDSCAPE, playstore=False)
     ipaddr = emu.get_ip_address()
     print(f"Emulator IP address: {ipaddr}")
     time.sleep(20)

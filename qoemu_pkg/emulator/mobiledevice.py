@@ -11,7 +11,7 @@ import shlex
 import re
 from enum import Enum
 
-ADB_NAME = "adb -e"   #-e selects emulator, -d usb-connected device, -s serialnr
+ADB_NAME = "adb"   #-e selects emulator, -d usb-connected device, -s serialnr
 MEASUREMENT_TEST_HOST = "www.youtube.de"
 
 def check_ext(name):
@@ -25,17 +25,17 @@ def check_ext(name):
         log.debug(f"using {output.stdout}")
 
 
-class EmulatorOrientation(Enum):
+class MobileDeviceOrientation(Enum):
     PORTRAIT = 'portrait'
     LANDSCAPE = 'landscape'
 
-class EmulatorType(Enum):
+class MobileDeviceType(Enum):
     NONE = 'none'
     SDK_EMULATOR = 'emulator'
     GENYMOTION = 'genymotion'
     REAL_DEVICE = 'realdevice'
 
-class Emulator:
+class MobileDevice:
 
     def __init__(self):
         log.basicConfig(level=log.DEBUG)
@@ -48,9 +48,9 @@ class Emulator:
         """Checks if the environment is prepared to execute the emulator. Needs to be overriden by subclasses."""
         self.envOk = True
 
-    def is_vd_available(self, name: str) -> bool:
+    def is_device_available(self, name: str) -> bool:
         """
-        Checks if a virtual device is available.
+        Checks if a (virtual) device is available and could be started.
 
         Parameters
         ----------
@@ -81,9 +81,9 @@ class Emulator:
         """
         pass
 
-    def is_device_available(self, name: str) -> bool:
+    def is_device_ready(self, name: str) -> bool:
         """
-        Checks if a device is available.
+        Checks if a device is ready and accessible.
 
         Parameters
         ----------
@@ -98,9 +98,9 @@ class Emulator:
         """
         return False
 
-    def create_vd(self, playstore=False):
+    def create_device(self, playstore=False):
         """
-        Creates the virtual device.
+        Creates the (virtual) device.
 
         Parameters
         ----------
@@ -109,9 +109,9 @@ class Emulator:
         """
         pass
 
-    def delete_vd(self):
+    def delete_device(self):
         """
-        Deletes the virtual device.
+        Deletes the (virtual) device.
         """
         pass
 
@@ -138,13 +138,13 @@ class Emulator:
         """
         pass
 
-    def get_orientation(self) -> EmulatorOrientation:
+    def get_orientation(self) -> MobileDeviceOrientation:
         """
         Get currently active orientation of the device
         """
-        return EmulatorOrientation.PORTRAIT
+        return MobileDeviceOrientation.PORTRAIT
 
-    def set_orientation(self, orientation: EmulatorOrientation):
+    def set_orientation(self, orientation: MobileDeviceOrientation):
         pass
 
     def get_ip_address(self) -> ipaddress:
@@ -158,16 +158,16 @@ class Emulator:
         match = (matcher.search(output.stdout))
         if match:
             ip_addr_text = match.group(1)
-            log.debug(f"emulator ip address: {ip_addr_text}")
+            log.debug(f"mobile device ip address: {ip_addr_text}")
             ip_address = ipaddress.ip_address(ip_addr_text)
         else:
             ip_address = None
-            log.debug("Cannot determine ip addess of emulator.")
+            log.debug("Cannot determine ip addess of mobile device.")
 
         return ip_address
 
     def measure_rtt(self) -> float:
-        log.error(f"Measuring delay bias (target host: {MEASUREMENT_TEST_HOST})...")
+        log.debug(f"Measuring delay bias (target host: {MEASUREMENT_TEST_HOST})...")
         output = subprocess.run(shlex.split(
             f"{ADB_NAME} shell ping -c 5 {MEASUREMENT_TEST_HOST}"),
             stdout=subprocess.PIPE,
@@ -183,9 +183,9 @@ class Emulator:
             raise RuntimeError("Measuring delay bias failed.")
         return float(avg_delay)
 
-    def launch(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
+    def launch(self, orientation=MobileDeviceOrientation.PORTRAIT, playstore=False):
         """
-        Launche the emulator
+        Launch the device
 
         :param orientation: Orientation to be used
         :param playstore: should the playstore be enabled?
@@ -195,6 +195,6 @@ class Emulator:
 
     def shutdown(self):
         """
-        Shutdown the emulator
+        Shutdown the device
         """
         log.error("Shutting down the emulator is not implemented for the Emulator base class")

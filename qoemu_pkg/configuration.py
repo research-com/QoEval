@@ -10,7 +10,7 @@ import pathlib
 import configparser
 
 # default file name of configuration file and mandatory section name
-from qoemu_pkg.emulator.emulator import EmulatorType
+from qoemu_pkg.emulator.mobiledevice import MobileDeviceType
 
 QOEMU_CONF = 'qoemu.conf'
 QOEMU_SECTION = 'QOEMU'
@@ -37,4 +37,4 @@ qoemu_conf = config[f'{QOEMU_SECTION}']
 vd_path = qoemu_conf.get('AVDPath', _default_avd_path)
 video_capture_path = qoemu_conf.get('VideoCapturePath', _default_video_capture_path)
 show_device_frame = qoemu_conf.get('ShowDeviceFrame', False)
-emulator_type = EmulatorType[qoemu_conf.get('EmulatorType', 'none')]
+emulator_type = MobileDeviceType[qoemu_conf.get('EmulatorType', 'none')]

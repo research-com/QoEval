@@ -4,7 +4,7 @@
 """
 from qoemu_pkg.capture.capture import Capture
 from qoemu_pkg.configuration import emulator_type
-from qoemu_pkg.emulator.emulator import EmulatorType, EmulatorOrientation
+from qoemu_pkg.emulator.mobiledevice import MobileDeviceType, MobileDeviceOrientation
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
 from qoemu_pkg.emulator.standard_emulator import StandardEmulator
 from qoemu_pkg.netem.netem import Connection
@@ -40,9 +40,9 @@ class Coordinator:
         log.basicConfig(level=log.DEBUG)
         self.capture = Capture()
         self.ui_control = UiControl(ADB_DEVICE_SERIAL)
-        if emulator_type == EmulatorType.GENYMOTION:
+        if emulator_type == MobileDeviceType.GENYMOTION:
             self.emulator = GenymotionEmulator()
-        if emulator_type == EmulatorType.SDK_EMULATOR:
+        if emulator_type == MobileDeviceType.SDK_EMULATOR:
             self.emulator = StandardEmulator()
         self._is_prepared = False
         self.netem = None
@@ -50,11 +50,11 @@ class Coordinator:
 
     def _get_video_id(self, type_id: str, table_id: str, entry_id: str) -> str:
         emulator_id = "E1-"
-        if emulator_type == EmulatorType.SDK_EMULATOR:
+        if emulator_type == MobileDeviceType.SDK_EMULATOR:
             emulator_id += "S"
-        if emulator_type == EmulatorType.GENYMOTION:
+        if emulator_type == MobileDeviceType.GENYMOTION:
             emulator_id += "G"
-        if emulator_type == EmulatorType.REAL_DEVICE:
+        if emulator_type == MobileDeviceType.REAL_DEVICE:
             emulator_id += "R"
 
         emulator_id += f"-{COORDINATOR_RELEASE}"
@@ -68,7 +68,7 @@ class Coordinator:
         self.output_filename = self._get_video_id(type_id, table_id, entry_id)
 
         # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided if use-case requires play services
-        self.emulator.launch(orientation=EmulatorOrientation.LANDSCAPE)
+        self.emulator.launch(orientation=MobileDeviceOrientation.LANDSCAPE)
         # [t_init, rul, rdl, dul, ddl]
         delay_bias_ul_dl = self.emulator.measure_rtt() / 2    # can only measure RTT, assume 50%/50% ul vs. dl
         if delay_bias_ul_dl > params['dul'] or delay_bias_ul_dl > params['ddl']:
