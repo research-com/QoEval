@@ -147,6 +147,13 @@ class MobileDevice:
     def set_orientation(self, orientation: MobileDeviceOrientation):
         pass
 
+    def input_keyevent(self, keyevent: int):
+        subprocess.run(shlex.split(f"{ADB_NAME} shell input keyevent {keyevent}")).check_returncode()
+
+    def unlock_device(self):
+        self.input_keyevent(82)   # menu
+        self.input_keyevent(4)    # back
+
     def get_ip_address(self) -> ipaddress:
         output = subprocess.run(shlex.split(
             f"{ADB_NAME} shell ifconfig wlan0"),

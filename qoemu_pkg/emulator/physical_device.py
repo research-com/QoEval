@@ -16,13 +16,15 @@ import shlex
 import re
 
 SCREENCOPY_NAME = "scrcpy"
+SCREENCOPY_OPTIONS ="--stay-awake"
 ADB_NAME = "adb"
 
 
 class PhysicalDevice(MobileDevice):
-    def __init__(self):
+    def __init__(self, mirror: bool=True):
         super().__init__()
         self.__scrcpy_output = None
+        self.__mirror = mirror
 
     def check_env(self):
         log.info("checking availability of mobile device mirroring tool...")
@@ -104,12 +106,20 @@ class PhysicalDevice(MobileDevice):
         if self.is_playstore_enabled() != playstore:
             log.debug(f"Modifying playstore setting - new setting is \"{playstore}\"")
             self.set_playstore_enabled(playstore)
-        log.debug("Establishing mobile device mirroring...")
-        self.__scrcpy_output = subprocess.Popen(shlex.split(
-            f"{SCREENCOPY_NAME}"),
-            stdout=subprocess.PIPE,
-            universal_newlines=True)
-        time.sleep(1)
+        if self.__mirror:
+            log.debug("Establishing mobile device mirroring...")
+            self.__scrcpy_output = subprocess.Popen(shlex.split(
+                f"{SCREENCOPY_NAME} {SCREENCOPY_OPTIONS}"),
+                stdout=subprocess.PIPE,
+                universal_newlines=True)
+            for i in range(0, 5):
+                if self.__scrcpy_output.poll() != None and self.__scrcpy_output.poll() != 0:
+                    raise RuntimeError(f"Error while launching mobile device screen copy.")
+                time.sleep(1)
+                log.debug("Waiting for mobile device mirror connection...")
+
+        self.unlock_device()
+        self.input_keyevent(3)  # send HOME key so that we are in a defined state
         log.debug("Physical device connection has been launched.")
 
     def shutdown(self):
