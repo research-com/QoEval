@@ -4,7 +4,7 @@
 """
 import time
 
-from qoemu_pkg.emulator.emulator import check_ext, Emulator, EmulatorOrientation, ADB_NAME
+from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME
 from qoemu_pkg.configuration import vd_path
 
 import logging as log
@@ -21,11 +21,11 @@ DEVICE_NAME = "pixel"
 VD_NAME = "qoemu_" + DEVICE_NAME + "_" + "_Genymotion" + "_x86"
 STANDARD_OPTIONS="--virtualkeyboard=on --nbcpu=6 --ram=4096 --network-mode=nat"
 
-class GenymotionEmulator(Emulator):
+class GenymotionEmulator(MobileDevice):
     def __init__(self):
         super().__init__()
         self.vd_name = VD_NAME
-        self.__orientation = EmulatorOrientation.PORTRAIT
+        self.__orientation = MobileDeviceOrientation.PORTRAIT
 
     def __print_available_templates(self):
         output = subprocess.run(shlex.split(
@@ -39,7 +39,7 @@ class GenymotionEmulator(Emulator):
         check_ext(VD_MANAGER_NAME)
         self.envOk = True
 
-    def delete_vd(self):
+    def delete_device(self):
         log.debug(f"Deleting VD {self.vd_name}")
         subprocess.run(shlex.split(
             f"{VD_MANAGER_NAME} admin stop {self.vd_name}"),
@@ -50,13 +50,13 @@ class GenymotionEmulator(Emulator):
             stdout=subprocess.PIPE,
             universal_newlines=True)
 
-    def is_vd_available(self, name):
+    def is_device_available(self, name):
         log.debug(f"checking if virtual device {name} is available")
         output = subprocess.run(shlex.split(f"{VD_MANAGER_NAME} admin list"), stdout=subprocess.PIPE,
                                 universal_newlines=True)
         return output.stdout.find(name) != -1
 
-    def is_device_available(self, name):
+    def is_device_ready(self, name):
         log.debug(f"checking if device {name} is available")
         output = subprocess.run(shlex.split(f"{VD_MANAGER_NAME} admin list --running"), stdout=subprocess.PIPE,
                                 universal_newlines=True)
@@ -77,7 +77,7 @@ class GenymotionEmulator(Emulator):
             universal_newlines=True)
         output.check_returncode()
 
-    def create_vd(self, playstore=False):
+    def create_device(self, playstore=False):
         log.debug(f"Creating VD {self.vd_name}")
         # check that the required target and device are available
         if not self.is_template_available(TEMPLATE_UUID):
@@ -93,12 +93,12 @@ class GenymotionEmulator(Emulator):
     def get_orientation(self):
         return self.__orientation
 
-    def set_orientation(self, orientation: EmulatorOrientation):
+    def set_orientation(self, orientation: MobileDeviceOrientation):
         log.debug(f"setting orientation for {self.vd_name} ")
-        if orientation == EmulatorOrientation.PORTRAIT:
+        if orientation == MobileDeviceOrientation.PORTRAIT:
             rotation_angle = 0
         else:
-            if orientation == EmulatorOrientation.LANDSCAPE:
+            if orientation == MobileDeviceOrientation.LANDSCAPE:
                 rotation_angle = 90
         output = subprocess.run(shlex.split(
             f"{GM_SHELL} -c \"rotation setangle {rotation_angle}\""),
@@ -147,17 +147,17 @@ class GenymotionEmulator(Emulator):
 
         return ip_address
 
-    def launch(self, orientation=EmulatorOrientation.PORTRAIT, playstore=False):
+    def launch(self, orientation=MobileDeviceOrientation.PORTRAIT, playstore=False):
         log.info("Launching emulator...")
         # delete_avd(self.vd_name)  # enable this line to reset upon each start
-        if not self.is_vd_available(self.vd_name):
-            self.create_vd(playstore=playstore)
+        if not self.is_device_available(self.vd_name):
+            self.create_device(playstore=playstore)
         if self.is_playstore_enabled() != playstore:
             log.debug(f"Modifying playstore setting - new setting is \"{playstore}\"")
             self.set_playstore_enabled(playstore)
             # this requires a re-creation of the avd since we need different packages
-            self.delete_vd()
-            self.create_vd(playstore=playstore)
+            self.delete_device()
+            self.create_device(playstore=playstore)
         output = subprocess.run(shlex.split(
             f"{VD_MANAGER_NAME} admin start {self.vd_name}"),
             stdout=subprocess.PIPE,
@@ -178,7 +178,7 @@ if __name__ == '__main__':
     print("Emulator control")
     emu = GenymotionEmulator()
     # emu.delete_vd()
-    emu.launch(orientation=EmulatorOrientation.LANDSCAPE, playstore=False)
+    emu.launch(orientation=MobileDeviceOrientation.LANDSCAPE, playstore=False)
     print (f"Started emulator with IP address: {emu.get_ip_address()}")
     time.sleep(20)
     emu.shutdown()

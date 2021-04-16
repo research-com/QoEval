@@ -6,6 +6,7 @@
 import logging as log
 import os
 import subprocess
+import time
 import shlex
 import Xlib
 import Xlib.display
@@ -15,12 +16,11 @@ from qoemu_pkg.configuration import video_capture_path
 # Define constants
 FFMPEG = "ffmpeg"
 FFMPEG_FORMAT = "x11grab"
-FFMPEG_RATE = "30"  # rate in FPS
-FFMPEG_REC_TIME = "00:00:30"
+CAPTURE_FPS = "30"  # rate in FPS
+CAPTURE_DEFAULT_REC_TIME = "00:00:30"
 # AUDIO_DEVICE config: use "pacmd list-sources" to get a list of sources
-AUDIO_DEVICE = "alsa_output.pci-0000_00_1f.3.analog-stereo.monitor"
-# AUDIO_DEVICE = "nx_audio_in.monitor"
-# AUDIO_DEVICE = "default"
+AUDIO_DEVICE_EMU = "alsa_output.pci-0000_00_1f.3.analog-stereo.monitor" # TODO: should be configurable
+AUDIO_DEVICE_REAL = "hw:0"    # TODO: should be configurable via config file
 DISPLAY = "1"
 
 SDK_EMULATOR_WINDOW_TITLE = "Android Emulator"
@@ -58,11 +58,56 @@ def check_ffmpeg_features():
         log.error(f"ffmpeg does not support format {FFMPEG_FORMAT}")
         raise RuntimeError('Installed ffmpeg does not support a required format.')
 
-
 class Capture:
     def __init__(self):
         log.basicConfig(level=log.DEBUG)
         check_env()
+
+    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
+        raise RuntimeError(f"Method not implemented.");
+
+SCREENCOPY_NAME = "scrcpy"
+SCREENCOPY_OPTIONS ="--stay-awake -N --record"  # note: must end with option for file recording
+
+class CaptureRealDevice(Capture):
+    def __init__(self):
+        super().__init__()
+        check_ext(SCREENCOPY_NAME)
+
+    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
+        # start video recording from real device
+        ts = time.strptime(duration, "%H:%M:%S")
+        duration_in_secs = ts.tm_hour * 3600 + ts.tm_min * 60 + ts.tm_sec
+
+        dest_tmp = os.path.join(video_capture_path, 'captured_realdev')
+        dest = os.path.join(video_capture_path, output_filename)
+        scrcpy_output = subprocess.Popen(shlex.split(f"{SCREENCOPY_NAME} {SCREENCOPY_OPTIONS} {dest_tmp}.mp4"), stdout=subprocess.PIPE,
+                       universal_newlines=True)
+
+        if audio:
+            # start audio recording - will use ffmpeg for timing the recording
+            command = f"{FFMPEG} -f alsa -i {AUDIO_DEVICE_REAL} -t {duration} -y {dest_tmp}.wav"
+            log.debug(f"start audio recording cmd: {command}")
+            subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
+                           universal_newlines=True).check_returncode()
+        else:
+            # poll regularly if the process has terminated - until we have reached desired duration
+            runtime_capture = 0.0
+            while scrcpy_output.poll()==None and runtime_capture < duration_in_secs:
+                time.sleep(1)
+                runtime_capture+=1
+
+        scrcpy_output.terminate()
+
+        # re-encoding to compressed format (we do not delete the raw dest_tmp on purpose, so it can be compared later)
+        command = f"{FFMPEG} -i {dest_tmp}.mp4 -i {dest_tmp}.wav -map 0:v -map 1:a -c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 -shortest -y {dest}.avi"
+        log.debug(f"re-encoding cmd: {command}")
+        subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
+                                universal_newlines=True).check_returncode()
+
+class CaptureEmulator(Capture):
+    def __init__(self):
+        super().__init__()
         self._display = Xlib.display.Display()
         self._root = self._display.screen().root
 
@@ -101,7 +146,7 @@ class Capture:
             name = window.get_wm_name()  # Title
             prop = window.get_full_property(self._display.intern_atom('_NET_WM_PID'), Xlib.X.AnyPropertyType)
             pid = prop.value[0]  # PID
-            log.debug(f"Window ID: {pid} Title: {name}")
+            # log.debug(f"Window ID: {pid} Title: {name}")
             if name and not name.isspace() and name.find(title) != -1:
                 # found the window
                 return window
@@ -133,10 +178,10 @@ class Capture:
         window.configure(stack_mode=Xlib.X.Above)
         self._display.sync()
 
-    def start_recording(self, output_filename: str, duration: str=FFMPEG_REC_TIME, audio: bool=True):
+    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
         if audio:
             # pulse:
-            audio_param = f"-f pulse -thread_queue_size 4096 -i {AUDIO_DEVICE} -ac 2"
+            audio_param = f"-f pulse -thread_queue_size 4096 -i {AUDIO_DEVICE_EMU} -ac 2"
             # alsa
             # audio_param = f"-f alsa -i hw:0 -ac 2"
         else:
@@ -167,9 +212,9 @@ class Capture:
 
         # lossless 2: -qscale 0 -vcodec huffyuv
         command = f"{FFMPEG} -thread_queue_size 1024 {audio_param} -thread_queue_size 1024 " + \
-                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width-right_border}x{window_pos.height} " + \
-                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {duration} "+ \
-                  f"-acodec pcm_s16le -ar 44100 "+ \
+                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {CAPTURE_FPS} -s {window_pos.width - right_border}x{window_pos.height} " + \
+                  f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {duration} " + \
+                  f"-acodec pcm_s16le -ar 44100 " + \
                   f"-qscale 0 -vcodec huffyuv -y {dest_tmp}.avi"
 
         log.debug(f"cmd: {command}")
@@ -185,5 +230,6 @@ class Capture:
 if __name__ == '__main__':
     # executed directly as a script
     print("QoE screen capturing")
-    cap = Capture()
+    # cap = CaptureEmulator()
+    cap = CaptureRealDevice()
     cap.start_recording("output")

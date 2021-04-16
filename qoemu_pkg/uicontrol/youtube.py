@@ -6,10 +6,10 @@ from com.dtmilano.android.adb import adbclient
 from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
 
 # Links
-YOUTUBE_URL_PREPARE = "https://youtu.be/nLyC7U850Xs"  # Youtube video used in preparation process
+YOUTUBE_URL_PREPREPARE = "https://youtu.be/someinvalidurl"  # preprep url used for triggering the app
+YOUTUBE_URL_PREPARE = "https://www.youtube.com/watch?v=GRVwYbQPFQQ"  # Youtube video used in preparation process
 
 # View IDs
-
 _ID_PLAYER = "com.google.android.youtube:id/watch_player"
 _ID_PAUSE = "com.google.android.youtube:id/player_control_play_pause_replay_button"
 _ID_FULLSCREEN = "com.google.android.youtube:id/fullscreen_button"
@@ -21,43 +21,31 @@ _ID_RESOLUTION = "com.google.android.youtube:id/list_item_text_secondary"
 _SHOW_RESOLUTION_TIMESPAN = 15
 
 
-# TODO: redundant code - refactor
-
-def _touch_player_window(vc):
+def _touch_view_by_id(vc, id: str):
     # find and touch Youtube player window
+    vc.dump(window=-1, sleep=0)
+    player_view = vc.findViewById(id)
+    if player_view:
+        log.debug(f"View {id} found!")
+        # log.debug(player_view.__tinyStr__())
+        player_view.touch()
+    else:
+        log.error(f"View {id} NOT found!")
+
+
+def _pause_player(vc):
+    # pause a playing youtube video
     vc.dump(window=-1, sleep=0)
     player_view = vc.findViewById(_ID_PLAYER)
     if player_view:
         log.debug(f"View {_ID_PLAYER} found!")
-        # log.debug(player_view.__tinyStr__())
+        center = player_view.getCenter()
         player_view.touch()
+        time.sleep(0.5)
+        vc.touch(center[0], center[1])
     else:
         log.error(f"View {_ID_PLAYER} NOT found!")
     return player_view
-
-
-def _touch_pause_button(vc):
-    # press pause button
-    vc.dump(window=-1, sleep=0)
-    play_pause_view = vc.findViewById(_ID_PAUSE)
-    if play_pause_view:
-        log.debug(f"play_pause_view {_ID_PAUSE} found!")
-        # log.debug(play_pause_view.__tinyStr__())
-        # log.debug(f"Pause Center {play_pause_view.getCenter()}")
-        play_pause_view.touch()
-    else:
-        log.error(f"play_pause_view {_ID_PAUSE} NOT found!")
-
-
-def _touch_fullscreen_button(vc):
-    full_screen_view = vc.findViewById(_ID_FULLSCREEN)
-    if full_screen_view:
-        log.debug("fullscreen_button found!")
-        # log.debug(full_screen_view.__tinyStr__())
-        _touch_player_window(vc)  # TODO: check if correct
-        full_screen_view.touch()
-    else:
-        log.error("fullscreen_button NOT found!")
 
 
 def _touch_overflow_button(vc):
@@ -95,8 +83,11 @@ class _Youtube(UseCase):
 
         # device.shell(f"am broadcast -a {intent_name}")
         # start some arbitrary video so we can switch to fullscreen mode while playing
+        self.device.shell(f"am start -a android.intent.action.VIEW \"{YOUTUBE_URL_PREPREPARE}\"")
+        log.debug(f"Started intend with pre-prepare video url: \"{YOUTUBE_URL_PREPREPARE}\"")
+        time.sleep(10)
         self.device.shell(f"am start -a android.intent.action.VIEW \"{YOUTUBE_URL_PREPARE}\"")
-        time.sleep(1)
+        log.debug(f"Started intend with prep video url: \"{YOUTUBE_URL_PREPARE}\"")
         self._vc = com.dtmilano.android.viewclient.ViewClient(
             *com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit(serialno=self.serialno))
         # ViewClient.sleep(3)
@@ -105,28 +96,21 @@ class _Youtube(UseCase):
         no_fullscreen_view = self._vc.findViewById(_ID_NO_FULLSCREEN_INDICATOR)
         if no_fullscreen_view:
             log.debug("currently not in fullscreen mode - switching to fullscreen")
-            _touch_player_window(self._vc)
-            _touch_pause_button(self._vc)
+            # _touch_player_window(self._vc)
+            # _touch_pause_button(self._vc)
+            _pause_player(self._vc)
 
             com.dtmilano.android.viewclient.ViewClient.sleep(3)
 
-            _touch_fullscreen_button(self._vc)
+            _touch_view_by_id(self._vc, _ID_FULLSCREEN)
 
             log.debug("Waiting...")
             com.dtmilano.android.viewclient.ViewClient.sleep(3)
 
-        # pausing youtube app
-        _touch_player_window(self._vc)
-        _touch_pause_button(self._vc)
+        _pause_player(self._vc)
 
-        # set to medium volume (note: there seems to be no way to set a specific absolute value)
-        set_audio = False
-        if (set_audio):
-            log.info("Setting audio volume")
-            for x in range(15):
-                self.device.press('KEYCODE_VOLUME_DOWN')
-            for x in range(9):
-                self.device.press('KEYCODE_VOLUME_UP')
+        # set media audio to medium volume
+        self.set_media_volume(22)
 
         log.info("Prepared to start target video...")
         com.dtmilano.android.viewclient.ViewClient.sleep(5)
@@ -148,8 +132,7 @@ class _Youtube(UseCase):
             time.sleep(duration - _SHOW_RESOLUTION_TIMESPAN)
             log.debug("Showing overflow")
             # pausing youtube app
-            _touch_player_window(self._vc)
-            _touch_pause_button(self._vc)
+            _pause_player(self._vc)
             time.sleep(1)
             # self._vc.traverse()
             _touch_overflow_button(self._vc)
