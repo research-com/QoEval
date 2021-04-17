@@ -233,9 +233,14 @@ class Connection:
                 shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
                             f"{parent_id} netem rate {self.rul}kbit delay {self.dul}ms loss 0%")).check_returncode()
         else:
+            # Variant 1: emulate T_init by packet loss during T_init
+            # subprocess.run(
+            #    shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
+            #                f"{parent_id} netem loss 100%")).check_returncode()
+            # Variant 2: emulate T_init by delaying packets (should be more realistic since T_init emulates connection setup)
             subprocess.run(
-                shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
-                            f"{parent_id} netem loss 100%")).check_returncode()
+               shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
+                           f"{parent_id} netem rate {self.rul}kbit delay {self.t_init}ms loss 0%")).check_returncode()
 
     def _update_incoming(self):
         """Updates the netem qdisc for incoming traffic for this connection"""
@@ -245,9 +250,14 @@ class Connection:
                 f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
                 f"root netem rate {self.rdl}kbit delay {self.ddl}ms loss 0%")).check_returncode()
         else:
+            # Variant 1: emulate T_init by packet loss during T_init
+            # subprocess.run(shlex.split(
+            #     f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
+            #     f"root netem loss 100%")).check_returncode()
+            # Variant 2: emulate T_init by delaying packets (should be more realistic since T_init emulates connection setup)
             subprocess.run(shlex.split(
                 f"{self.__CMD_TC} qdisc change dev {self.virtual_device} "
-                f"root netem loss 100%")).check_returncode()
+                f"root netem rate {self.rdl}kbit delay {self.t_init}ms loss 0%")).check_returncode()
 
     def change_parameters(self, t_init:float=None, rul:float=None, rdl:float=None, dul:float=None, ddl:float=None):
         """

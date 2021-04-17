@@ -14,6 +14,7 @@ _ID_PLAYER = "com.google.android.youtube:id/watch_player"
 _ID_PAUSE = "com.google.android.youtube:id/player_control_play_pause_replay_button"
 _ID_FULLSCREEN = "com.google.android.youtube:id/fullscreen_button"
 _ID_NO_FULLSCREEN_INDICATOR = "com.google.android.youtube:id/channel_navigation_container"
+_ID_LIVE_CHAT_OVERLAY = "com.google.android.youtube:id/live_chat_overlay_button"
 _ID_AUTONAV = "com.google.android.youtube:id/autonav_toggle_button"
 _ID_OVERFLOW = "com.google.android.youtube:id/player_overflow_button"
 _ID_RESOLUTION = "com.google.android.youtube:id/list_item_text_secondary"
@@ -26,7 +27,7 @@ def _touch_view_by_id(vc, id: str):
     vc.dump(window=-1, sleep=0)
     player_view = vc.findViewById(id)
     if player_view:
-        log.debug(f"View {id} found!")
+        # log.debug(f"View {id} found!")
         # log.debug(player_view.__tinyStr__())
         player_view.touch()
     else:
@@ -38,7 +39,7 @@ def _pause_player(vc):
     vc.dump(window=-1, sleep=0)
     player_view = vc.findViewById(_ID_PLAYER)
     if player_view:
-        log.debug(f"View {_ID_PLAYER} found!")
+        # log.debug(f"View {_ID_PLAYER} found!")
         center = player_view.getCenter()
         player_view.touch()
         time.sleep(0.5)
@@ -50,17 +51,32 @@ def _pause_player(vc):
 
 def _touch_overflow_button(vc):
     vc.dump(window=-1, sleep=0)
-    # overflow_view = vc.findViewById(_ID_OVERFLOW)
-    # workaround: overflow is out of vision on emulator(?) - position is reported as 0,0
-    #             therefore, we locate the AUTONAV button and touch with an appropriate offset
+    # vc.traverse()
+    overflow_view = vc.findViewById(_ID_OVERFLOW)
+    if overflow_view and overflow_view.getPositionAndSize()[0] > 0 and overflow_view.getPositionAndSize()[1] > 0:
+        # found a valid overflow element
+        overflow_view.touch()
+        return
+    # workaround: if overflow is out of vision on emulator(?) - position is reported as 0,0
+    # Thus, we need to detect a neighbouring button. Unfortunately, the youtube player ui
+    # is somewhat dynamic at this point, so we need to check what situation we are in:
+    # a) check if a chat-view button is there
+    live_chat_view = vc.findViewById(_ID_LIVE_CHAT_OVERLAY)
+    if live_chat_view:
+        delta_x = live_chat_view.getPositionAndSize()[3]
+        live_chat_view.touch(adbclient.DOWN_AND_UP, delta_x)
+        return
+    #  b) check for AUTONAV button and touch with an appropriate offset
     autonav_view = vc.findViewById(_ID_AUTONAV)
     if autonav_view:
         log.debug(f"AUTONAV Position and Size: {autonav_view.getPositionAndSize()}")
         delta_x = autonav_view.getPositionAndSize()[3]
-        log.debug(f"delta_x to touch overflow button based on AUTONAV position is {delta_x} pixels")
+        # log.debug(f"delta_x to touch overflow button based on AUTONAV position is {delta_x} pixels")
         autonav_view.touch(adbclient.DOWN_AND_UP, delta_x)
-    else:
-        log.error("overflow_view NOT found!")
+        return
+    # c) until now, we did not find any known neighbouring button - our last chance: touch by hard-coded position
+    log.warning("Could not determine position of overflow button dynamically, trying Pixel 5 position.")
+    vc.touch(2280,72)   # for google pixel 5 - other device might have the button at a different position
 
 
 class _Youtube(UseCase):

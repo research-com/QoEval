@@ -97,6 +97,8 @@ class Coordinator:
         # append ?t=[start time in seconds] to link and create use-case
         s = convert_to_seconds(get_start(type_id, table_id, entry_id))
         url = f"{get_link(type_id, table_id, entry_id)}"
+        if len(url) < 7:
+            raise RuntimeError(f"Invalid Url: {url}")
         if "?" in url:
             url = f"{url}&t={s}"
         else:
@@ -150,7 +152,7 @@ if __name__ == '__main__':
         coordinator = Coordinator()
         coordinator.prepare('VS', 'B', id)
         wait_countdown(5)
-        coordinator.execute('00:02:00')
+        coordinator.execute('00:00:30')
         wait_countdown(10)
         coordinator.finish()
         wait_countdown(5)

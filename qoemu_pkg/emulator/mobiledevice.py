@@ -175,8 +175,11 @@ class MobileDevice:
 
     def measure_rtt(self) -> float:
         log.debug(f"Measuring delay bias (target host: {MEASUREMENT_TEST_HOST})...")
+        # first ping is ignored (includes times for DNS etc.)
+        subprocess.run(shlex.split(f"{ADB_NAME} shell ping -c 6 {MEASUREMENT_TEST_HOST}"), stdout=subprocess.PIPE)
+        # now perform the actual measurement
         output = subprocess.run(shlex.split(
-            f"{ADB_NAME} shell ping -c 5 {MEASUREMENT_TEST_HOST}"),
+            f"{ADB_NAME} shell ping -c 20 -i 0.2 {MEASUREMENT_TEST_HOST}"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
         pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})\sms"
