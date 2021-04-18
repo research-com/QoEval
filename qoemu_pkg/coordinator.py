@@ -12,6 +12,7 @@ from qoemu_pkg.netem.netem import Connection
 from qoemu_pkg.uicontrol.uicontrol import UiControl
 from qoemu_pkg.uicontrol.usecase import UseCaseType
 from qoemu_pkg.parser.parser import *
+from qoemu_pkg.configuration import video_capture_path
 
 import logging as log
 import threading
@@ -22,6 +23,8 @@ NET_DEVICE_NAME = "enp0s31f6"             # TODO: get from config file
 # ADB_DEVICE_SERIAL ="192.168.56.146:5555"  # TODO: get from config file / auto-detect
 ADB_DEVICE_SERIAL ="11131FDD4003EW"   # Pixel 5 real hardware device
 COORDINATOR_RELEASE = "0.1"
+
+GEN_LOG_FILE = os.path.join(video_capture_path, 'qoemu.log')
 
 
 def wait_countdown(time_in_sec: int):
@@ -56,6 +59,7 @@ class Coordinator:
         self._is_prepared = False
         self.netem = None
         self.output_filename = None
+        self._gen_log = open(GEN_LOG_FILE, "a+")
 
     def _get_video_id(self, type_id: str, table_id: str, entry_id: str) -> str:
         emulator_id = "E1-"
@@ -75,12 +79,20 @@ class Coordinator:
         params = get_parameters(type_id, table_id, entry_id)
         log.debug(f"Preparing with parameters: {params}")
         self.output_filename = self._get_video_id(type_id, table_id, entry_id)
+        time_string = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
+        self._gen_log.write(f"{time_string} {self.output_filename} {params} ")
 
         # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided if use-case requires play services
         self.emulator.launch(orientation=MobileDeviceOrientation.LANDSCAPE)
         # [t_init, rul, rdl, dul, ddl]
-        delay_bias_ul_dl = self.emulator.measure_rtt() / 2    # can only measure RTT, assume 50%/50% ul vs. dl
+        try:
+            delay_bias_ul_dl = self.emulator.measure_rtt() / 2    # can only measure RTT, assume 50%/50% ul vs. dl
+        except RuntimeError as rte:
+            self._gen_log.write(f" measuring delay bias failed - canceled. ")
+            log.error(" measuring delay bias failed - check if you have Internet connectivity!")
+            raise rte
         if delay_bias_ul_dl > params['dul'] or delay_bias_ul_dl > params['ddl']:
+            self._gen_log.write(f" delay bias of {delay_bias_ul_dl}ms too high - canceled. ")
             raise RuntimeError(f"Delay bias of {delay_bias_ul_dl}ms exceeds delay parameter of {params['ddl']}ms! Cannot emulate.")
 
         self.netem = Connection("coord1", NET_DEVICE_NAME, t_init=params['t_init'],
@@ -104,7 +116,9 @@ class Coordinator:
         else:
             url = f"{url}?t={s}"
         self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url)
+        self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; video url: {url}; len: {s}s ")
         self.ui_control.prepare_use_case()
+        self._gen_log.flush()
         self._is_prepared = True
 
     def execute(self, capture_time:str='00:00:30'):
@@ -124,14 +138,23 @@ class Coordinator:
         self.netem.disable_netem()
 
     def finish(self):
+        if not self._is_prepared:
+            log.warning("finish called for a campaign which is not prepared")
+        if self._gen_log:
+            timestring = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
+            self._gen_log.write(f" finished at {timestring}\r\n")
+            self._gen_log.close()
+            self._gen_log = None
         if self.netem:
             self.netem.cleanup()
             self.netem = None
-        if not self._is_prepared:
-            log.error("Cannot finish campaign - not prepared.")
-            return
-        self.ui_control.shutdown_use_case()
-        self.emulator.shutdown()
+        if self.ui_control:
+            try:
+                self.ui_control.shutdown_use_case()
+            except RuntimeError as rte:
+                log.error(f"exception during ui shutdown: {rte}")
+        if self.emulator:
+            self.emulator.shutdown()
 
 
 if __name__ == '__main__':
@@ -147,14 +170,16 @@ if __name__ == '__main__':
 #    print(get_end('VS', 'A', '1'))
 
     ids_to_evaluate = get_entry_ids('VS', 'B')
-    # for id in ids_to_evaluate:
-    for id in ['1']:# ,'3','4','6']:
-        coordinator = Coordinator()
-        coordinator.prepare('VS', 'B', id)
-        wait_countdown(5)
-        coordinator.execute('00:00:30')
-        wait_countdown(10)
+
+    coordinator = Coordinator()
+    try:
+        # for id in ids_to_evaluate:
+        for id in ['1']:#['6','5','4','3','2','1']:
+            coordinator.prepare('VS', 'B', id)
+            wait_countdown(2)
+            coordinator.execute('00:00:30')
+            wait_countdown(5)
+    finally:
         coordinator.finish()
-        wait_countdown(5)
 
     print("Done.")
