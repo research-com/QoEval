@@ -171,15 +171,16 @@ if __name__ == '__main__':
 
     ids_to_evaluate = get_entry_ids('VS', 'B')
 
-    coordinator = Coordinator()
-    try:
-        # for id in ids_to_evaluate:
-        for id in ['1']:#['6','5','4','3','2','1']:
+    # for id in ids_to_evaluate:
+    for id in ['6','5','4','3','2','1']:
+        coordinator = Coordinator()
+        try:
             coordinator.prepare('VS', 'B', id)
             wait_countdown(2)
-            coordinator.execute('00:00:30')
+            coordinator.execute('00:03:00')
             wait_countdown(5)
-    finally:
-        coordinator.finish()
+        finally:
+            coordinator.finish()
+
 
     print("Done.")
