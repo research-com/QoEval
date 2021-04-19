@@ -15,8 +15,9 @@ VIDEO_REC="ffmpeg vlc-bin wmctrl x11-utils"
 REMOTE_ACCESS="openssh-server"
 JAVA="openjdk-8-jre"
 PYTHON="python3-venv python3-pip"
-VULKAN="nvidia-driver-460 nvidia-settings vulkan-utils vulkan-tools"
+# VULKAN="nvidia-driver-460 nvidia-settings vulkan-utils vulkan-tools"
 BROWSER="firefox"
+SCRCPY="ffmpeg libsdl2-2.0-0 adb wget gcc git pkg-config meson ninja-build libavcodec-dev libavformat-dev libavutil-dev libsdl2-dev"
 
 USER="qoe-user"
 set -o errexit # fail if any command fails
@@ -39,7 +40,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # add PPA for NVIDIA proprietary drivers
-add-apt-repository ppa:oibaf/graphics-drivers
+# add-apt-repository ppa:oibaf/graphics-drivers
 
 # update and upgrade packages
 $APT update
@@ -47,9 +48,10 @@ $APT upgrade
 
 # install all dependencies
 $APT install $SHELL
-$APT install $OS_TOOLS &&
+$APT install $OS_TOOLS
+$APT install $SCRCPY
 
-$APT install $VULKAN
+# $APT install $VULKAN
 
 $APT install $MONITORING
 usermod -a -G wireshark $USER
