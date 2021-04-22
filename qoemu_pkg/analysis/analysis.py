@@ -25,6 +25,7 @@ Plotting data from .csv file, second 2 to 5, packet count in/out, saving it as p
     plt.save_pdf(1600, 600)
 
 """
+import io
 import logging as log
 import subprocess
 import threading
@@ -126,6 +127,7 @@ class DataCollector:
         self.has_started = False
         self.counter_out = Counter()
         self.counter_in = Counter()
+        self.stop_listening_flag = False
         self.data = {
             "time": [],
             "p_out": [],
@@ -134,6 +136,19 @@ class DataCollector:
             "b_in": [],
 
         }
+
+    def _listen_on_interfaces(self):
+        cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out}" \
+              "-Tfields -e frame.number -e frame.time_epoch " \
+              "-e frame.cap_len -e frame.interface_name"  # -e eth.src -e eth.dst"
+        proc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE)
+        for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
+            yield line.rstrip().split("\t")
+            if self.stop_listening_flag:
+                break
+
+        proc.terminate()
+        self.stop_listening_flag = False
 
     def _listen_on_interface(self, interface: Interface):
         """
