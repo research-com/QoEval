@@ -70,13 +70,16 @@ class UiControl:
 if __name__ == '__main__':
     # executed directly as a script
     print("QoE User Interface control")
-    ui_control = UiControl("192.168.56.146:5555")
+    # ui_control = UiControl("192.168.56.146:5555")
+    ui_control = UiControl("11131FDD4003EW")
 
     # set and execute a Youtube use case
     # Tagesschau Intro:
     # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/5lEd5D2J27Y?t=8")
+    # Tagesschau letzte Sendung Jan Hofer:
+    ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://www.youtube.com/watch?v=1dxhytrMmkM?t=895")
     # Beethoven
-    ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/TpWpqs864y0?t=3819")
+    # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/TpWpqs864y0?t=3819")
     ui_control.prepare_use_case()
     ui_control.execute_use_case(30)
     ui_control.shutdown_use_case()

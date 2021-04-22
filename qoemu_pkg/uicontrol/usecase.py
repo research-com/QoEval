@@ -40,3 +40,11 @@ class UseCase:
 
     def shutdown(self):
         pass
+
+    def set_media_volume(self, volume: int):
+        # service call to set audio
+        # 10: service call number
+        # 3: audio stream type for media
+        if volume < 0 or volume > 25:
+            raise RuntimeError(f"Volume level must be in the range [0,25]! (You tried to set it to {volume}.)")
+        self.device.shell(f"service call audio 10 i32 3 i32 {volume} i32 1")
