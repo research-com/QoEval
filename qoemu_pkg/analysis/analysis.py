@@ -11,7 +11,7 @@ Counting packets/bytes on "ifb0" (outgoing) and "ifb1" (incoming) for 10s with a
 with a BPF to filter packets from/to the ip address 8.8.8.8
 
     coll = analysis.DataCollector("ifb0", "ifb1", 10, 20, bpf_filter="host 8.8.8.8")
-    coll.init()
+    coll.start_threads()
     coll.start()
 
 Showing a live plot of incoming packet count during the collection of the data:
@@ -70,8 +70,7 @@ class DataCollector:
                  duration: int,
                  interval: int = 10,
                  filename: str = None,
-                 bpf_filter: str = "",
-                 display_filter: str = ""):
+                 bpf_filter: str = ""):
         """
         Creates the object and sets all attributes.
 
@@ -81,7 +80,6 @@ class DataCollector:
         :param duration: The duration in seconds for which data will be collected
         :param filename: The filename under which the data will be saved, if None a default will be used
         :param bpf_filter: A bpf_filter (Berkeley Packet Filter) applied to the packets
-        :param display_filter: A display_filter (wireshark display filter) applied to the packets
         """
         self.virtual_interface_out = virtual_interface_out
         self.virtual_interface_in = virtual_interface_in
@@ -89,7 +87,6 @@ class DataCollector:
         self.interval = interval
         self.filename = filename
         self.bpf_filter = bpf_filter
-        self.display_filter = display_filter
         self.start_time = None
         self.is_initialized = False
         self.capture_started = False
@@ -106,8 +103,9 @@ class DataCollector:
 
     def _listen_on_interfaces(self):
         cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out} " \
-              "-Tfields -e frame.number -e frame.time_epoch " \
-              "-e frame.cap_len -e frame.interface_name"  # -e eth.src -e eth.dst"
+              f"-Tfields -e frame.number -e frame.time_epoch " \
+              f"-e frame.cap_len -e frame.interface_name " \
+              f"-f {self.bpf_filter}"  # -e eth.src -e eth.dst"
         proc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE)
         for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
             yield line.rstrip().split("\t")
