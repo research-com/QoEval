@@ -146,7 +146,7 @@ class Connection:
         return False
 
     def _redirect_incoming(self):
-        """Sets up the tc rules to redirect incoming traffic to the virtual device"""
+        """Sets up the tc rules to redirect incoming traffic to the virtual_device_in"""
         log.debug(f"Initializing incoming tc redirection rules for connection: '{self.name}'")
         output = subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} ingress handle ffff:"))
         output.check_returncode()
@@ -178,7 +178,7 @@ class Connection:
         output.check_returncode()
 
     def _redirect_outgoing(self):
-        """Sets up the tc rules to redirect outgoing traffic to the virtual device"""
+        """Sets up the tc rules to redirect outgoing traffic to the virtual_device_out and after that the netem qdiscs"""
         log.debug(f"Initializing outgoing tc redirection rules for connection: '{self.name}'")
         # for each excluded port, we add a high(er) prio action to handle traffic in 1:1 (no netem)
         remaining_prio = 1
@@ -201,17 +201,18 @@ class Connection:
              log.debug(f"Emulation enabled specifically for IP: {self.android_ip}")
              output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} protocol ip "
                                                  f"priority {remaining_prio} parent 1: u32 "
-                                                 f"match ip src {self.android_ip}/32 flowid 1:2"))
+                                                 f"match ip src {self.android_ip}/32 flowid 1:2 action mirred egress "
+                                                 f" redirect dev {self.virtual_device_out}"))
              output.check_returncode()
         else:
             # all other traffic is handled in 1:2 by netem
             output = subprocess.run(shlex.split(
-                f"{self.__CMD_TC} filter add dev {self.device} protocol ip priority {remaining_prio} "
-                f"parent 1: u32 match u32 0 0 flowid 1:2"))
+                f"{self.__CMD_TC} filter add dev {self.device} protocol all priority {remaining_prio} "
+                f"parent 1: u32 match u32 0 0 flowid 1:2 action mirred egress redirect dev {self.virtual_device_out}"))
             output.check_returncode()
 
     def _add_netem_qdiscs(self):
-        """Add the netem qdiscs to both devices"""
+        """Add the netem qdiscs to both the device and the virtual_device_in"""
         log.debug(f"Adding netem qdiscs to both devices for connection: '{self.name}'")
 
         # setup a simple priority queue - all traffic from emulator will be handled by 1:2 which has netem
