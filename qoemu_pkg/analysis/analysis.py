@@ -94,8 +94,9 @@ class DataCollector:
     """This class listens on and collects data from two interfaces, one for outgoing and one for incoming traffic."""
 
     def __init__(self,
-                 interface_out: str,
-                 interface_in: str,
+                 virtual_interface_out: str,
+                 virtual_interface_in: str,
+                 phsical_interface_mac_address : str,
                  duration: int,
                  interval: int = 10,
                  filename: str = None,
@@ -104,17 +105,17 @@ class DataCollector:
         """
         Creates the object and sets all attributes.
 
-        :param interface_out: The name of the interface on which outgoing traffic is sniffed
-        :param interface_in: The name of the interface on which incoming traffic is sniffed
+        :param virtual_interface_out: The name of the interface on which outgoing traffic is sniffed
+        :param virtual_interface_in: The name of the interface on which incoming traffic is sniffed
         :param interval: The interval in ms for which packet/byte counts
         :param duration: The duration in seconds for which data will be collected
         :param filename: The filename under which the data will be saved, if None a default will be used
         :param bpf_filter: A bpf_filter (Berkeley Packet Filter) applied to the packets
         :param display_filter: A display_filter (wireshark display filter) applied to the packets
         """
-        self.interface_out = Interface(interface_out)
-        self.interface_in = Interface(interface_in)
-
+        self.virtual_interface_out = Interface(virtual_interface_out)
+        self.virtual_interface_in = Interface(virtual_interface_in)
+        self.physical_interface_mac_address = phsical_interface_mac_address
         self.duration = duration
         self.interval = interval
         self.filename = filename
@@ -163,10 +164,10 @@ class DataCollector:
             length = int(item.length)
             counter.bytes += length
 
-            if item.eth.src == interface.mac:
+            if item.eth.src == self.physical_interface_mac_address:
                 counter.packets_out += 1
                 counter.bytes_out += length
-            else:
+            elif item.eth.dst == self.physical_interface_mac_address:
                 counter.packets_in += 1
                 counter.bytes_in += length
             if self.has_started:
@@ -184,7 +185,7 @@ class DataCollector:
         self.counter_out.bytes = 0
         self.counter_out.bytes_out = 0
         self.counter_out.bytes_in = 0
-        if self.interface_in is not None:
+        if self.virtual_interface_in is not None:
             self.counter_in.packets = 0
             self.counter_in.packets_out = 0
             self.counter_in.packets_in = 0
@@ -231,12 +232,12 @@ class DataCollector:
         """
         # create daemons
         count_thread_out = threading.Thread(target=self._count_thread,
-                                            args=([self.interface_out, self.counter_out]))
+                                            args=([self.virtual_interface_out, self.counter_out]))
         count_thread_out.setDaemon(True)
         count_thread_out.start()
 
         count_thread_in = threading.Thread(target=self._count_thread,
-                                           args=([self.interface_in, self.counter_in]))
+                                           args=([self.virtual_interface_in, self.counter_in]))
         count_thread_in.setDaemon(True)
         count_thread_in.start()
 
@@ -408,7 +409,7 @@ class LivePlot:
                  data_collector: DataCollector,
                  packets_bytes: str,
                  direction: str,
-                 y_lim=True,
+                 y_lim=None,
                  has_dynamic_x=False):
 
         """
