@@ -39,36 +39,6 @@ import pandas as pd
 import pyshark
 
 
-class Interface:
-    """This class represents an interface and contains its name and MAC address"""
-
-    def __init__(self, name: str):
-        """
-        Creates an Interface object if an interface with the given name exists and finds it's MAC address.
-
-        If no interface with the given name is found, the name will be set to None.
-
-        :param name: The name of the interface
-        """
-        self.name = name
-        # check if interface exists and if so find mac address
-        output = subprocess.run(['ifconfig'], stdout=subprocess.PIPE,
-                                universal_newlines=True)
-        if self.name not in output.stdout:
-            log.error(f"Interface {self.name} does not exist")
-            self.name = None
-        if self.name is not None:
-            # get MAC addresses of interface
-            found = False
-            for line in output.stdout.split("\n"):
-                if self.name in line:
-                    found = True
-                if found:
-                    if "ether" in line:
-                        self.mac = line.split()[1]
-                        break
-
-
 class Counter:
     """A container for the data collected on an interface during an interval.
 
@@ -97,7 +67,6 @@ class DataCollector:
     def __init__(self,
                  virtual_interface_out: str,
                  virtual_interface_in: str,
-                 phsical_interface_mac_address : str,
                  duration: int,
                  interval: int = 10,
                  filename: str = None,
@@ -114,9 +83,8 @@ class DataCollector:
         :param bpf_filter: A bpf_filter (Berkeley Packet Filter) applied to the packets
         :param display_filter: A display_filter (wireshark display filter) applied to the packets
         """
-        self.virtual_interface_out = Interface(virtual_interface_out)
-        self.virtual_interface_in = Interface(virtual_interface_in)
-        self.physical_interface_mac_address = phsical_interface_mac_address
+        self.virtual_interface_out = virtual_interface_out
+        self.virtual_interface_in = virtual_interface_in
         self.duration = duration
         self.interval = interval
         self.filename = filename
@@ -124,9 +92,8 @@ class DataCollector:
         self.display_filter = display_filter
         self.start_time = None
         self.is_initialized = False
-        self.has_started = False
-        self.counter_out = Counter()
-        self.counter_in = Counter()
+        self.capture_started = False
+        self.counter = Counter()
         self.stop_listening_flag = False
         self.data = {
             "time": [],
@@ -138,7 +105,7 @@ class DataCollector:
         }
 
     def _listen_on_interfaces(self):
-        cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out}" \
+        cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out} " \
               "-Tfields -e frame.number -e frame.time_epoch " \
               "-e frame.cap_len -e frame.interface_name"  # -e eth.src -e eth.dst"
         proc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE)
@@ -150,21 +117,7 @@ class DataCollector:
         proc.terminate()
         self.stop_listening_flag = False
 
-    def _listen_on_interface(self, interface: Interface):
-        """
-        This function listens to an interface and yields traversing packets (matching the bpf_filter and display_filter)
-
-            :param interface: The interface object representing the interface to listen on
-        """
-
-        log.info(f"Listening on interface: {interface.name}")
-        capture = pyshark.LiveCapture(interface=interface.name,
-                                      bpf_filter=self.bpf_filter,
-                                      display_filter=self.display_filter)
-        for item in capture.sniff_continuously():
-            yield item
-
-    def _count_thread(self, interface: Interface, counter: Counter):
+    def _count_thread(self):
         """
         This function is meant to runs as a thread and counts packets using the _listen_on_interface function.
 
@@ -173,64 +126,58 @@ class DataCollector:
         :param counter: The CountContainer used to temporarily store data in
         """
 
-        for item in self._listen_on_interface(interface):
+        for packet in self._listen_on_interfaces():
 
-            counter.packets += 1
-            length = int(item.length)
-            counter.bytes += length
+            self.counter.packets += 1
+            length = int(packet[2])
+            self.counter.bytes += length
 
-            if item.eth.src == self.physical_interface_mac_address:
-                counter.packets_out += 1
-                counter.bytes_out += length
-            elif item.eth.dst == self.physical_interface_mac_address:
-                counter.packets_in += 1
-                counter.bytes_in += length
-            if self.has_started:
+            if packet[3] == self.virtual_interface_out:
+                self.counter.packets_out += 1
+                self.counter.bytes_out += length
+            else:
+                self.counter.packets_in += 1
+                self.counter.bytes_in += length
+            if self.capture_started:
                 if time.time() - self.start_time > self.duration:
-                    log.info(f"Finished listening on interface: {interface.name}")
+                    log.info(f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
+                    self.stop_listening_flag = True
                     return
 
-    def _reset_counters(self):
+    def _reset_counter(self):
         """
-        resets all packet and byte counts in the Counter objects to 0
+        resets all packet and byte counts in the Counter object to 0
         """
-        self.counter_out.packets = 0
-        self.counter_out.packets_out = 0
-        self.counter_out.packets_in = 0
-        self.counter_out.bytes = 0
-        self.counter_out.bytes_out = 0
-        self.counter_out.bytes_in = 0
-        if self.virtual_interface_in is not None:
-            self.counter_in.packets = 0
-            self.counter_in.packets_out = 0
-            self.counter_in.packets_in = 0
-            self.counter_in.bytes = 0
-            self.counter_in.bytes_out = 0
-            self.counter_in.bytes_in = 0
+        self.counter.packets = 0
+        self.counter.packets_out = 0
+        self.counter.packets_in = 0
+        self.counter.bytes = 0
+        self.counter.bytes_out = 0
+        self.counter.bytes_in = 0
 
     def _write_to_data(self):
         """
         appends the current relevant packet and byte counts to the data object
         """
         self.data["time"].append(time.time() - self.start_time)
-        self.data["p_out"].append(self.counter_out.packets_out)
-        self.data["b_out"].append(self.counter_out.bytes_out)
-        self.data["p_in"].append(self.counter_in.packets_in)
-        self.data["b_in"].append(self.counter_in.bytes_in)
+        self.data["p_out"].append(self.counter.packets_out)
+        self.data["b_out"].append(self.counter.bytes_out)
+        self.data["p_in"].append(self.counter.packets_in)
+        self.data["b_in"].append(self.counter.bytes_in)
 
     # writes data to file every period
     def _write_thread(self):
         """
         Meant to run as a thread. Writes the collected data to the data object in intervals.
         """
-        self._reset_counters()
-        self.start_time = time.time()
-        self.has_started = True
+        while not self.capture_started:
+            pass
+        self._reset_counter()
 
         while time.time() - self.start_time < self.duration:
             time.sleep(float(self.interval / 1000) - ((time.time() - self.start_time) % float(self.interval / 1000)))
             self._write_to_data()
-            self._reset_counters()
+            self._reset_counter()
 
         df = pd.DataFrame.from_dict(self.data)
         if self.filename is None:
@@ -241,22 +188,20 @@ class DataCollector:
 
         return
 
-    def activate_capture(self):
+    def start_threads(self):
         """
-        Starts threads counting packets/bytes. Sleeps for 1 seconds afterwards to ensure they are active.
+        Starts thread counting packets/bytes. Sleeps for 3 seconds afterwards to ensure they are active.
         """
-        # create daemons
-        count_thread_out = threading.Thread(target=self._count_thread,
-                                            args=([self.virtual_interface_out, self.counter_out]))
-        count_thread_out.setDaemon(True)
-        count_thread_out.start()
+        # create daemon
+        count_thread = threading.Thread(target=self._count_thread)
+        count_thread.setDaemon(True)
+        count_thread.start()
 
-        count_thread_in = threading.Thread(target=self._count_thread,
-                                           args=([self.virtual_interface_in, self.counter_in]))
-        count_thread_in.setDaemon(True)
-        count_thread_in.start()
+        write_thread = threading.Thread(target=self._write_thread, args=())
+        write_thread.setDaemon(True)
+        write_thread.start()
 
-        time.sleep(1)
+        time.sleep(3)
         self.is_initialized = True
 
     def start(self):
@@ -265,11 +210,9 @@ class DataCollector:
         """
         if not self.is_initialized:
             log.error("Packet capture not yet activated.")
-
-        write_thread = threading.Thread(target=self._write_thread, args=())
-        write_thread.setDaemon(True)
-
-        write_thread.start()
+            return
+        self.start_time = time.time()
+        self.capture_started = True
 
 
 class Plot:
