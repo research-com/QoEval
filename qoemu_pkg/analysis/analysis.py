@@ -111,7 +111,7 @@ class DataCollector:
     def _listen_on_interfaces(self):
         cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out} " \
               f"-Tfields -e frame.number -e frame.time_epoch " \
-              f"-e frame.cap_len -e frame.interface_name " \
+              f"-e frame.cap_len -e frame.interface_name -e _ws.col.Protocol" \
               f"-f {self.bpf_filter}"  # -e eth.src -e eth.dst"
         proc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE)
         for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
