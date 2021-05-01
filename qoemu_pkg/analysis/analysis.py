@@ -36,36 +36,11 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pyshark
 
 TIME_FIELD = "time"
-PACKETS_OUT_FIELD = "p_out"
-PACKETS_IN_FIELD = "p_in"
-BYTES_OUT_FIELD = "b_out"
-BYTES_IN_FIELD = "b_in"
-UDP_PREFIX = "udp_"
-TCP_PREFIX = "tcp_"
-
-class Counter:
-    """A container for the data collected on an interface during an interval.
-
-     Attributes:
-
-        packets: Count of total packets
-        packets_in: Count of incoming packets
-        packets_out: Count of outgoing packets
-        bytes: Count of total bytes
-        bytes_in: Count of incoming bytes
-        bytes_out: Count of outgoing bytes
-    """
-
-    def __init__(self):
-        self.packets = 0
-        self.packets_out = 0
-        self.packets_in = 0
-        self.bytes = 0
-        self.bytes_out = 0
-        self.bytes_in = 0
+FIELDS = ["p", "b"]
+DIRECTIONS = ["out", "in"]
+PROTOCOLS = ["all", "udp", "tcp"]
 
 
 class DataCollector:
@@ -77,6 +52,7 @@ class DataCollector:
                  duration: int,
                  interval: int = 10,
                  filename: str = None,
+                 bin_sizes: [] = None,
                  bpf_filter: str = ""):
         """
         Creates the object and sets all attributes.
@@ -97,21 +73,32 @@ class DataCollector:
         self.start_time = None
         self.is_initialized = False
         self.capture_started = False
-        self.counter = Counter()
         self.stop_listening_flag = False
-        self.data = {
-            TIME_FIELD: [],
-            PACKETS_OUT_FIELD: [],
-            PACKETS_IN_FIELD: [],
-            BYTES_OUT_FIELD: [],
-            BYTES_IN_FIELD: [],
+        self.bin_sizes = bin_sizes
 
+        self.data = {
+            TIME_FIELD: []
         }
+        self.temp_data = {}
+        for protocol in PROTOCOLS:
+            for direction in DIRECTIONS:
+                for field in FIELDS:
+                    self.data[f"{field}_{direction}_{protocol}"] = []
+                    self.temp_data[f"{field}_{direction}_{protocol}"] = 0
+
+        if self.bin_sizes:
+            for protocol in PROTOCOLS:
+                for direction in DIRECTIONS:
+                    for size in self.bin_sizes:
+                        self.data[f"p_{direction}_{protocol}_<={size}"] = []
+                        self.temp_data[f"p_{direction}_{protocol}_<={size}"] = 0
+                    self.data[f"p_{direction}_{protocol}_>={self.bin_sizes[len(self.bin_sizes) - 1]}"] = []
+                    self.temp_data[f"p_{direction}_{protocol}_>={self.bin_sizes[len(self.bin_sizes) - 1]}"] = 0
 
     def _listen_on_interfaces(self):
         cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out} " \
               f"-Tfields -e frame.number -e frame.time_epoch " \
-              f"-e frame.cap_len -e frame.interface_name -e _ws.col.Protocol" \
+              f"-e frame.cap_len -e frame.interface_name -e _ws.col.Protocol " \
               f"-f {self.bpf_filter}"  # -e eth.src -e eth.dst"
         proc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE)
         for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
@@ -122,30 +109,78 @@ class DataCollector:
         proc.terminate()
         self.stop_listening_flag = False
 
+    def _is_out(self, packet):
+        return packet[3] == self.virtual_interface_out
+
+    def _is_in(self, packet):
+        return packet[3] == self.virtual_interface_out
+
+    @staticmethod
+    def _is_udp(packet):
+        return packet[4] == "UDP"
+
+    @staticmethod
+    def _is_tcp(packet):
+        return packet[4] == "TCP"
+
+    def _get_bin(self, packet):
+        for size in self.bin_sizes:
+            if int(packet[2]) <= size:
+                return size
+        return -1
+
+    def _put_packet_in_bin(self, direction, protocol, length):
+        if self.bin_sizes:
+            for size in self.bin_sizes:
+                if length <= size:
+                    self.temp_data[f"p_{direction}_{protocol}_<={size}"] += 1
+                    return
+            self.temp_data[f"p_{direction}_{protocol}_>={self.bin_sizes[len(self.bin_sizes) - 1]}"] += 1
+            return
+
     def _count_thread(self):
         """
         This function is meant to runs as a thread and counts packets using the _listen_on_interface function.
-
-
-        :param interface: The interface object representing the interface to listen on
-        :param counter: The CountContainer used to temporarily store data in
         """
 
         for packet in self._listen_on_interfaces():
 
-            self.counter.packets += 1
             length = int(packet[2])
-            self.counter.bytes += length
 
-            if packet[3] == self.virtual_interface_out:
-                self.counter.packets_out += 1
-                self.counter.bytes_out += length
-            else:
-                self.counter.packets_in += 1
-                self.counter.bytes_in += length
+            if self._is_out(packet):
+                self.temp_data["p_out_all"] += 1
+                self.temp_data["b_out_all"] += length
+                self._put_packet_in_bin("out", "all", length)
+
+                if self._is_tcp(packet):
+                    self.temp_data["p_out_tcp"] += 1
+                    self.temp_data["b_out_tcp"] += length
+                    self._put_packet_in_bin("out", "tcp", length)
+
+                if self._is_udp(packet):
+                    self.temp_data["p_out_udp"] += 1
+                    self.temp_data["b_out_udp"] += length
+                    self._put_packet_in_bin("out", "udp", length)
+
+            elif self._is_in(packet):
+                self.temp_data["p_in_all"] += 1
+                self.temp_data["b_in_all"] += length
+                self._put_packet_in_bin("in", "all", length)
+
+                if self._is_tcp(packet):
+                    self.temp_data["p_in_tcp"] += 1
+                    self.temp_data["b_in_tcp"] += length
+                    self._put_packet_in_bin("in", "tcp", length)
+
+                if self._is_udp(packet):
+                    self.temp_data["p_in_udp"] += 1
+                    self.temp_data["b_in_udp"] += length
+                    self._put_packet_in_bin("in", "udp", length)
+
             if self.capture_started:
                 if time.time() - self.start_time > self.duration:
-                    log.info(f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
+                    log.info(
+                        f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
                     self.stop_listening_flag = True
                     return
 
@@ -153,22 +188,25 @@ class DataCollector:
         """
         resets all packet and byte counts in the Counter object to 0
         """
-        self.counter.packets = 0
-        self.counter.packets_out = 0
-        self.counter.packets_in = 0
-        self.counter.bytes = 0
-        self.counter.bytes_out = 0
-        self.counter.bytes_in = 0
+        for protocol in PROTOCOLS:
+            for direction in DIRECTIONS:
+                for field in FIELDS:
+                    self.temp_data[f"{field}_{direction}_{protocol}"] = 0
+
+        if self.bin_sizes:
+            for protocol in PROTOCOLS:
+                for direction in DIRECTIONS:
+                    for size in self.bin_sizes:
+                        self.temp_data[f"p_{direction}_{protocol}_<={size}"] = 0
+                    self.temp_data[f"p_{direction}_{protocol}_>={self.bin_sizes[len(self.bin_sizes) - 1]}"] = 0
 
     def _write_to_data(self):
         """
         appends the current relevant packet and byte counts to the data object
         """
         self.data[TIME_FIELD].append(time.time() - self.start_time)
-        self.data[PACKETS_OUT_FIELD].append(self.counter.packets_out)
-        self.data[BYTES_OUT_FIELD].append(self.counter.bytes_out)
-        self.data[PACKETS_IN_FIELD].append(self.counter.packets_in)
-        self.data[BYTES_IN_FIELD].append(self.counter.bytes_in)
+        for key in self.temp_data:
+            self.data[key].append(self.temp_data[key])
 
     # writes data to file every period
     def _write_thread(self):
@@ -284,18 +322,18 @@ class Plot:
 
             if self.packets_bytes == "p":
                 if self.direction == "in":
-                    t = row[PACKETS_IN_FIELD]
+                    t = row["p_in_all"]
                 elif self.direction == "out":
-                    t = row[PACKETS_OUT_FIELD]
+                    t = row["p_out_all"]
                 else:
-                    t = row[PACKETS_IN_FIELD] + row[PACKETS_OUT_FIELD]
+                    t = row["p_in_all"] + row["p_out_all"]
             else:
                 if self.direction == "in":
-                    t = row[BYTES_IN_FIELD]
+                    t = row["b_in_all"]
                 elif self.direction == "out":
-                    t = row[BYTES_OUT_FIELD]
+                    t = row["b_out_all"]
                 else:
-                    t = row[BYTES_IN_FIELD] + row[BYTES_OUT_FIELD]
+                    t = row["b_in_all"] + row["b_out_all"]
 
             if (index + 1) % self.resolution_mult == 0:
                 self.x_values.append(row[TIME_FIELD])
@@ -418,19 +456,19 @@ class LivePlot:
 
             if self.packets_bytes == "p":
                 if self.direction == "in":
-                    t = self.data_collector.data[PACKETS_IN_FIELD][self.line_counter]
-                if self.direction == "out":
-                    t = self.data_collector.data[PACKETS_OUT_FIELD][self.line_counter]
+                    t = self.data_collector.data["p_in_all"][self.line_counter]
+                elif self.direction == "out":
+                    t = self.data_collector.data["p_out_all"][self.line_counter]
                 else:
-                    t = self.data_collector.data[PACKETS_IN_FIELD][self.line_counter] + self.data_collector.data[PACKETS_OUT_FIELD][
+                    t = self.data_collector.data["p_in_all"][self.line_counter] + self.data_collector.data["p_out_all"][
                         self.line_counter]
             else:
                 if self.direction == "in":
-                    t = self.data_collector.data[BYTES_IN_FIELD][self.line_counter]
-                if self.direction == "out":
-                    t = self.data_collector.data[BYTES_OUT_FIELD][self.line_counter]
+                    t = self.data_collector.data["b_in_all"][self.line_counter]
+                elif self.direction == "out":
+                    t = self.data_collector.data["b_out_all"][self.line_counter]
                 else:
-                    t = self.data_collector.data[BYTES_IN_FIELD][self.line_counter] + self.data_collector.data[BYTES_OUT_FIELD][
+                    t = self.data_collector.data["b_in_all"][self.line_counter] + self.data_collector.data["b_out_all"][
                         self.line_counter]
             self.bar_collection[self.bar_counter].set_height(t)
             if self.has_dynamic_y:
