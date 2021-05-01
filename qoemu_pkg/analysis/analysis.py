@@ -38,6 +38,13 @@ import numpy as np
 import pandas as pd
 import pyshark
 
+TIME_FIELD = "time"
+PACKETS_OUT_FIELD = "p_out"
+PACKETS_IN_FIELD = "p_in"
+BYTES_OUT_FIELD = "b_out"
+BYTES_IN_FIELD = "b_in"
+UDP_PREFIX = "udp_"
+TCP_PREFIX = "tcp_"
 
 class Counter:
     """A container for the data collected on an interface during an interval.
@@ -93,11 +100,11 @@ class DataCollector:
         self.counter = Counter()
         self.stop_listening_flag = False
         self.data = {
-            "time": [],
-            "p_out": [],
-            "p_in": [],
-            "b_out": [],
-            "b_in": [],
+            TIME_FIELD: [],
+            PACKETS_OUT_FIELD: [],
+            PACKETS_IN_FIELD: [],
+            BYTES_OUT_FIELD: [],
+            BYTES_IN_FIELD: [],
 
         }
 
@@ -157,11 +164,11 @@ class DataCollector:
         """
         appends the current relevant packet and byte counts to the data object
         """
-        self.data["time"].append(time.time() - self.start_time)
-        self.data["p_out"].append(self.counter.packets_out)
-        self.data["b_out"].append(self.counter.bytes_out)
-        self.data["p_in"].append(self.counter.packets_in)
-        self.data["b_in"].append(self.counter.bytes_in)
+        self.data[TIME_FIELD].append(time.time() - self.start_time)
+        self.data[PACKETS_OUT_FIELD].append(self.counter.packets_out)
+        self.data[BYTES_OUT_FIELD].append(self.counter.bytes_out)
+        self.data[PACKETS_IN_FIELD].append(self.counter.packets_in)
+        self.data[BYTES_IN_FIELD].append(self.counter.bytes_in)
 
     # writes data to file every period
     def _write_thread(self):
@@ -268,8 +275,8 @@ class Plot:
 
         df = pd.read_csv(self.filename)
 
-        df = df[df["time"] >= self.start]
-        df = df[df["time"] <= self.end]
+        df = df[df[TIME_FIELD] >= self.start]
+        df = df[df[TIME_FIELD] <= self.end]
 
         t_sum = 0  # used when summing up multiple rows of data
 
@@ -277,21 +284,21 @@ class Plot:
 
             if self.packets_bytes == "p":
                 if self.direction == "in":
-                    t = row["p_in"]
+                    t = row[PACKETS_IN_FIELD]
                 elif self.direction == "out":
-                    t = row["p_out"]
+                    t = row[PACKETS_OUT_FIELD]
                 else:
-                    t = row["p_in"] + row["p_out"]
+                    t = row[PACKETS_IN_FIELD] + row[PACKETS_OUT_FIELD]
             else:
                 if self.direction == "in":
-                    t = row["b_in"]
+                    t = row[BYTES_IN_FIELD]
                 elif self.direction == "out":
-                    t = row["b_out"]
+                    t = row[BYTES_OUT_FIELD]
                 else:
-                    t = row["b_in"] + row["b_out"]
+                    t = row[BYTES_IN_FIELD] + row[BYTES_OUT_FIELD]
 
             if (index + 1) % self.resolution_mult == 0:
-                self.x_values.append(row["time"])
+                self.x_values.append(row[TIME_FIELD])
                 t_sum += t
                 self.y_values.append(t_sum)
                 t_sum = 0
@@ -407,23 +414,23 @@ class LivePlot:
 
     def _animate(self, i):
         """The animate function called by animation.FuncAnimation()"""
-        for i, timestamp in enumerate(self.data_collector.data["time"][self.line_counter:]):
+        for i, timestamp in enumerate(self.data_collector.data[TIME_FIELD][self.line_counter:]):
 
             if self.packets_bytes == "p":
                 if self.direction == "in":
-                    t = self.data_collector.data["p_in"][self.line_counter]
+                    t = self.data_collector.data[PACKETS_IN_FIELD][self.line_counter]
                 if self.direction == "out":
-                    t = self.data_collector.data["p_out"][self.line_counter]
+                    t = self.data_collector.data[PACKETS_OUT_FIELD][self.line_counter]
                 else:
-                    t = self.data_collector.data["p_in"][self.line_counter] + self.data_collector.data["p_out"][
+                    t = self.data_collector.data[PACKETS_IN_FIELD][self.line_counter] + self.data_collector.data[PACKETS_OUT_FIELD][
                         self.line_counter]
             else:
                 if self.direction == "in":
-                    t = self.data_collector.data["b_in"][self.line_counter]
+                    t = self.data_collector.data[BYTES_IN_FIELD][self.line_counter]
                 if self.direction == "out":
-                    t = self.data_collector.data["b_out"][self.line_counter]
+                    t = self.data_collector.data[BYTES_OUT_FIELD][self.line_counter]
                 else:
-                    t = self.data_collector.data["b_in"][self.line_counter] + self.data_collector.data["b_out"][
+                    t = self.data_collector.data[BYTES_IN_FIELD][self.line_counter] + self.data_collector.data[BYTES_OUT_FIELD][
                         self.line_counter]
             self.bar_collection[self.bar_counter].set_height(t)
             if self.has_dynamic_y:
