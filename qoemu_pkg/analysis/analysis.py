@@ -297,7 +297,7 @@ class Plot:
         axes = self.fig.gca()
 
         axes.bar(self.x_values, self.y_values, align='edge',
-                 width=self.tick_interval / 1000 * 0.5 * self.resolution_mult)
+                 width=(self.x_values[1]-self.x_values[0]) * 0.8 * self.resolution_mult)
 
     def _arrange_xticks(self):
         """ Arranges the x-ticks of the plot"""
