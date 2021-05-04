@@ -123,8 +123,18 @@ class DataCollector:
         :param interface: The interface object representing the interface to listen on
         :param counter: The CountContainer used to temporarily store data in
         """
+        frame = 0
 
         for packet in self._listen_on_interfaces():
+
+            if self.capture_started:
+                if frame == 0:
+                    self._reset_counter()
+                    frame += 1
+                if float(packet[1]) > self.start_time + frame * self.interval/1000:
+                    self._write_to_data(frame * self.interval/1000)
+                    self._reset_counter()
+                    frame += 1
 
             self.counter.packets += 1
             length = int(packet[2])
@@ -140,6 +150,7 @@ class DataCollector:
                 if time.time() - self.start_time > self.duration:
                     log.info(f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
                     self.stop_listening_flag = True
+                    self._write_to_file()
                     return
 
     def _reset_counter(self):
@@ -153,38 +164,23 @@ class DataCollector:
         self.counter.bytes_out = 0
         self.counter.bytes_in = 0
 
-    def _write_to_data(self):
+    def _write_to_data(self, time):
         """
         appends the current relevant packet and byte counts to the data object
         """
-        self.data["time"].append(time.time() - self.start_time)
+        self.data["time"].append(time)
         self.data["p_out"].append(self.counter.packets_out)
         self.data["b_out"].append(self.counter.bytes_out)
         self.data["p_in"].append(self.counter.packets_in)
         self.data["b_in"].append(self.counter.bytes_in)
 
-    # writes data to file every period
-    def _write_thread(self):
-        """
-        Meant to run as a thread. Writes the collected data to the data object in intervals.
-        """
-        while not self.capture_started:
-            pass
-        self._reset_counter()
-
-        while time.time() - self.start_time < self.duration:
-            time.sleep(float(self.interval / 1000) - ((time.time() - self.start_time) % float(self.interval / 1000)))
-            self._write_to_data()
-            self._reset_counter()
-
+    def _write_to_file(self):
         df = pd.DataFrame.from_dict(self.data)
         if self.filename is None:
             self.filename = "QoEmu-Data " + str(datetime.fromtimestamp(self.start_time))
 
-        df.to_csv(f"{self.filename}.csv")
+        df.to_csv(f"{self.filename}.csv", index=False)
         log.info("Finished writing to file")
-
-        return
 
     def start_threads(self):
         """
@@ -195,9 +191,6 @@ class DataCollector:
         count_thread.setDaemon(True)
         count_thread.start()
 
-        write_thread = threading.Thread(target=self._write_thread, args=())
-        write_thread.setDaemon(True)
-        write_thread.start()
 
         time.sleep(3)
         self.is_initialized = True
