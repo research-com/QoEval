@@ -38,10 +38,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-TIME_FIELD = "time"
-FIELDS = ["p", "b"]
-DIRECTIONS = ["out", "in"]
-PROTOCOLS = ["all", "udp", "tcp"]
+PACKET = "p"
+BYTE = "b"
+OUT = "out"
+IN = "in"
+ALL = "all"
+UDP = "UDP"
+TCP = "TCP"
+BIN = "bin"
+TIME = "time"
+SEP = ":"
+VALUES = [PACKET, BYTE]
+DIRECTIONS = [OUT, IN]
+PROTOCOLS = [ALL, UDP, TCP]
+BINS = []
 
 
 class DataCollector:
@@ -78,22 +88,21 @@ class DataCollector:
         self.bin_sizes = bin_sizes
         self.data_array_size = math.ceil(self.duration / self.interval * 1000)
         self.data = {
-            TIME_FIELD: np.arange(start=self.interval/1000,
-                              stop=self.duration + self.interval/1000,
-                              step=self.interval/1000)
+            TIME: np.arange(start=self.interval / 1000,
+                            stop=self.duration + self.interval/1000,
+                            step=self.interval/1000)
         }
         for protocol in PROTOCOLS:
             for direction in DIRECTIONS:
-                for field in FIELDS:
-                    self.data[f"{field}_{direction}_{protocol}"] = np.zeros(self.data_array_size)
-
+                for value in VALUES:
+                    self.data[f"{value}{SEP}{direction}{SEP}{protocol}"] = np.zeros(self.data_array_size)
 
         if self.bin_sizes:
             for protocol in PROTOCOLS:
                 for direction in DIRECTIONS:
                     for size in self.bin_sizes:
-                        self.data[f"p_{direction}_{protocol}_<={size}"] = np.zeros(self.data_array_size)
-                    self.data[f"p_{direction}_{protocol}_>{self.bin_sizes[len(self.bin_sizes) - 1]}"] = np.zeros(self.data_array_size)
+                        self.data[f"{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}"] = np.zeros(self.data_array_size)
+                    self.data[f"{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}"] = np.zeros(self.data_array_size)
 
     def _listen_on_interfaces(self):
         cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out} " \
@@ -109,33 +118,25 @@ class DataCollector:
         proc.terminate()
         self.stop_listening_flag = False
 
-    def _is_out(self, packet):
-        return packet[3] == self.virtual_interface_out
+    def _is_of_protocol(self, packet, protocol):
+        if protocol == ALL:
+            return True
+        if protocol == packet[4]:
+            return True
+        return False
 
-    def _is_in(self, packet):
-        return packet[3] == self.virtual_interface_out
-
-    @staticmethod
-    def _is_udp(packet):
-        return packet[4] == "UDP"
-
-    @staticmethod
-    def _is_tcp(packet):
-        return packet[4] == "TCP"
-
-    def _get_bin(self, packet):
-        for size in self.bin_sizes:
-            if int(packet[2]) <= size:
-                return size
-        return -1
+    def _get_direction(self, packet):
+        if packet[3] == self.virtual_interface_out:
+            return OUT
+        return IN
 
     def _put_packet_in_bin(self, direction, protocol, length, packet_time_frame):
         if self.bin_sizes:
             for size in self.bin_sizes:
                 if length <= size:
-                    self.data[f"p_{direction}_{protocol}_<={size}"][packet_time_frame] += 1
+                    self.data[f"{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}"][packet_time_frame] += 1
                     return
-            self.data[f"p_{direction}_{protocol}_>={self.bin_sizes[len(self.bin_sizes) - 1]}"][packet_time_frame] += 1
+            self.data[f"{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}"][packet_time_frame] += 1
             return
 
     def _count_thread(self):
@@ -150,6 +151,7 @@ class DataCollector:
             if float(packet[1]) < self.start_time:
                 continue
 
+            # packet_time_frame is the index of the packet time frame in the data arrays
             packet_time_frame = math.floor((float(packet[1]) - self.start_time) / (self.interval/1000))
 
             # if the packet_time_frame is out of bounds we are finished writing data:
@@ -161,37 +163,11 @@ class DataCollector:
 
             length = int(packet[2])
 
-            if self._is_out(packet):
-                self.data["p_out_all"][packet_time_frame] += 1
-                self.data["b_out_all"][packet_time_frame] += length
-                self._put_packet_in_bin("out", "all", length, packet_time_frame)
-
-                if self._is_tcp(packet):
-                    self.data["p_out_tcp"][packet_time_frame] += 1
-                    self.data["b_out_tcp"][packet_time_frame] += length
-                    self._put_packet_in_bin("out", "tcp", length, packet_time_frame)
-
-                if self._is_udp(packet):
-                    self.data["p_out_udp"][packet_time_frame] += 1
-                    self.data["b_out_udp"][packet_time_frame] += length
-                    self._put_packet_in_bin("out", "udp", length, packet_time_frame)
-
-            elif self._is_in(packet):
-                self.data["p_in_all"][packet_time_frame] += 1
-                self.data["b_in_all"][packet_time_frame] += length
-                self._put_packet_in_bin("in", "all", length, packet_time_frame)
-
-                if self._is_tcp(packet):
-                    self.data["p_in_tcp"][packet_time_frame] += 1
-                    self.data["b_in_tcp"][packet_time_frame] += length
-                    self._put_packet_in_bin("in", "tcp", length, packet_time_frame)
-
-                if self._is_udp(packet):
-                    self.data["p_in_udp"][packet_time_frame] += 1
-                    self.data["b_in_udp"][packet_time_frame] += length
-                    self._put_packet_in_bin("in", "udp", length, packet_time_frame)
-
-
+            for protocol in PROTOCOLS:
+                if self._is_of_protocol(packet, protocol):
+                    self.data[f"{PACKET}{SEP}{self._get_direction(packet)}{SEP}{protocol}"][packet_time_frame] += 1
+                    self.data[f"{BYTE}{SEP}{self._get_direction(packet)}{SEP}{protocol}"][packet_time_frame] += length
+                    self._put_packet_in_bin(self._get_direction(packet), protocol, length, packet_time_frame)
 
     def _write_to_file(self):
         df = pd.DataFrame.from_dict(self.data)
@@ -209,7 +185,6 @@ class DataCollector:
         count_thread = threading.Thread(target=self._count_thread)
         count_thread.setDaemon(True)
         count_thread.start()
-
 
         time.sleep(3)
         self.is_initialized = True
@@ -280,30 +255,20 @@ class Plot:
 
         df = pd.read_csv(self.filename)
 
-        df = df[df[TIME_FIELD] >= self.start]
-        df = df[df[TIME_FIELD] <= self.end]
+        df = df[df[TIME] >= self.start]
+        df = df[df[TIME] <= self.end]
 
         t_sum = 0  # used when summing up multiple rows of data
 
         for index, row in df.iterrows():
 
-            if self.packets_bytes == "p":
-                if self.direction == "in":
-                    t = row["p_in_all"]
-                elif self.direction == "out":
-                    t = row["p_out_all"]
-                else:
-                    t = row["p_in_all"] + row["p_out_all"]
+            if self.direction == IN or self.direction == OUT:
+                t = row[f"{self.packets_bytes}:{self.direction}:{ALL}"]
             else:
-                if self.direction == "in":
-                    t = row["b_in_all"]
-                elif self.direction == "out":
-                    t = row["b_out_all"]
-                else:
-                    t = row["b_in_all"] + row["b_out_all"]
+                t = row[f"{self.packets_bytes}:{OUT}:{ALL}"] + row[f"{self.packets_bytes}:{IN}:{ALL}"]
 
             if (index + 1) % self.resolution_mult == 0:
-                self.x_values.append(row[TIME_FIELD])
+                self.x_values.append(row[TIME])
                 t_sum += t
                 self.y_values.append(t_sum)
                 t_sum = 0
@@ -332,13 +297,14 @@ class Plot:
     def _label_axes(self):
         """ Labels the axes of the plot"""
         self.fig.gca().set_xlabel("Time in seconds")
-        if self.packets_bytes == "p":
+        s1 = ""
+        if self.packets_bytes == PACKET:
             s1 = "Packets "
-        else:
+        if self.packets_bytes == BYTE:
             s1 = "Bytes "
-        if self.direction == "in":
+        if self.direction == IN:
             s2 = "in"
-        elif self.direction == "out":
+        elif self.direction == OUT:
             s2 = "out"
         else:
             s2 = "in/out"
@@ -419,22 +385,14 @@ class LivePlot:
 
     def _animate(self, i):
         """The animate function called by animation.FuncAnimation()"""
-        for i, timestamp in enumerate(self.data_collector.data[TIME_FIELD]):
+        for i, timestamp in enumerate(self.data_collector.data[TIME]):
 
-            if self.packets_bytes == "p":
-                if self.direction == "in":
-                    t = self.data_collector.data["p_in_all"][i]
-                elif self.direction == "out":
-                    t = self.data_collector.data["p_out_all"][i]
-                else:
-                    t = self.data_collector.data["p_in_all"][i] + self.data_collector.data["p_out_all"][i]
+            if self.direction == IN or self.direction == OUT:
+                t = self.data_collector.data[f"{self.packets_bytes}:{self.direction}:{ALL}"][i]
             else:
-                if self.direction == "in":
-                    t = self.data_collector.data["b_in_all"][i]
-                elif self.direction == "out":
-                    t = self.data_collector.data["b_out_all"][i]
-                else:
-                    t = self.data_collector.data["b_in_all"][i] + self.data_collector.data["b_out_all"][i]
+                t = self.data_collector.data[f"{self.packets_bytes}:{IN}:{ALL}"][i] \
+                    + self.data_collector.data[f"{self.packets_bytes}:{OUT}:{ALL}"][i]
+
             self.bar_collection[i].set_height(t)
             if self.has_dynamic_y:
                 if self.bar_collection[i].get_height() > self.y_lim:
@@ -457,13 +415,14 @@ class LivePlot:
         plt.xlabel("Time in seconds")
 
         plt.xlabel("Time in seconds")
-        if self.packets_bytes == "p":
+        s1 = ""
+        if self.packets_bytes == PACKET:
             s1 = "Packets "
-        else:
+        if self.packets_bytes == BYTE:
             s1 = "Bytes "
-        if self.direction == "in":
+        if self.direction == IN:
             s2 = "in"
-        elif self.direction == "out":
+        elif self.direction == OUT:
             s2 = "out"
         else:
             s2 = "in/out"
