@@ -27,6 +27,7 @@ Plotting data from .csv file, second 2 to 5, packet count in/out, saving it as p
 """
 import io
 import logging as log
+import math
 import subprocess
 import threading
 import time
@@ -36,29 +37,8 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pyshark
 
 
-class Counter:
-    """A container for the data collected on an interface during an interval.
-
-     Attributes:
-
-        packets: Count of total packets
-        packets_in: Count of incoming packets
-        packets_out: Count of outgoing packets
-        bytes: Count of total bytes
-        bytes_in: Count of incoming bytes
-        bytes_out: Count of outgoing bytes
-    """
-
-    def __init__(self):
-        self.packets = 0
-        self.packets_out = 0
-        self.packets_in = 0
-        self.bytes = 0
-        self.bytes_out = 0
-        self.bytes_in = 0
 
 
 class DataCollector:
@@ -90,14 +70,16 @@ class DataCollector:
         self.start_time = None
         self.is_initialized = False
         self.capture_started = False
-        self.counter = Counter()
         self.stop_listening_flag = False
+        self.data_array_size = math.ceil(self.duration / self.interval * 1000)
         self.data = {
-            "time": [],
-            "p_out": [],
-            "p_in": [],
-            "b_out": [],
-            "b_in": [],
+            "time": np.arange(start=self.interval/1000,
+                              stop=self.duration + self.interval/1000,
+                              step=self.interval/1000),
+            "p_out": np.zeros(self.data_array_size),
+            "p_in": np.zeros(self.data_array_size),
+            "b_out": np.zeros(self.data_array_size),
+            "b_in": np.zeros(self.data_array_size),
 
         }
 
@@ -118,61 +100,31 @@ class DataCollector:
     def _count_thread(self):
         """
         This function is meant to runs as a thread and counts packets using the _listen_on_interface function.
-
-
-        :param interface: The interface object representing the interface to listen on
-        :param counter: The CountContainer used to temporarily store data in
         """
-        frame = 0
 
         for packet in self._listen_on_interfaces():
 
-            if self.capture_started:
-                if frame == 0:
-                    self._reset_counter()
-                    frame += 1
-                if float(packet[1]) > self.start_time + frame * self.interval/1000:
-                    self._write_to_data(frame * self.interval/1000)
-                    self._reset_counter()
-                    frame += 1
+            if not self.capture_started:
+                continue
+            if float(packet[1]) < self.start_time:
+                continue
 
-            self.counter.packets += 1
+            packet_time_frame = math.floor((float(packet[1]) - self.start_time) / (self.interval/1000))
+
             length = int(packet[2])
-            self.counter.bytes += length
 
             if packet[3] == self.virtual_interface_out:
-                self.counter.packets_out += 1
-                self.counter.bytes_out += length
+                self.data["p_out"][packet_time_frame] += 1
+                self.data["b_out"][packet_time_frame] += length
             else:
-                self.counter.packets_in += 1
-                self.counter.bytes_in += length
+                self.data["p_in"][packet_time_frame] += 1
+                self.data["b_in"][packet_time_frame] += length
             if self.capture_started:
                 if time.time() - self.start_time > self.duration:
                     log.info(f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
                     self.stop_listening_flag = True
                     self._write_to_file()
                     return
-
-    def _reset_counter(self):
-        """
-        resets all packet and byte counts in the Counter object to 0
-        """
-        self.counter.packets = 0
-        self.counter.packets_out = 0
-        self.counter.packets_in = 0
-        self.counter.bytes = 0
-        self.counter.bytes_out = 0
-        self.counter.bytes_in = 0
-
-    def _write_to_data(self, time):
-        """
-        appends the current relevant packet and byte counts to the data object
-        """
-        self.data["time"].append(time)
-        self.data["p_out"].append(self.counter.packets_out)
-        self.data["b_out"].append(self.counter.bytes_out)
-        self.data["p_in"].append(self.counter.packets_in)
-        self.data["b_in"].append(self.counter.bytes_in)
 
     def _write_to_file(self):
         df = pd.DataFrame.from_dict(self.data)
@@ -400,31 +352,27 @@ class LivePlot:
 
     def _animate(self, i):
         """The animate function called by animation.FuncAnimation()"""
-        for i, timestamp in enumerate(self.data_collector.data["time"][self.line_counter:]):
+        for i, timestamp in enumerate(self.data_collector.data["time"]):
 
             if self.packets_bytes == "p":
                 if self.direction == "in":
-                    t = self.data_collector.data["p_in"][self.line_counter]
+                    t = self.data_collector.data["p_in"][i]
                 elif self.direction == "out":
-                    t = self.data_collector.data["p_out"][self.line_counter]
+                    t = self.data_collector.data["p_out"][i]
                 else:
-                    t = self.data_collector.data["p_in"][self.line_counter] + self.data_collector.data["p_out"][
-                        self.line_counter]
+                    t = self.data_collector.data["p_in"][i] + self.data_collector.data["p_out"][i]
             else:
                 if self.direction == "in":
-                    t = self.data_collector.data["b_in"][self.line_counter]
+                    t = self.data_collector.data["b_in"][i]
                 elif self.direction == "out":
-                    t = self.data_collector.data["b_out"][self.line_counter]
+                    t = self.data_collector.data["b_out"][i]
                 else:
-                    t = self.data_collector.data["b_in"][self.line_counter] + self.data_collector.data["b_out"][
-                        self.line_counter]
-            self.bar_collection[self.bar_counter].set_height(t)
+                    t = self.data_collector.data["b_in"][i] + self.data_collector.data["b_out"][i]
+            self.bar_collection[i].set_height(t)
             if self.has_dynamic_y:
-                if self.bar_collection[self.bar_counter].get_height() > self.y_lim:
-                    self.y_lim = self.bar_collection[self.bar_counter].get_height()
+                if self.bar_collection[i].get_height() > self.y_lim:
+                    self.y_lim = self.bar_collection[i].get_height()
                     plt.ylim(0, self.y_lim)
-            self.line_counter += 1
-            self.bar_counter += 1
 
             if self.has_dynamic_x:
                 plt.xlim(0, timestamp + 5 * self.data_collector.interval / 1000)
