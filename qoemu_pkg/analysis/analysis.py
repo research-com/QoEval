@@ -152,6 +152,13 @@ class DataCollector:
 
             packet_time_frame = math.floor((float(packet[1]) - self.start_time) / (self.interval/1000))
 
+            # if the packet_time_frame is out of bounds we are finished writing data:
+            if packet_time_frame >= self.data_array_size:
+                log.info(f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
+                self.stop_listening_flag = True
+                self._write_to_file()
+                return
+
             length = int(packet[2])
 
             if self._is_out(packet):
@@ -184,12 +191,7 @@ class DataCollector:
                     self.data["b_in_udp"][packet_time_frame] += length
                     self._put_packet_in_bin("in", "udp", length, packet_time_frame)
 
-            if self.capture_started:
-                if time.time() - self.start_time > self.duration:
-                    log.info(f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
-                    self.stop_listening_flag = True
-                    self._write_to_file()
-                    return
+
 
     def _write_to_file(self):
         df = pd.DataFrame.from_dict(self.data)
