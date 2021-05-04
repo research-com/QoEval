@@ -405,7 +405,7 @@ class LivePlot:
             if self.packets_bytes == "p":
                 if self.direction == "in":
                     t = self.data_collector.data["p_in"][self.line_counter]
-                if self.direction == "out":
+                elif self.direction == "out":
                     t = self.data_collector.data["p_out"][self.line_counter]
                 else:
                     t = self.data_collector.data["p_in"][self.line_counter] + self.data_collector.data["p_out"][
@@ -413,7 +413,7 @@ class LivePlot:
             else:
                 if self.direction == "in":
                     t = self.data_collector.data["b_in"][self.line_counter]
-                if self.direction == "out":
+                elif self.direction == "out":
                     t = self.data_collector.data["b_out"][self.line_counter]
                 else:
                     t = self.data_collector.data["b_in"][self.line_counter] + self.data_collector.data["b_out"][
