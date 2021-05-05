@@ -1,27 +1,30 @@
 """
 
-Analysis module, using pyshark and matplotlib
+Analysis module, using tshark, pandas and matplotlib
 
 This module can sniff and collect traffic data on two interfaces (one for outgoing and one for incoming traffic)
 and plot it.
 
 Example usage:
 
-Counting packets/bytes on "ifb0" (outgoing) and "ifb1" (incoming) for 10s with a resolution interval of 20ms
-with a BPF to filter packets from/to the ip address 8.8.8.8
+Counting packets/bytes on "ifb0" (outgoing) and "ifb1" (incoming) for 10s with a resolution interval of 20ms,
+additionally sorting packets into bins for future histogram plots, with a BPF to filter packets from/to the ip address 8.8.8.8
 
-    coll = analysis.DataCollector("ifb0", "ifb1", 10, 20, bpf_filter="host 8.8.8.8")
+    coll = analysis.DataCollector("ifb0", "ifb1", 10, 20, bin_sizes: [60, 120, 200, 500], bpf_filter="host 8.8.8.8")
     coll.start_threads()
     coll.start()
 
-Showing a live plot of incoming packet count during the collection of the data:
+Showing a live plot of outgoing packet count during the collection of the data:
 
-    live_plt = analysis.LivePlot(coll, "p", "in")
+    live_plt = analysis.LivePlot(coll, value=analysis.PACKETS, direction=analysis.OUT)
     live_plt.show()
 
-Plotting data from .csv file, second 2 to 5, packet count in/out, saving it as pdf with a resolution of 1600*600 pixels
+Plotting from the saved .csv file, second 2 to 5, packet count in and out separately as stacked bar plot,
+packet protocol TCP, saving it as pdf with a resolution of 1600*600 pixels
 
-    plt = analysis.Plot(coll.filename, 2, 5, "p")
+    plt = analysis.Plot(coll.filename, start=2, end=5, value=analysis.PACKETS, directions=[analysis.IN, analysis.OUT],
+                            protocols=[analysis.TCP], kind="bar", grid="both", stacked=True)
+
     plt.save_pdf(1600, 600)
 
 """
@@ -39,8 +42,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-PACKET = "packets"
-BYTE = "byte"
+PACKETS = "packets"
+BYTES = "byte"
 INOUT = "in/out"
 OUT = "out"
 IN = "in"
@@ -50,7 +53,7 @@ TCP = "TCP"
 BIN = "bin"
 TIME = "time"
 SEP = ":"
-VALUES = [PACKET, BYTE]
+VALUES = [PACKETS, BYTES]
 DIRECTIONS = [INOUT, IN, OUT]
 PROTOCOLS = [ALL, UDP, TCP]
 BINS = []
@@ -75,6 +78,7 @@ class DataCollector:
         :param interval: The interval in ms for which packet/byte counts
         :param duration: The duration in seconds for which data will be collected
         :param filename: The filename under which the data will be saved, if None a default will be used
+        :param bin_sizes: list of integers representing the borders between bins for histogram creation
         :param bpf_filter: A bpf_filter (Berkeley Packet Filter) applied to the packets
         """
         self.virtual_interface_out = virtual_interface_out
@@ -104,16 +108,18 @@ class DataCollector:
                 for direction in DIRECTIONS:
                     for size in self.bin_sizes:
                         self.data[
-                            f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}{SEP}"] = np.zeros(
+                            f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}{SEP}"] = np.zeros(
                             self.data_array_size)
                     self.data[
-                        f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"] = np.zeros(
+                        f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"] = np.zeros(
                         self.data_array_size)
 
     def _listen_on_interfaces(self):
         """
+        This method will listen on both interfaces and yield the packets captured as lists of strings representing the
+        properties of the packets.
 
-
+        Due to python buffering, packets may be yielded out of order.
         """
         cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out} " \
               f"-Tfields -e frame.number -e frame.time_epoch " \
@@ -152,17 +158,20 @@ class DataCollector:
         if self.bin_sizes:
             for size in self.bin_sizes:
                 if length <= size:
-                    self.data[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}{SEP}"][
+                    self.data[f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}{SEP}"][
                         packet_time_frame] += 1
                     return
             self.data[
-                f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"][
+                f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"][
                 packet_time_frame] += 1
             return
 
     def _count_thread(self):
         """
-        This function is meant to runs as a thread and counts packets using the _listen_on_interface function.
+        This function is meant to runs as a thread and will sort packets yielded by the _listen_on_interface method
+        into the data array.
+
+        The method will return once it has counted all packets for the duration of the data collection.
         """
 
         for packet in self._listen_on_interfaces():
@@ -192,8 +201,8 @@ class DataCollector:
                 for direction in DIRECTIONS:
                     if self._is_of_direction(packet, direction):
                         if self._is_of_protocol(packet, protocol):
-                            self.data[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}"][packet_time_frame] += 1
-                            self.data[f"{SEP}{BYTE}{SEP}{direction}{SEP}{protocol}{SEP}"][packet_time_frame] += length
+                            self.data[f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}"][packet_time_frame] += 1
+                            self.data[f"{SEP}{BYTES}{SEP}{direction}{SEP}{protocol}{SEP}"][packet_time_frame] += length
                             self._put_packet_in_bin(direction, protocol, length, packet_time_frame)
 
     def _write_to_file(self):
@@ -206,7 +215,7 @@ class DataCollector:
 
     def start_threads(self):
         """
-        Starts thread counting packets/bytes. Sleeps for 3 seconds afterwards to ensure they are active.
+        Starts thread counting packets. Sleeps for 3 seconds afterwards to ensure they are active.
         """
         # create daemon
         count_thread = threading.Thread(target=self._count_thread)
@@ -228,8 +237,9 @@ class DataCollector:
 
 
 class Plot:
-    """Offers methods to create a plots based on existing .csv data files."""
-
+    """Offers methods to create a plots based on existing .csv data files, created by the DataCollector object
+        For now, one should create a new Plot object for every plot.
+        """
     def __init__(self,
                  filename: str,
                  start: int,
@@ -248,17 +258,17 @@ class Plot:
         """
         Creating this object will create a plot with the given parameters
 
-        :param protocols: list of packet protocols to be plotted ("all", "tcp", "udp")
-        :param kind: "bar", "line" or "hist", type of the plot
-        :param grid: None, "major", "both" or "minor" (not recommended), grid settings
-        :param stacked: boolean, whether the bar plot should be stacked
         :param filename: Name of the file containing the data
         :param start: time in seconds from which point on the data should be plotted
         :param end: time in seconds to which point the data should be plotted
-        :param packets_bytes: "p" or "b" to plot packets or bytes respectively
-        :param directions: "in", "out" or any other string to plot incoming, outgoing or both
-        :param tick_interval: Interval in ms between x ticks
-        :param label_interval: Interval in ms between major ticks with labels
+        :param packets_bytes: PACKETS or BYTES constant, value to be plotted over time
+        :param directions: list of directions to be plotted (use IN, OUT and INOUT constants)
+        :param protocols: list of packet protocols to be plotted (ALL, TCP, UDP)
+        :param kind: "bar", "line" or "hist", type of the plot
+        :param grid: None, "major", "both" or "minor" (not recommended), grid settings
+        :param stacked: boolean, whether the bar plot should be stacked
+        :param tick_interval: Interval in ms between x_ticks
+        :param label_interval: Interval in ms between major x_ticks with labels
         :param resolution_mult: multiplier by which the plot will decrease the resolution of the data
         :param x_size: the default x size of plot in pixels
         :param y_size: the default y size of plot in pixels
@@ -298,8 +308,6 @@ class Plot:
 
         self._label_axes(self.kind)
 
-    def create(self):
-        pass
 
     def _parse_data(self):
         """
@@ -411,7 +419,7 @@ class Plot:
         data = {BIN: []}
 
         # regex for parsing bin sizes
-        p = f"(?<={SEP}{PACKET}{SEP}{IN}{SEP}{ALL}{SEP}{BIN}{SEP})\S+(?={SEP})"
+        p = f"(?<={SEP}{PACKETS}{SEP}{IN}{SEP}{ALL}{SEP}{BIN}{SEP})\S+(?={SEP})"
         for col in self.dataframe.columns:
             # parse bins:
             if f"{SEP}{IN}{SEP}{ALL}{SEP}{BIN}{SEP}" in col:
@@ -420,10 +428,10 @@ class Plot:
         # parse bin data
         for protocol in self.protocols:
             for direction in self.directions:
-                data[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}"] = []
+                data[f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}"] = []
                 for bin in data[BIN]:
-                    data[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}"].append(
-                        self.dataframe[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}{bin}{SEP}"].sum()
+                    data[f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}"].append(
+                        self.dataframe[f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}{bin}{SEP}"].sum()
                     )
         # as dataframe
         df = pd.DataFrame(data)
@@ -440,13 +448,13 @@ class Plot:
         """ Labels the axes of the plot"""
         if type in ["bar", "line"]:
             self.fig.gca().set_xlabel("Time in seconds")
-            if self.packets_bytes == PACKET:
-                self.fig.gca().set_ylabel(PACKET)
-            if self.packets_bytes == BYTE:
-                self.fig.gca().set_ylabel(BYTE)
+            if self.packets_bytes == PACKETS:
+                self.fig.gca().set_ylabel(PACKETS)
+            if self.packets_bytes == BYTES:
+                self.fig.gca().set_ylabel(BYTES)
         if type == "hist":
             self.fig.gca().set_xlabel("Packet size (byte)")
-            self.fig.gca().set_ylabel(PACKET)
+            self.fig.gca().set_ylabel(PACKETS)
 
     def _set_size(self, x, y):
         """Sets the size of the plot"""
@@ -475,6 +483,7 @@ class Plot:
 
     @staticmethod
     def show():
+        """Shows the plot"""
         plt.show()
 
 
@@ -484,7 +493,7 @@ class LivePlot:
 
     def __init__(self,
                  data_collector: DataCollector,
-                 packets_bytes: str,
+                 value: str,
                  direction: str,
                  y_lim=None,
                  has_dynamic_x=False):
@@ -493,13 +502,13 @@ class LivePlot:
         Initializes the Plot
 
         :param data_collector: The DataCollector collecting the data to be plotted
-        :param packets_bytes: "p" or "b" to plot packet count/byte count respectively
-        :param direction: "in", "out" or ""(both) to plot incoming, outgoing or both
+        :param value: PACKETS or BYTES to plot packet count/byte count respectively
+        :param direction: IN, OUT or INOUT to plot incoming, outgoing or both
         :param y_lim: limit of the y axis range. The default "None" will lead to a dynamic y axis range
         :param has_dynamic_x: Decides if x axis range is static or dynamic
         """
         self.data_collector = data_collector
-        self.packets_bytes = packets_bytes
+        self.value = value
         self.direction = direction
         self.y_lim = 12
         self.has_dynamic_x = has_dynamic_x
@@ -532,11 +541,11 @@ class LivePlot:
         for index, timestamp in enumerate(self.data_collector.data[TIME]):
 
             if self.direction == IN or self.direction == OUT:
-                value = self.data_collector.data[f"{SEP}{self.packets_bytes}{SEP}{self.direction}{SEP}{ALL}{SEP}"][
+                value = self.data_collector.data[f"{SEP}{self.value}{SEP}{self.direction}{SEP}{ALL}{SEP}"][
                     index]
             else:
-                value = self.data_collector.data[f"{SEP}{self.packets_bytes}{SEP}{IN}{SEP}{ALL}{SEP}"][index] \
-                        + self.data_collector.data[f"{SEP}{self.packets_bytes}{SEP}{OUT}{SEP}{ALL}{SEP}"][index]
+                value = self.data_collector.data[f"{SEP}{self.value}{SEP}{IN}{SEP}{ALL}{SEP}"][index] \
+                        + self.data_collector.data[f"{SEP}{self.value}{SEP}{OUT}{SEP}{ALL}{SEP}"][index]
 
             self.bar_collection[index].set_height(value)
             if self.has_dynamic_y:
@@ -560,10 +569,10 @@ class LivePlot:
 
         # label axes
         self.fig.gca().set_xlabel("Time in seconds")
-        if self.packets_bytes == PACKET:
-            self.fig.gca().set_ylabel(PACKET)
-        if self.packets_bytes == BYTE:
-            self.fig.gca().set_ylabel(BYTE)
+        if self.value == PACKETS:
+            self.fig.gca().set_ylabel(PACKETS)
+        if self.value == BYTES:
+            self.fig.gca().set_ylabel(BYTES)
 
         # set xticks
         plt.xticks(np.arange(min(self.x), max(self.x) + 1, 0.2))
