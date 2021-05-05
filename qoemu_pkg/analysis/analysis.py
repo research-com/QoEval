@@ -238,22 +238,27 @@ class Plot:
                  directions=None,
                  protocols=None,
                  kind=None,
+                 grid=None,
                  stacked=False,
-                 tick_interval: int = 10,
-                 label_frequency: int = 10,
+                 tick_interval: int = 100,
+                 label_interval: int = 1000,
                  resolution_mult: int = 1,
                  x_size=1400,
                  y_size=600):
         """
         Creating this object will create a plot with the given parameters
 
+        :param protocols: list of packet protocols to be plotted ("all", "tcp", "udp")
+        :param kind: "bar", "line" or "hist", type of the plot
+        :param grid: None, "major", "both" or "minor" (not recommended), grid settings
+        :param stacked: boolean, whether the bar plot should be stacked
         :param filename: Name of the file containing the data
         :param start: time in seconds from which point on the data should be plotted
         :param end: time in seconds to which point the data should be plotted
         :param packets_bytes: "p" or "b" to plot packets or bytes respectively
         :param directions: "in", "out" or any other string to plot incoming, outgoing or both
         :param tick_interval: Interval in ms between x ticks
-        :param label_frequency: Frequency of labelled x ticks (i.e. every n-th tick will be labeled)
+        :param label_interval: Interval in ms between major ticks with labels
         :param resolution_mult: multiplier by which the plot will decrease the resolution of the data
         :param x_size: the default x size of plot in pixels
         :param y_size: the default y size of plot in pixels
@@ -267,11 +272,12 @@ class Plot:
         self.start = start
         self.end = end
         self.kind = kind
+        self.grid = grid
         self.stacked = stacked
         self.packets_bytes = packets_bytes
         self.directions = directions
         self.tick_interval = tick_interval
-        self.label_frequency = label_frequency
+        self.label_interval = label_interval
         self.resolution_mult = resolution_mult
         self.x_size = x_size
         self.y_size = y_size
@@ -288,6 +294,8 @@ class Plot:
         if self.kind == "hist":
             self._create_histogram(self.fig)
 
+        self._set_size(self.x_size, self.y_size)
+
         self._label_axes(self.kind)
 
     def create(self):
@@ -299,6 +307,8 @@ class Plot:
         """
 
         df = pd.read_csv(self.filename)
+
+        self.interval = df[TIME][1] * 1000
 
         # find indices on both ends of time frame
         start_index = df.index[df[TIME] >= self.start][0]
@@ -315,7 +325,7 @@ class Plot:
         df = df[df.index <= end_index]
 
         if self.resolution_mult != 1:
-            # if we cominge rows using resolution_mult, we need to pick the correct rows from the "time" column
+            # if we combine rows using resolution_mult, we need to pick the correct rows from the "time" column
             times = df.iloc[::self.resolution_mult, :][TIME]
             times.reset_index(drop=True, inplace=True)
             # and sum up the of rows of the data
@@ -332,7 +342,8 @@ class Plot:
         for col in self.dataframe.columns:
             if (any(f"{SEP}{s}{SEP}" in col for s in self.directions)
                     and (any(f"{SEP}{s}{SEP}" in col for s in self.protocols))
-                    and (f"{SEP}{self.packets_bytes}{SEP}" in col)):
+                    and (f"{SEP}{self.packets_bytes}{SEP}" in col)
+                    and not (f"{SEP}{BIN}{SEP}" in col)):
                 columns.append(col)
 
         # reduce dataframe to used columns
@@ -342,19 +353,22 @@ class Plot:
         df.set_index(TIME).plot(kind="line", ax=figure.gca())
 
         # set major and minor tick position
-        self.fig.gca().xaxis.set_minor_locator(plt.FixedLocator(df[TIME][::self.tick_interval]))
-        self.fig.gca().xaxis.set_major_locator(plt.FixedLocator(df[TIME][::self.label_frequency]))
+        self.fig.gca().xaxis.set_minor_locator(plt.FixedLocator(df[TIME][::round(self.tick_interval/self.interval/self.resolution_mult)]))
+        self.fig.gca().xaxis.set_major_locator(plt.FixedLocator(df[TIME][::round(self.label_interval/self.interval/self.resolution_mult)]))
 
         # format the ticks
         self.fig.gca().tick_params(which='major', length=5, labelrotation=0)
         self.fig.gca().tick_params(which='minor', length=2)
 
+        # set grid
+        if self.grid:
+            plt.grid(True, which=self.grid)
+
         # create labels for  major ticks
-        major_tick_labels = ["{:.2f}".format(item) for item in self.dataframe[TIME][::self.label_frequency]]
+        major_tick_labels = ["{:.2f}".format(item) for item in self.dataframe[TIME][::round(self.label_interval/self.interval/self.resolution_mult)]]
 
         # assign labels to major ticks
         self.fig.gca().xaxis.set_major_formatter(ticker.FixedFormatter(major_tick_labels))
-
 
     def _create_bar_plot(self, figure):
         """ Creates a bar plot with the parsed x and y values"""
@@ -363,7 +377,8 @@ class Plot:
         for col in self.dataframe.columns:
             if (any(f"{SEP}{s}{SEP}" in col for s in self.directions)
                     and (any(f"{SEP}{s}{SEP}" in col for s in self.protocols))
-                    and (f"{SEP}{self.packets_bytes}{SEP}" in col)):
+                    and (f"{SEP}{self.packets_bytes}{SEP}" in col)
+                    and not (f"{SEP}{BIN}{SEP}" in col)):
                 columns.append(col)
 
         # reduce dataframe to used columns
@@ -373,16 +388,20 @@ class Plot:
         # plot using pandas
         df.plot(kind="bar", stacked=self.stacked, align="edge", width=0.8, ax=figure.gca())
 
+        # set grid
+        if self.grid:
+            plt.grid(True, which=self.grid)
+
         # set major and minor tick position
-        self.fig.gca().xaxis.set_minor_locator(plt.FixedLocator(range(0, len(self.dataframe), self.tick_interval)))
-        self.fig.gca().xaxis.set_major_locator(plt.FixedLocator(range(0, len(self.dataframe), self.label_frequency)))
+        self.fig.gca().xaxis.set_minor_locator(plt.FixedLocator(range(0, len(self.dataframe), round(self.tick_interval/self.interval/self.resolution_mult))))
+        self.fig.gca().xaxis.set_major_locator(plt.FixedLocator(range(0, len(self.dataframe), round(self.label_interval/self.interval/self.resolution_mult))))
 
         # format the ticks
         self.fig.gca().tick_params(which='major', length=5, labelrotation=0)
         self.fig.gca().tick_params(which='minor', length=2)
 
         # create labels for  major ticks
-        major_tick_labels = ["{:.2f}".format(item) for item in self.dataframe[TIME][::self.label_frequency]]
+        major_tick_labels = ["{:.2f}".format(item) for item in self.dataframe[TIME][::round(self.label_interval/self.interval / self.resolution_mult)]]
 
         # assign labels to major ticks
         self.fig.gca().xaxis.set_major_formatter(ticker.FixedFormatter(major_tick_labels))
