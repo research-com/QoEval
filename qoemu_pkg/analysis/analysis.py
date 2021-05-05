@@ -154,12 +154,17 @@ class DataCollector:
             # packet_time_frame is the index of the packet time frame in the data arrays
             packet_time_frame = math.floor((float(packet[1]) - self.start_time) / (self.interval/1000))
 
-            # if the packet_time_frame is out of bounds we are finished writing data:
+            # if the packet_time_frame is out of bounds we are not saving it to data:
             if packet_time_frame >= self.data_array_size:
-                log.info(f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
-                self.stop_listening_flag = True
-                self._write_to_file()
-                return
+                # packets can arrive out of order so we continue to look for packets for a few secs
+                if float(packet[1]) >= self.start_time + self.duration + 2:
+                    log.info(
+                        f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
+                    self.stop_listening_flag = True
+                    self._write_to_file()
+                    return
+                continue
+
 
             length = int(packet[2])
 
