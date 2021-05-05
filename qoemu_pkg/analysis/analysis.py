@@ -28,18 +28,20 @@ Plotting data from .csv file, second 2 to 5, packet count in/out, saving it as p
 import io
 import logging as log
 import math
+import re
 import subprocess
 import threading
 import time
 from datetime import datetime
-
+import matplotlib.ticker as ticker
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-PACKET = "p"
-BYTE = "b"
+PACKET = "packets"
+BYTE = "byte"
+INOUT = "in/out"
 OUT = "out"
 IN = "in"
 ALL = "all"
@@ -49,7 +51,7 @@ BIN = "bin"
 TIME = "time"
 SEP = ":"
 VALUES = [PACKET, BYTE]
-DIRECTIONS = [OUT, IN]
+DIRECTIONS = [INOUT, IN, OUT]
 PROTOCOLS = [ALL, UDP, TCP]
 BINS = []
 
@@ -88,23 +90,31 @@ class DataCollector:
         self.bin_sizes = bin_sizes
         self.data_array_size = math.ceil(self.duration / self.interval * 1000)
         self.data = {
-            TIME: np.arange(start=self.interval / 1000,
-                            stop=self.duration + self.interval/1000,
-                            step=self.interval/1000)
+            TIME: np.arange(start=0,
+                            stop=self.duration,
+                            step=self.interval / 1000)
         }
         for protocol in PROTOCOLS:
             for direction in DIRECTIONS:
                 for value in VALUES:
-                    self.data[f"{value}{SEP}{direction}{SEP}{protocol}"] = np.zeros(self.data_array_size)
+                    self.data[f"{SEP}{value}{SEP}{direction}{SEP}{protocol}{SEP}"] = np.zeros(self.data_array_size)
 
         if self.bin_sizes:
             for protocol in PROTOCOLS:
                 for direction in DIRECTIONS:
                     for size in self.bin_sizes:
-                        self.data[f"{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}"] = np.zeros(self.data_array_size)
-                    self.data[f"{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}"] = np.zeros(self.data_array_size)
+                        self.data[
+                            f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}{SEP}"] = np.zeros(
+                            self.data_array_size)
+                    self.data[
+                        f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"] = np.zeros(
+                        self.data_array_size)
 
     def _listen_on_interfaces(self):
+        """
+
+
+        """
         cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out} " \
               f"-Tfields -e frame.number -e frame.time_epoch " \
               f"-e frame.cap_len -e frame.interface_name -e _ws.col.Protocol " \
@@ -118,7 +128,8 @@ class DataCollector:
         proc.terminate()
         self.stop_listening_flag = False
 
-    def _is_of_protocol(self, packet, protocol):
+    @staticmethod
+    def _is_of_protocol(packet, protocol):
         if protocol == ALL:
             return True
         if protocol == packet[4]:
@@ -130,13 +141,23 @@ class DataCollector:
             return OUT
         return IN
 
+    def _is_of_direction(self, packet, direction):
+        if direction == INOUT:
+            return True
+        if direction == self._get_direction(packet):
+            return True
+        return False
+
     def _put_packet_in_bin(self, direction, protocol, length, packet_time_frame):
         if self.bin_sizes:
             for size in self.bin_sizes:
                 if length <= size:
-                    self.data[f"{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}"][packet_time_frame] += 1
+                    self.data[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}{SEP}"][
+                        packet_time_frame] += 1
                     return
-            self.data[f"{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}"][packet_time_frame] += 1
+            self.data[
+                f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"][
+                packet_time_frame] += 1
             return
 
     def _count_thread(self):
@@ -152,7 +173,7 @@ class DataCollector:
                 continue
 
             # packet_time_frame is the index of the packet time frame in the data arrays
-            packet_time_frame = math.floor((float(packet[1]) - self.start_time) / (self.interval/1000))
+            packet_time_frame = math.floor((float(packet[1]) - self.start_time) / (self.interval / 1000))
 
             # if the packet_time_frame is out of bounds we are not saving it to data:
             if packet_time_frame >= self.data_array_size:
@@ -165,14 +186,15 @@ class DataCollector:
                     return
                 continue
 
-
             length = int(packet[2])
 
             for protocol in PROTOCOLS:
-                if self._is_of_protocol(packet, protocol):
-                    self.data[f"{PACKET}{SEP}{self._get_direction(packet)}{SEP}{protocol}"][packet_time_frame] += 1
-                    self.data[f"{BYTE}{SEP}{self._get_direction(packet)}{SEP}{protocol}"][packet_time_frame] += length
-                    self._put_packet_in_bin(self._get_direction(packet), protocol, length, packet_time_frame)
+                for direction in DIRECTIONS:
+                    if self._is_of_direction(packet, direction):
+                        if self._is_of_protocol(packet, protocol):
+                            self.data[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}"][packet_time_frame] += 1
+                            self.data[f"{SEP}{BYTE}{SEP}{direction}{SEP}{protocol}{SEP}"][packet_time_frame] += length
+                            self._put_packet_in_bin(direction, protocol, length, packet_time_frame)
 
     def _write_to_file(self):
         df = pd.DataFrame.from_dict(self.data)
@@ -213,7 +235,10 @@ class Plot:
                  start: int,
                  end: int,
                  packets_bytes: str,
-                 direction: str = "in/out",
+                 directions=None,
+                 protocols=None,
+                 kind=None,
+                 stacked=False,
                  tick_interval: int = 10,
                  label_frequency: int = 10,
                  resolution_mult: int = 1,
@@ -226,94 +251,183 @@ class Plot:
         :param start: time in seconds from which point on the data should be plotted
         :param end: time in seconds to which point the data should be plotted
         :param packets_bytes: "p" or "b" to plot packets or bytes respectively
-        :param direction: "in", "out" or any other string to plot incoming, outgoing or both
+        :param directions: "in", "out" or any other string to plot incoming, outgoing or both
         :param tick_interval: Interval in ms between x ticks
         :param label_frequency: Frequency of labelled x ticks (i.e. every n-th tick will be labeled)
         :param resolution_mult: multiplier by which the plot will decrease the resolution of the data
         :param x_size: the default x size of plot in pixels
         :param y_size: the default y size of plot in pixels
         """
+        if directions is None:
+            directions = [INOUT]
+        if protocols is None:
+            protocols = [ALL]
+
         self.filename = filename
         self.start = start
         self.end = end
+        self.kind = kind
+        self.stacked = stacked
         self.packets_bytes = packets_bytes
-        self.direction = direction
+        self.directions = directions
         self.tick_interval = tick_interval
         self.label_frequency = label_frequency
         self.resolution_mult = resolution_mult
         self.x_size = x_size
         self.y_size = y_size
+        self.protocols = protocols
+        self.dataframe = None
 
-        self.x_values = []
-        self.y_values = []
         self.fig = plt.figure()
 
         self._parse_data()
-        self._create_bar_plot()
-        self._arrange_xticks()
-        self._label_axes()
+        if self.kind == "bar":
+            self._create_bar_plot(self.fig)
+        if self.kind == "line":
+            self._create_line_plot(self.fig)
+        if self.kind == "hist":
+            self._create_histogram(self.fig)
+
+        self._label_axes(self.kind)
+
+    def create(self):
+        pass
 
     def _parse_data(self):
         """
-        Reads .csv file and saves relevant data to self.x_values and self.y_values
+        Reads .csv file and creates a pandas dataframe
         """
 
         df = pd.read_csv(self.filename)
 
-        df = df[df[TIME] >= self.start]
-        df = df[df[TIME] <= self.end]
+        # find indices on both ends of time frame
+        start_index = df.index[df[TIME] >= self.start][0]
+        end_index = df.index[df[TIME] >= self.end][0]
 
-        t_sum = 0  # used when summing up multiple rows of data
+        # make sure count of rows is divisible by resolution mult:
+        end_index += (end_index - start_index + 1) % self.resolution_mult
+        # make sure we're not out of bounds
+        if end_index > df.tail(1).index.item():
+            end_index -= self.resolution_mult
 
-        for index, row in df.iterrows():
+        # reduce dataframe to specified time frame
+        df = df[df.index >= start_index]
+        df = df[df.index <= end_index]
 
-            if self.direction == IN or self.direction == OUT:
-                t = row[f"{self.packets_bytes}:{self.direction}:{ALL}"]
-            else:
-                t = row[f"{self.packets_bytes}:{OUT}:{ALL}"] + row[f"{self.packets_bytes}:{IN}:{ALL}"]
-
-            if (index + 1) % self.resolution_mult == 0:
-                self.x_values.append(row[TIME])
-                t_sum += t
-                self.y_values.append(t_sum)
-                t_sum = 0
-
-            else:
-                t_sum += t
-
-    def _create_bar_plot(self):
-        """ Creates a bar plot with the parsed x and y values"""
-        axes = self.fig.gca()
-
-        axes.bar(self.x_values, self.y_values, align='edge',
-                 width=(self.x_values[1]-self.x_values[0]) * 0.8 * self.resolution_mult)
-
-    def _arrange_xticks(self):
-        """ Arranges the x-ticks of the plot"""
-        axes = self.fig.gca()
-        axes.set_xticks(np.arange(self.start, self.end + self.tick_interval / 1000,
-                                  float(self.tick_interval / 1000)))
-
-        axes.xaxis.set_major_locator(plt.MultipleLocator(self.tick_interval * self.label_frequency / 1000))
-        axes.xaxis.set_minor_locator(plt.MultipleLocator(self.tick_interval / 1000))
-        axes.tick_params(which='major', length=5, labelsize="large")
-        axes.tick_params(which='minor', length=2)
-
-    def _label_axes(self):
-        """ Labels the axes of the plot"""
-        self.fig.gca().set_xlabel("Time in seconds")
-        s1 = ""
-        if self.packets_bytes == PACKET:
-            s1 = "Packets "
-        if self.packets_bytes == BYTE:
-            s1 = "Bytes "
-        if self.direction == IN:
-            s2 = "in"
-        elif self.direction == OUT:
-            s2 = "out"
+        if self.resolution_mult != 1:
+            # if we cominge rows using resolution_mult, we need to pick the correct rows from the "time" column
+            times = df.iloc[::self.resolution_mult, :][TIME]
+            times.reset_index(drop=True, inplace=True)
+            # and sum up the of rows of the data
+            df = df.drop(TIME, axis=1).groupby(np.arange(len(df)) // self.resolution_mult).sum()
+            # reassemble time column and data
+            self.dataframe = pd.concat([times, df], axis=1)
         else:
-            s2 = "in/out"
-        self.fig.gca().set_ylabel(f"{s1}{s2}")
+            self.dataframe = df
+
+    def _create_line_plot(self, figure):
+        """ Creates a line plot with the parsed x and y values"""
+        # parse columns to be used
+        columns = [TIME]
+        for col in self.dataframe.columns:
+            if (any(f"{SEP}{s}{SEP}" in col for s in self.directions)
+                    and (any(f"{SEP}{s}{SEP}" in col for s in self.protocols))
+                    and (f"{SEP}{self.packets_bytes}{SEP}" in col)):
+                columns.append(col)
+
+        # reduce dataframe to used columns
+        df = self.dataframe[columns]
+
+        # plot with index set to time
+        df.set_index(TIME).plot(kind="line", ax=figure.gca())
+
+        # set major and minor tick position
+        self.fig.gca().xaxis.set_minor_locator(plt.FixedLocator(df[TIME][::self.tick_interval]))
+        self.fig.gca().xaxis.set_major_locator(plt.FixedLocator(df[TIME][::self.label_frequency]))
+
+        # format the ticks
+        self.fig.gca().tick_params(which='major', length=5, labelrotation=0)
+        self.fig.gca().tick_params(which='minor', length=2)
+
+        # create labels for  major ticks
+        major_tick_labels = ["{:.2f}".format(item) for item in self.dataframe[TIME][::self.label_frequency]]
+
+        # assign labels to major ticks
+        self.fig.gca().xaxis.set_major_formatter(ticker.FixedFormatter(major_tick_labels))
+
+
+    def _create_bar_plot(self, figure):
+        """ Creates a bar plot with the parsed x and y values"""
+        # parse columns to be used
+        columns = [TIME]
+        for col in self.dataframe.columns:
+            if (any(f"{SEP}{s}{SEP}" in col for s in self.directions)
+                    and (any(f"{SEP}{s}{SEP}" in col for s in self.protocols))
+                    and (f"{SEP}{self.packets_bytes}{SEP}" in col)):
+                columns.append(col)
+
+        # reduce dataframe to used columns
+        df = self.dataframe[columns]
+        df.set_index(TIME, inplace=True)
+
+        # plot using pandas
+        df.plot(kind="bar", stacked=self.stacked, align="edge", width=0.8, ax=figure.gca())
+
+        # set major and minor tick position
+        self.fig.gca().xaxis.set_minor_locator(plt.FixedLocator(range(0, len(self.dataframe), self.tick_interval)))
+        self.fig.gca().xaxis.set_major_locator(plt.FixedLocator(range(0, len(self.dataframe), self.label_frequency)))
+
+        # format the ticks
+        self.fig.gca().tick_params(which='major', length=5, labelrotation=0)
+        self.fig.gca().tick_params(which='minor', length=2)
+
+        # create labels for  major ticks
+        major_tick_labels = ["{:.2f}".format(item) for item in self.dataframe[TIME][::self.label_frequency]]
+
+        # assign labels to major ticks
+        self.fig.gca().xaxis.set_major_formatter(ticker.FixedFormatter(major_tick_labels))
+
+    def _create_histogram(self, figure):
+
+        data = {BIN: []}
+
+        # regex for parsing bin sizes
+        p = f"(?<={SEP}{PACKET}{SEP}{IN}{SEP}{ALL}{SEP}{BIN}{SEP})\S+(?={SEP})"
+        for col in self.dataframe.columns:
+            # parse bins:
+            if f"{SEP}{IN}{SEP}{ALL}{SEP}{BIN}{SEP}" in col:
+                data[BIN].append(re.search(p, col)[0])
+
+        # parse bin data
+        for protocol in self.protocols:
+            for direction in self.directions:
+                data[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}"] = []
+                for bin in data[BIN]:
+                    data[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}"].append(
+                        self.dataframe[f"{SEP}{PACKET}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}{bin}{SEP}"].sum()
+                    )
+        # as dataframe
+        df = pd.DataFrame(data)
+        df.set_index(BIN, inplace=True)
+
+        # plot using pandas
+        df.plot(kind="bar", stacked=self.stacked, align="center", width=0.8, ax=figure.gca())
+
+        # format labels
+        self.fig.gca().tick_params(which='major', length=5, labelrotation=0)
+        self.fig.gca().tick_params(which='minor', length=2)
+
+    def _label_axes(self, type):
+        """ Labels the axes of the plot"""
+        if type in ["bar", "line"]:
+            self.fig.gca().set_xlabel("Time in seconds")
+            if self.packets_bytes == PACKET:
+                self.fig.gca().set_ylabel(PACKET)
+            if self.packets_bytes == BYTE:
+                self.fig.gca().set_ylabel(BYTE)
+        if type == "hist":
+            self.fig.gca().set_xlabel("Packet size (byte)")
+            self.fig.gca().set_ylabel(PACKET)
 
     def _set_size(self, x, y):
         """Sets the size of the plot"""
@@ -340,9 +454,14 @@ class Plot:
 
         self.fig.savefig(f'{self.filename}.png')
 
+    @staticmethod
+    def show():
+        plt.show()
+
 
 class LivePlot:
-    """Plots the data of a given DataCollector live"""
+    """Plots the data of a given DataCollector live. Plot may behave unexpectedly because of buffering, which can lead
+    to packets being processed much later than they arrive"""
 
     def __init__(self,
                  data_collector: DataCollector,
@@ -375,6 +494,7 @@ class LivePlot:
 
         self.fig = plt.figure()
 
+        # list of bars of plot
         self.bar_collection = plt.bar(self.x, self.y, align='edge', width=data_collector.interval / 1000 * 0.8)
 
         self.y_lim = y_lim
@@ -390,18 +510,19 @@ class LivePlot:
 
     def _animate(self, i):
         """The animate function called by animation.FuncAnimation()"""
-        for i, timestamp in enumerate(self.data_collector.data[TIME]):
+        for index, timestamp in enumerate(self.data_collector.data[TIME]):
 
             if self.direction == IN or self.direction == OUT:
-                t = self.data_collector.data[f"{self.packets_bytes}:{self.direction}:{ALL}"][i]
+                value = self.data_collector.data[f"{SEP}{self.packets_bytes}{SEP}{self.direction}{SEP}{ALL}{SEP}"][
+                    index]
             else:
-                t = self.data_collector.data[f"{self.packets_bytes}:{IN}:{ALL}"][i] \
-                    + self.data_collector.data[f"{self.packets_bytes}:{OUT}:{ALL}"][i]
+                value = self.data_collector.data[f"{SEP}{self.packets_bytes}{SEP}{IN}{SEP}{ALL}{SEP}"][index] \
+                        + self.data_collector.data[f"{SEP}{self.packets_bytes}{SEP}{OUT}{SEP}{ALL}{SEP}"][index]
 
-            self.bar_collection[i].set_height(t)
+            self.bar_collection[index].set_height(value)
             if self.has_dynamic_y:
-                if self.bar_collection[i].get_height() > self.y_lim:
-                    self.y_lim = self.bar_collection[i].get_height()
+                if self.bar_collection[index].get_height() > self.y_lim:
+                    self.y_lim = self.bar_collection[index].get_height()
                     plt.ylim(0, self.y_lim)
 
             if self.has_dynamic_x:
@@ -417,22 +538,15 @@ class LivePlot:
                                        interval=self.draw_interval)
 
         plt.ylim(0, self.y_lim)
-        plt.xlabel("Time in seconds")
 
-        plt.xlabel("Time in seconds")
-        s1 = ""
+        # label axes
+        self.fig.gca().set_xlabel("Time in seconds")
         if self.packets_bytes == PACKET:
-            s1 = "Packets "
+            self.fig.gca().set_ylabel(PACKET)
         if self.packets_bytes == BYTE:
-            s1 = "Bytes "
-        if self.direction == IN:
-            s2 = "in"
-        elif self.direction == OUT:
-            s2 = "out"
-        else:
-            s2 = "in/out"
-        plt.ylabel(f"{s1}{s2}")
+            self.fig.gca().set_ylabel(BYTE)
 
+        # set xticks
         plt.xticks(np.arange(min(self.x), max(self.x) + 1, 0.2))
 
         xticks_pos, xticks_labels = plt.xticks()
