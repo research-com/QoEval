@@ -320,7 +320,10 @@ class Plot:
 
         # find indices on both ends of time frame
         start_index = df.index[df[TIME] >= self.start][0]
-        end_index = df.index[df[TIME] >= self.end][0]
+        try:
+            end_index = df.index[df[TIME] >= self.end][0]
+        except IndexError:
+            end_index = df.tail(1).index.item()
 
         # make sure count of rows is divisible by resolution mult:
         end_index += (end_index - start_index + 1) % self.resolution_mult
