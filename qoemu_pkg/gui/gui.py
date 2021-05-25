@@ -1,7 +1,6 @@
 from settings_frame import *
 from parameter_select_frame import *
 from analysis_frame import *
-from upload_frame import *
 from log_frame import *
 
 
@@ -21,7 +20,6 @@ class Gui(tk.Tk):
         self.parameter_frame = ParameterFrame(self)
         self.settings_frame = SettingsFrame(self)
         self.analysis_frame = AnalysisFrame(self)
-        self.upload_frame = UploadFrame(self)
         self.log_frame = LogFrame(self)
 
         self.parameter_frame.grid(row=0, column=0, sticky="nsew", rowspan=2)
