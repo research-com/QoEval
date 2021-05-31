@@ -36,5 +36,10 @@ qoemu_conf = config[f'{QOEMU_SECTION}']
 
 vd_path = qoemu_conf.get('AVDPath', _default_avd_path)
 video_capture_path = qoemu_conf.get('VideoCapturePath', _default_video_capture_path)
-show_device_frame = qoemu_conf.get('ShowDeviceFrame', False)
+show_device_frame = qoemu_conf.getboolean('ShowDeviceFrame', False)
 emulator_type = MobileDeviceType[qoemu_conf.get('EmulatorType', 'none')]
+adb_device_serial = qoemu_conf.get('AdbDeviceSerial', '')
+audio_device_emu = qoemu_conf.get('AudioDeviceEmu','')
+audio_device_real = qoemu_conf.get('AudioDeviceReal','')
+traffic_analysis_live = qoemu_conf.getboolean('TrafficAnalysisLiveVisualization', False)
+traffic_analysis_plot = qoemu_conf.getboolean('TrafficAnalysisPlot', True)

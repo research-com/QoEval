@@ -2,8 +2,9 @@
 """
     Stimuli campaign coordinator
 """
+from qoemu_pkg.analysis import analysis
 from qoemu_pkg.capture.capture import CaptureEmulator,CaptureRealDevice
-from qoemu_pkg.configuration import emulator_type
+from qoemu_pkg.configuration import emulator_type, video_capture_path, traffic_analysis_live, traffic_analysis_plot, adb_device_serial
 from qoemu_pkg.emulator.mobiledevice import MobileDeviceType, MobileDeviceOrientation
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
 from qoemu_pkg.emulator.standard_emulator import StandardEmulator
@@ -12,16 +13,15 @@ from qoemu_pkg.netem.netem import Connection
 from qoemu_pkg.uicontrol.uicontrol import UiControl
 from qoemu_pkg.uicontrol.usecase import UseCaseType
 from qoemu_pkg.parser.parser import *
-from qoemu_pkg.configuration import video_capture_path
+
 
 import logging as log
 import threading
 import time
 import sys
+import traceback
 
 NET_DEVICE_NAME = "enp0s31f6"             # TODO: get from config file
-# ADB_DEVICE_SERIAL ="192.168.56.146:5555"  # TODO: get from config file / auto-detect
-ADB_DEVICE_SERIAL ="11131FDD4003EW"   # Pixel 5 real hardware device
 COORDINATOR_RELEASE = "0.1"
 
 GEN_LOG_FILE = os.path.join(video_capture_path, 'qoemu.log')
@@ -43,7 +43,7 @@ def convert_to_seconds(time_str: str)->float:
 class Coordinator:
     def __init__(self):
         log.basicConfig(level=log.DEBUG)
-        self.ui_control = UiControl(ADB_DEVICE_SERIAL)
+        self.ui_control = UiControl(adb_device_serial)
         if emulator_type == MobileDeviceType.GENYMOTION:
             self.emulator = GenymotionEmulator()
             self.capture = CaptureEmulator()
@@ -58,6 +58,7 @@ class Coordinator:
             raise RuntimeError('No emulation device configured - check you \"qoemu.conf\" .')
         self._is_prepared = False
         self.netem = None
+        self.analysis = None
         self.output_filename = None
         self._gen_log = open(GEN_LOG_FILE, "a+")
 
@@ -74,6 +75,15 @@ class Coordinator:
 
         id = f"{type_id}-{table_id}-{entry_id}_{emulator_id}_P0"
         return id
+
+    def _get_bpf_rule(self) -> str:
+        if self.netem.android_ip:
+            return f"host {self.netem.android_ip}"
+        raise RuntimeError("check port rule")
+        # TODO: return valid bpf rule which excludes the exclude_ports
+        if self.netem.exclude_ports:
+            return f" "
+
 
     def prepare(self, type_id: str, table_id: str, entry_id: str):
         params = get_parameters(type_id, table_id, entry_id)
@@ -126,6 +136,14 @@ class Coordinator:
             log.error("Cannot execute campaign - not prepared.")
             return
 
+        # initialize traffic analysis - if enabled
+        if traffic_analysis_live or traffic_analysis_plot:
+            length_in_sec = convert_to_seconds(capture_time)
+            self.analysis = analysis.DataCollector(self.netem.virtual_device_in, self.netem.virtual_device_in,
+                                                   10, length_in_sec, bpf_filter=self._get_bpf_rule())
+            self.analysis.start_threads()
+            self.analysis.start()
+
         # execute concurrently in separate threads
         uc_duration = convert_to_seconds(capture_time) + 2  # add 2s safety margin
         ui_control_thread = threading.Thread(target=self.ui_control.execute_use_case, args=(uc_duration,))
@@ -171,16 +189,22 @@ if __name__ == '__main__':
 
     ids_to_evaluate = get_entry_ids('VS', 'B')
 
-    # for id in ids_to_evaluate:
-    for id in ['6','5','4','3','2','1']:
-        coordinator = Coordinator()
-        try:
-            coordinator.prepare('VS', 'B', id)
-            wait_countdown(2)
-            coordinator.execute('00:03:00')
-            wait_countdown(5)
-        finally:
-            coordinator.finish()
-
+    try:
+        # for id in ids_to_evaluate:
+        for id in ['6']:#,'5','4','3','2','1']:
+            coordinator = Coordinator()
+            try:
+                coordinator.prepare('VS', 'B', id)
+                wait_countdown(2)
+                coordinator.execute('00:03:00')
+                wait_countdown(5)
+            finally:
+                coordinator.finish()
+    except RuntimeError as err:
+        traceback.print_exc()
+        print("******************************************************************************************************")
+        print(f"RuntimeError occured: {err}")
+        print(f"Coordinated QoEmu run canceled.")
+        print("******************************************************************************************************")
 
     print("Done.")
