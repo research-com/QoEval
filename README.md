@@ -1,5 +1,9 @@
 # QoEmu V0.1
 
+## Installation
+When cloning the git repository, check that git lfs is enabled
+by using the command ``git lfs install`` and ``git lfs fetch``
+
 ## Hardware Device Control
 For controlling a real Android phone:
 * The phone must be connected to the qoemu host by an USB connection (used for
