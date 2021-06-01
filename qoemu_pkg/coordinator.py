@@ -5,7 +5,7 @@
 from qoemu_pkg.analysis import analysis
 from qoemu_pkg.capture.capture import CaptureEmulator,CaptureRealDevice,PostProcessor
 from qoemu_pkg.configuration import emulator_type, video_capture_path, traffic_analysis_live, traffic_analysis_plot, adb_device_serial
-from qoemu_pkg.emulator.mobiledevice import MobileDeviceType, MobileDeviceOrientation
+from qoemu_pkg.configuration import MobileDeviceType, MobileDeviceOrientation
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
 from qoemu_pkg.emulator.standard_emulator import StandardEmulator
 from qoemu_pkg.emulator.physical_device import PhysicalDevice
@@ -149,6 +149,7 @@ class Coordinator:
         ui_control_thread = threading.Thread(target=self.ui_control.execute_use_case, args=(uc_duration,))
         capture_thread = threading.Thread(target=self.capture.start_recording, args=(self.output_filename, capture_time))
         self.netem.enable_netem()
+        input("netem active - press enter to continue...")
         ui_control_thread.start()
         capture_thread.start()
         capture_thread.join()

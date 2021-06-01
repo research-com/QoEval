@@ -9,9 +9,13 @@ import subprocess
 import ipaddress
 import shlex
 import re
-from enum import Enum
+from qoemu_pkg.configuration import MobileDeviceOrientation, adb_device_serial
 
-ADB_NAME = "adb"   #-e selects emulator, -d usb-connected device, -s serialnr
+if len(adb_device_serial) > 1:
+    ADB_NAME = f"adb -s {adb_device_serial}"   #-e selects emulator, -d usb-connected device, -s serialnr
+else:
+    ADB_NAME = "adb"
+
 MEASUREMENT_TEST_HOST = "www.youtube.de"
 
 def check_ext(name):
@@ -23,17 +27,6 @@ def check_ext(name):
         raise RuntimeError('External component not found.')
     else:
         log.debug(f"using {output.stdout}")
-
-
-class MobileDeviceOrientation(Enum):
-    PORTRAIT = 'portrait'
-    LANDSCAPE = 'landscape'
-
-class MobileDeviceType(Enum):
-    NONE = 'none'
-    SDK_EMULATOR = 'emulator'
-    GENYMOTION = 'genymotion'
-    REAL_DEVICE = 'realdevice'
 
 class MobileDevice:
 

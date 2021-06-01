@@ -8,12 +8,22 @@ Handle configuration options
 import os
 import pathlib
 import configparser
+from enum import Enum
 
 # default file name of configuration file and mandatory section name
-from qoemu_pkg.emulator.mobiledevice import MobileDeviceType
-
 QOEMU_CONF = 'qoemu.conf'
 QOEMU_SECTION = 'QOEMU'
+
+class MobileDeviceOrientation(Enum):
+    PORTRAIT = 'portrait'
+    LANDSCAPE = 'landscape'
+
+class MobileDeviceType(Enum):
+    NONE = 'none'
+    SDK_EMULATOR = 'emulator'
+    GENYMOTION = 'genymotion'
+    REAL_DEVICE = 'realdevice'
+
 
 # provide some default values
 _default_avd_path = os.path.join(pathlib.Path.home(), 'qoemu_avd')
