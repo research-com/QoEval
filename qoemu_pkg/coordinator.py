@@ -3,7 +3,7 @@
     Stimuli campaign coordinator
 """
 from qoemu_pkg.analysis import analysis
-from qoemu_pkg.capture.capture import CaptureEmulator,CaptureRealDevice
+from qoemu_pkg.capture.capture import CaptureEmulator,CaptureRealDevice,PostProcessor
 from qoemu_pkg.configuration import emulator_type, video_capture_path, traffic_analysis_live, traffic_analysis_plot, adb_device_serial
 from qoemu_pkg.emulator.mobiledevice import MobileDeviceType, MobileDeviceOrientation
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
@@ -62,7 +62,7 @@ class Coordinator:
         self.output_filename = None
         self._gen_log = open(GEN_LOG_FILE, "a+")
 
-    def _get_video_id(self, type_id: str, table_id: str, entry_id: str) -> str:
+    def get_video_id(self, type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
         emulator_id = "E1-"
         if emulator_type == MobileDeviceType.SDK_EMULATOR:
             emulator_id += "S"
@@ -73,7 +73,7 @@ class Coordinator:
 
         emulator_id += f"-{COORDINATOR_RELEASE}"
 
-        id = f"{type_id}-{table_id}-{entry_id}_{emulator_id}_P0"
+        id = f"{type_id}-{table_id}-{entry_id}_{emulator_id}_P{postprocessing_step}"
         return id
 
     def _get_bpf_rule(self) -> str:
@@ -88,7 +88,7 @@ class Coordinator:
     def prepare(self, type_id: str, table_id: str, entry_id: str):
         params = get_parameters(type_id, table_id, entry_id)
         log.debug(f"Preparing with parameters: {params}")
-        self.output_filename = self._get_video_id(type_id, table_id, entry_id)
+        self.output_filename = self.get_video_id(type_id, table_id, entry_id)
         time_string = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
         self._gen_log.write(f"{time_string} {self.output_filename} {params} ")
 
@@ -183,28 +183,52 @@ if __name__ == '__main__':
     print(get_table_ids('VS'))
     print(get_entry_ids('VS', 'B'))
 
+    do_generate_stimuli = True
+    do_postprocessing = False
+
 #    print(get_link('VS', 'A', '1'))
 #    print(get_start('VS', 'A', '1'))
 #    print(get_end('VS', 'A', '1'))
 
-    ids_to_evaluate = get_entry_ids('VS', 'B')
+    type_id = 'VS'
+    table_id = 'B'
+    ids_to_evaluate = get_entry_ids(type_id, table_id)
+    ids_to_evaluate =  ['6'] #,'5','4','3','2','1']
+
+    coordinator = Coordinator()
 
     try:
-        # for id in ids_to_evaluate:
-        for id in ['6']:#,'5','4','3','2','1']:
-            coordinator = Coordinator()
-            try:
-                coordinator.prepare('VS', 'B', id)
-                wait_countdown(2)
-                coordinator.execute('00:03:00')
-                wait_countdown(5)
-            finally:
-                coordinator.finish()
+        if do_generate_stimuli:
+                for entry_id in ids_to_evaluate:
+                    try:
+                        coordinator.prepare(type_id, table_id, entry_id)
+                        wait_countdown(2)
+                        coordinator.execute('00:03:00')
+                        wait_countdown(5)
+                    finally:
+                        coordinator.finish()
+
+        if do_postprocessing:
+            print ("Semi-manual post-processing starts... ")
+            print ("Please use a video player of your choice to answer the following questions.")
+            print("")
+            for entry_id in ids_to_evaluate:
+                video_id_in  = coordinator.get_video_id(type_id, table_id, entry_id,"0")
+                video_id_out = coordinator.get_video_id(type_id, table_id, entry_id,"1")
+                postprocessor = PostProcessor()
+                print(f"Processing: {video_id_in}")
+                t_init_buf = str(
+                    input(f"Time for until playback starts (T_init + time to fill playback buffer) [hh:mm:ss.xxx]: "))
+                t_raw_start = str(input(f"Time when relevant section starts in raw stimuli video [hh:mm:ss.xxx]: "))
+                postprocessor.process(video_id_in, video_id_out, t_init_buf, t_raw_start)
+                print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
+
     except RuntimeError as err:
-        traceback.print_exc()
-        print("******************************************************************************************************")
-        print(f"RuntimeError occured: {err}")
-        print(f"Coordinated QoEmu run canceled.")
-        print("******************************************************************************************************")
+            traceback.print_exc()
+            print("******************************************************************************************************")
+            print(f"RuntimeError occured: {err}")
+            print(f"Coordinated QoEmu run canceled.")
+            print("******************************************************************************************************")
+
 
     print("Done.")

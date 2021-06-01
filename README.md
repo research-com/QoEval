@@ -4,6 +4,25 @@
 When cloning the git repository, check that git lfs is enabled
 by using the command ``git lfs install`` and ``git lfs fetch``
 
+## Additional Post-Processing Tools
+Currently, the process of creating the stimuli videos requires a final manual
+post-processing step. For this, a *lossless* video manipulation tool is 
+required. We recommend https://github.com/mifi/lossless-cut.git
+
+### Remarks regarding installation of lossless-cut
+* For starting lossless-cut, see the developer-notes within the
+lossless-cut repo.
+
+* Yarn needs to be installed in a current version:
+```
+curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - 
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list 
+sudo apt update 
+sudo apt install yarn
+```
+* `node` needs to be updated to a recent version, e.g. by using the node version manager (nvm)
+
+
 ## Hardware Device Control
 For controlling a real Android phone:
 * The phone must be connected to the qoemu host by an USB connection (used for
