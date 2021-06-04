@@ -44,6 +44,8 @@ if not QOEMU_SECTION in config:
 
 qoemu_conf = config[f'{QOEMU_SECTION}']
 
+net_device_name = qoemu_conf.get('NetDeviceName','eth0')
+net_em_sanity_check = qoemu_conf.getboolean('NetEmSanityCheck',True)
 vd_path = qoemu_conf.get('AVDPath', _default_avd_path)
 video_capture_path = qoemu_conf.get('VideoCapturePath', _default_video_capture_path)
 show_device_frame = qoemu_conf.getboolean('ShowDeviceFrame', False)

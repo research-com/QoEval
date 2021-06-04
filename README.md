@@ -63,8 +63,16 @@ the default connection name, can also be different - check in connection editor)
 
 *WLAN Hardware and Configuration*:
 
-QoEmu has been tested with
-* Driver: [rtl88x2bu](https://github.com/cilynx/rtl88x2bu)
+QoEmu in combination with a real Android phone has mainly been tested with a Realtek based USB3 WLAN adaptor 
+(0bda:b812 Realtek Semiconductor Corp. RTL88x2bu [AC1200 Techkey]). Since Ubuntu 20.10, this device is
+supported without installing any further drivers manually. However, we recommend the following module options
+`rtw_vht_enable=2 rtw_switch_usb_mode=1 rtw_power_mgnt=0`.
+
+### Old WLAN configuration (Ubuntu 20.04 and earlier)
+Some WLAN cards such as the 
+* Driver: [rtl88x2bu](https://github.com/morrownr/88x2bu)
+  settings in ` /etc/modprobe.d/88x2bu.conf `: `options 88x2bu rtw_drv_log_level=0 rtw_led_ctrl=1 rtw_vht_enable=1 rtw_power_mgnt=0 rtw_switch_usb_mode=1`
+* Alternative Driver - causes issues with delays exceeding 40ms: [rtl88x2bu](https://github.com/cilynx/rtl88x2bu)
 * Disablee Powersaving in Ubuntu 20: Edit ``/etc/NetworkManager/conf.d/default-wifi-powersave-on.conf`` and set
 
   ```
@@ -101,3 +109,17 @@ Alternatives (currently not used in the project):
 * monkey tool via adb: \
   `monkey -p com.google.android.youtube -c android.intent.category.LAUNCHER 1` 
 * `uiautomatorviewer` (sdk tool) to get x,y
+
+
+## Known Bugs and Problems
+The 4.15 Linux kernel as well as the 5.8.0 kernel have a bug within the netem module which 
+leads to incorrectly emulated delays. (see https://superuser.com/questions/1338567/jitter-generation-with-netem-is-not-working and
+and https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1783822 for more information).
+
+*Recommendation:*
+
+Before generating QoEmu stimuli, confirm (e.g. by a bandwidth measurement app on your mobile/emulated device)
+that the measured delays are as expected/configured within QoEmu. If the delays are significantly higher
+than expected or vary to an extremely large extend, update your linux kernel and check that the WLAN
+device driver is working properly and all power-saving features have been disabled.
+

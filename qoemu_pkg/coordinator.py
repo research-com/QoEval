@@ -4,7 +4,8 @@
 """
 from qoemu_pkg.analysis import analysis
 from qoemu_pkg.capture.capture import CaptureEmulator,CaptureRealDevice,PostProcessor
-from qoemu_pkg.configuration import emulator_type, video_capture_path, traffic_analysis_live, traffic_analysis_plot, adb_device_serial
+from qoemu_pkg.configuration import emulator_type, video_capture_path, traffic_analysis_live, \
+    traffic_analysis_plot, adb_device_serial, net_device_name, net_em_sanity_check
 from qoemu_pkg.configuration import MobileDeviceType, MobileDeviceOrientation
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
 from qoemu_pkg.emulator.standard_emulator import StandardEmulator
@@ -21,8 +22,8 @@ import time
 import sys
 import traceback
 
-NET_DEVICE_NAME = "enp0s31f6"             # TODO: get from config file
 COORDINATOR_RELEASE = "0.1"
+DELAY_TOLERANCE = 20         # delay tolerance for sanity check [ms]
 
 GEN_LOG_FILE = os.path.join(video_capture_path, 'qoemu.log')
 
@@ -39,6 +40,20 @@ def convert_to_seconds(time_str: str)->float:
     ts = time.strptime(time_str, "%H:%M:%S")
     s = ts.tm_hour * 3600 + ts.tm_min * 60 + ts.tm_sec
     return s
+
+def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
+        emulator_id = "E1-"
+        if emulator_type == MobileDeviceType.SDK_EMULATOR:
+            emulator_id += "S"
+        if emulator_type == MobileDeviceType.GENYMOTION:
+            emulator_id += "G"
+        if emulator_type == MobileDeviceType.REAL_DEVICE:
+            emulator_id += "R"
+
+        emulator_id += f"-{COORDINATOR_RELEASE}"
+
+        id = f"{type_id}-{table_id}-{entry_id}_{emulator_id}_P{postprocessing_step}"
+        return id
 
 class Coordinator:
     def __init__(self):
@@ -60,35 +75,25 @@ class Coordinator:
         self.netem = None
         self.analysis = None
         self.output_filename = None
+        self.stats_filepath = None
         self._gen_log = open(GEN_LOG_FILE, "a+")
 
-    def get_video_id(self, type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
-        emulator_id = "E1-"
-        if emulator_type == MobileDeviceType.SDK_EMULATOR:
-            emulator_id += "S"
-        if emulator_type == MobileDeviceType.GENYMOTION:
-            emulator_id += "G"
-        if emulator_type == MobileDeviceType.REAL_DEVICE:
-            emulator_id += "R"
-
-        emulator_id += f"-{COORDINATOR_RELEASE}"
-
-        id = f"{type_id}-{table_id}-{entry_id}_{emulator_id}_P{postprocessing_step}"
-        return id
-
     def _get_bpf_rule(self) -> str:
+        filter_rule = ""
         if self.netem.android_ip:
-            return f"host {self.netem.android_ip}"
-        raise RuntimeError("check port rule")
-        # TODO: return valid bpf rule which excludes the exclude_ports
-        if self.netem.exclude_ports:
-            return f" "
+            filter_rule = f"host {self.netem.android_ip}"
+        for p in self.netem.exclude_ports:
+            if(len(filter_rule)>0):
+                filter_rule = f"{filter_rule} && "
+            filter_rule = f"{filter_rule} !(tcp port {p}) && !(udp port {p})"
+        log.debug(f"_get_bpf_rule filter rule: {filter_rule}")
+        return filter_rule
 
 
     def prepare(self, type_id: str, table_id: str, entry_id: str):
         params = get_parameters(type_id, table_id, entry_id)
         log.debug(f"Preparing with parameters: {params}")
-        self.output_filename = self.get_video_id(type_id, table_id, entry_id)
+        self.output_filename = get_video_id(type_id, table_id, entry_id)
         time_string = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
         self._gen_log.write(f"{time_string} {self.output_filename} {params} ")
 
@@ -105,12 +110,13 @@ class Coordinator:
             self._gen_log.write(f" delay bias of {delay_bias_ul_dl}ms too high - canceled. ")
             raise RuntimeError(f"Delay bias of {delay_bias_ul_dl}ms exceeds delay parameter of {params['ddl']}ms! Cannot emulate.")
 
-        self.netem = Connection("coord1", NET_DEVICE_NAME, t_init=params['t_init'],
+        self.netem = Connection("coord1", net_device_name, t_init=params['t_init'],
                                 rul=params['rul'], rdl=params['rdl'],
                                 dul=(params['dul']-delay_bias_ul_dl),
                                 ddl=(params['ddl']-delay_bias_ul_dl),
+                                # cannot use mobile dev ip in hostap mode android_ip=self.emulator.get_ip_address(),
                                 exclude_ports=[22, 5000, 5002])  # exclude ports used for nomachine/ssh remote control
-        # android_ip=self.emulator.get_ip_address())
+
         # set and execute a Youtube use case
         # Tagesschau Intro:
         # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/5lEd5D2J27Y?t=8")
@@ -136,25 +142,65 @@ class Coordinator:
             log.error("Cannot execute campaign - not prepared.")
             return
 
+        # calculate approximate duration of use-case
+        uc_duration = convert_to_seconds(capture_time) + 2  # add 2s safety margin
+
         # initialize traffic analysis - if enabled
         if traffic_analysis_live or traffic_analysis_plot:
             length_in_sec = convert_to_seconds(capture_time)
-            self.analysis = analysis.DataCollector(self.netem.virtual_device_in, self.netem.virtual_device_in,
-                                                   10, length_in_sec, bpf_filter=self._get_bpf_rule())
+            self.stats_filepath = os.path.join(video_capture_path, f"{self.output_filename}_stats")
+            self.analysis = analysis.DataCollector(self.netem.virtual_device_out, self.netem.virtual_device_in,
+                                                   10, uc_duration, filename= self.stats_filepath,
+                                                   bpf_filter=self._get_bpf_rule())
             self.analysis.start_threads()
-            self.analysis.start()
+
+        # optional sanity check (can be disbled in configuration file)
+        if(net_em_sanity_check):
+            self.netem.enable_netem(consider_t_init=False)
+            log.debug("network emulation sanity check - measuring delay while emulation is active...")
+            params = get_parameters(type_id, table_id, entry_id)
+            measured_rtt_during_emulation = self.emulator.measure_rtt()
+            max_allowed_rtt_during_emulation = params['dul'] + params['ddl'] + DELAY_TOLERANCE
+            self._gen_log.write(f" emu rtt: {measured_rtt_during_emulation}ms max rtt: {max_allowed_rtt_during_emulation}ms ")
+            if measured_rtt_during_emulation > max_allowed_rtt_during_emulation:
+                self._gen_log.write(f" network emulation sanity check failed - canceled. ")
+                raise RuntimeError(f"Measured RTT of {measured_rtt_during_emulation}ms exceeds maximum allowed RTT of {max_allowed_rtt_during_emulation}ms! Sanity check failed.")
 
         # execute concurrently in separate threads
-        uc_duration = convert_to_seconds(capture_time) + 2  # add 2s safety margin
         ui_control_thread = threading.Thread(target=self.ui_control.execute_use_case, args=(uc_duration,))
         capture_thread = threading.Thread(target=self.capture.start_recording, args=(self.output_filename, capture_time))
+
         self.netem.enable_netem()
-        input("netem active - press enter to continue...")
+        # input("netem active - check conditions on mobile device and press enter to continue...")
+
+        if traffic_analysis_live or traffic_analysis_plot:
+            self.analysis.start()
+
+        if traffic_analysis_live:
+            live_plot = analysis.LivePlot(self.analysis, analysis.PACKETS, analysis.ALL)
+
         ui_control_thread.start()
         capture_thread.start()
+
+        if traffic_analysis_live:
+            log.debug("Showing live plot - close window to continue processing when use-case has finished.")
+            live_plot.show()
+
         capture_thread.join()
         ui_control_thread.join()
         self.netem.disable_netem()
+
+        if traffic_analysis_plot:
+            self.analysis.wait_until_completed()
+            plot = analysis.Plot(self.stats_filepath,0,convert_to_seconds(capture_time),analysis.BYTES,
+                                 [analysis.OUT],[analysis.ALL],analysis.BAR)
+            plot.save_pdf(f"{self.stats_filepath}_out")
+            plot.save_png(f"{self.stats_filepath}_out")
+            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time),analysis.BYTES,
+                                 [analysis.IN],[analysis.ALL],analysis.BAR)
+            plot.save_pdf(f"{self.stats_filepath}_in")
+            plot.save_png(f"{self.stats_filepath}_in")
+
 
     def finish(self):
         if not self._is_prepared:
@@ -194,17 +240,16 @@ if __name__ == '__main__':
     type_id = 'VS'
     table_id = 'B'
     ids_to_evaluate = get_entry_ids(type_id, table_id)
-    ids_to_evaluate =  ['6'] #,'5','4','3','2','1']
-
-    coordinator = Coordinator()
+    # ids_to_evaluate =  ['6'] #,'5','4','3','2','1']
 
     try:
         if do_generate_stimuli:
                 for entry_id in ids_to_evaluate:
                     try:
+                        coordinator = Coordinator()
                         coordinator.prepare(type_id, table_id, entry_id)
                         wait_countdown(2)
-                        coordinator.execute('00:03:00')
+                        coordinator.execute('00:00:20')
                         wait_countdown(5)
                     finally:
                         coordinator.finish()
@@ -214,8 +259,8 @@ if __name__ == '__main__':
             print ("Please use a video player of your choice to answer the following questions.")
             print("")
             for entry_id in ids_to_evaluate:
-                video_id_in  = coordinator.get_video_id(type_id, table_id, entry_id,"0")
-                video_id_out = coordinator.get_video_id(type_id, table_id, entry_id,"1")
+                video_id_in  = get_video_id(type_id, table_id, entry_id,"0")
+                video_id_out = get_video_id(type_id, table_id, entry_id,"1")
                 postprocessor = PostProcessor()
                 print(f"Processing: {video_id_in}")
                 t_init_buf = str(
