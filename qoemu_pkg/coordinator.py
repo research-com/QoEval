@@ -13,6 +13,7 @@ from qoemu_pkg.uicontrol.uicontrol import UiControl
 from qoemu_pkg.uicontrol.usecase import UseCaseType
 from qoemu_pkg.parser.parser import *
 from qoemu_pkg.configuration import video_capture_path
+from qoemu_pkg.configuration import excluded_ports
 
 import logging as log
 import threading
@@ -99,7 +100,7 @@ class Coordinator:
                                 rul=params['rul'], rdl=params['rdl'],
                                 dul=(params['dul']-delay_bias_ul_dl),
                                 ddl=(params['ddl']-delay_bias_ul_dl),
-                                exclude_ports=[22, 5000, 5002])  # exclude ports used for nomachine/ssh remote control
+                                exclude_ports=excluded_ports)  # exclude ports used for nomachine/ssh remote control
         # android_ip=self.emulator.get_ip_address())
         # set and execute a Youtube use case
         # Tagesschau Intro:

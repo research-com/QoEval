@@ -14,8 +14,8 @@ class LogFrame(tk.Frame):
         self.stop_flag = False
 
         # Label
-        self.label = tk.Label(master=self, text="Log", font=("bold", 15), relief="flat")
-        self.label.pack(fill=tk.BOTH, expand=0, side="top")
+        # self.label = tk.Label(master=self, text="Log", font=("bold", 15), relief="flat")
+        # self.label.pack(fill=tk.BOTH, expand=0, side="top")
 
         # Button Frame
         self.button_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")

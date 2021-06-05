@@ -10,8 +10,8 @@ class SettingsFrame(tk.Frame):
         self.master = master
 
         # Label
-        self.label = tk.Label(master=self, text="Emulation Settings", font=("bold", 15), relief="flat")
-        self.label.pack(fill=tk.BOTH, expand=0, side="top")
+        # self.label = tk.Label(master=self, text="Emulation Settings", font=("bold", 15), relief="flat")
+        # self.label.pack(fill=tk.BOTH, expand=0, side="top")
 
         # SelectInterfaceFrame
         self.select_interface_frame = SelectInterfaceFrame(self)
