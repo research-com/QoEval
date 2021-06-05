@@ -9,9 +9,13 @@ import subprocess
 import ipaddress
 import shlex
 import re
-from enum import Enum
+from qoemu_pkg.configuration import MobileDeviceOrientation, adb_device_serial
 
-ADB_NAME = "adb"   #-e selects emulator, -d usb-connected device, -s serialnr
+if len(adb_device_serial) > 1:
+    ADB_NAME = f"adb -s {adb_device_serial}"   #-e selects emulator, -d usb-connected device, -s serialnr
+else:
+    ADB_NAME = "adb"
+
 MEASUREMENT_TEST_HOST = "www.youtube.de"
 
 def check_ext(name):
@@ -23,17 +27,6 @@ def check_ext(name):
         raise RuntimeError('External component not found.')
     else:
         log.debug(f"using {output.stdout}")
-
-
-class MobileDeviceOrientation(Enum):
-    PORTRAIT = 'portrait'
-    LANDSCAPE = 'landscape'
-
-class MobileDeviceType(Enum):
-    NONE = 'none'
-    SDK_EMULATOR = 'emulator'
-    GENYMOTION = 'genymotion'
-    REAL_DEVICE = 'realdevice'
 
 class MobileDevice:
 
@@ -174,7 +167,7 @@ class MobileDevice:
         return ip_address
 
     def measure_rtt(self) -> float:
-        log.debug(f"Measuring delay bias (target host: {MEASUREMENT_TEST_HOST})...")
+        log.debug(f"Measuring RTT (target host: {MEASUREMENT_TEST_HOST})...")
         # first ping is ignored (includes times for DNS etc.)
         subprocess.run(shlex.split(f"{ADB_NAME} shell ping -c 6 {MEASUREMENT_TEST_HOST}"), stdout=subprocess.PIPE)
         # now perform the actual measurement
@@ -187,10 +180,10 @@ class MobileDevice:
         match = (matcher.search(output.stdout))
         if match:
             avg_delay = match.group(2)
-            log.debug(f"measured delay bias avg: {avg_delay}ms  min: {match.group(1)}ms   max: {match.group(3)}ms")
+            log.debug(f"measured RTT avg: {avg_delay}ms  min: {match.group(1)}ms   max: {match.group(3)}ms")
         else:
             log.error(output.stdout)
-            raise RuntimeError("Measuring delay bias failed.")
+            raise RuntimeError("Measuring RTT failed.")
         return float(avg_delay)
 
     def launch(self, orientation=MobileDeviceOrientation.PORTRAIT, playstore=False):

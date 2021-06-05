@@ -8,12 +8,22 @@ Handle configuration options
 import os
 import pathlib
 import configparser
+from enum import Enum
 
 # default file name of configuration file and mandatory section name
-from qoemu_pkg.emulator.mobiledevice import MobileDeviceType
-
 QOEMU_CONF = 'qoemu.conf'
 QOEMU_SECTION = 'QOEMU'
+
+class MobileDeviceOrientation(Enum):
+    PORTRAIT = 'portrait'
+    LANDSCAPE = 'landscape'
+
+class MobileDeviceType(Enum):
+    NONE = 'none'
+    SDK_EMULATOR = 'emulator'
+    GENYMOTION = 'genymotion'
+    REAL_DEVICE = 'realdevice'
+
 
 # provide some default values
 _default_avd_path = os.path.join(pathlib.Path.home(), 'qoemu_avd')
@@ -34,7 +44,14 @@ if not QOEMU_SECTION in config:
 
 qoemu_conf = config[f'{QOEMU_SECTION}']
 
+net_device_name = qoemu_conf.get('NetDeviceName','eth0')
+net_em_sanity_check = qoemu_conf.getboolean('NetEmSanityCheck',True)
 vd_path = qoemu_conf.get('AVDPath', _default_avd_path)
 video_capture_path = qoemu_conf.get('VideoCapturePath', _default_video_capture_path)
-show_device_frame = qoemu_conf.get('ShowDeviceFrame', False)
+show_device_frame = qoemu_conf.getboolean('ShowDeviceFrame', False)
 emulator_type = MobileDeviceType[qoemu_conf.get('EmulatorType', 'none')]
+adb_device_serial = qoemu_conf.get('AdbDeviceSerial', '')
+audio_device_emu = qoemu_conf.get('AudioDeviceEmu','')
+audio_device_real = qoemu_conf.get('AudioDeviceReal','')
+traffic_analysis_live = qoemu_conf.getboolean('TrafficAnalysisLiveVisualization', False)
+traffic_analysis_plot = qoemu_conf.getboolean('TrafficAnalysisPlot', True)
