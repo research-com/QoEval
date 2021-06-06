@@ -23,7 +23,8 @@ import sys
 import traceback
 
 COORDINATOR_RELEASE = "0.1"
-DELAY_TOLERANCE = 5         # delay tolerance for sanity check [ms]
+DELAY_TOLERANCE_MIN = 5     # minimum delay tolerance for sanity check [ms]
+DELAY_TOLERANCE_REL = 0.05  # relative delay tolerance for sanity check [0..1]
 PROCESSING_BIAS = 10        # additionaly delay due to processing in emulator [ms]
 
 GEN_LOG_FILE = os.path.join(video_capture_path, 'qoemu.log')
@@ -161,7 +162,8 @@ class Coordinator:
             log.debug("network emulation sanity check - measuring delay while emulation is active...")
             params = get_parameters(type_id, table_id, entry_id)
             measured_rtt_during_emulation = self.emulator.measure_rtt()
-            max_allowed_rtt_during_emulation = params['dul'] + params['ddl'] + DELAY_TOLERANCE
+            max_allowed_rtt_during_emulation = params['dul'] + params['ddl'] + \
+                                               max(DELAY_TOLERANCE_MIN, DELAY_TOLERANCE_REL*(params['dul'] + params['ddl'] ))
             self._gen_log.write(f" emu rtt: {measured_rtt_during_emulation}ms max rtt: {max_allowed_rtt_during_emulation}ms ")
             if measured_rtt_during_emulation > max_allowed_rtt_during_emulation:
                 self._gen_log.write(f" network emulation sanity check failed - canceled. ")
@@ -172,7 +174,7 @@ class Coordinator:
         capture_thread = threading.Thread(target=self.capture.start_recording, args=(self.output_filename, capture_time))
 
         self.netem.enable_netem()
-        input("netem active - check conditions on mobile device and press enter to continue...")
+        # input("netem active - check conditions on mobile device and press enter to continue...")
 
         if traffic_analysis_live or traffic_analysis_plot:
             self.analysis.start()
