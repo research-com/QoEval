@@ -11,8 +11,6 @@ from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDevic
 from qoemu_pkg.configuration import vd_path
 
 import logging as log
-import configparser
-import os
 import subprocess
 import shlex
 import re

@@ -4,6 +4,7 @@ import shlex
 import subprocess
 import threading
 import time
+import math
 from typing import List
 
 MAX_CONNECTIONS = 1
@@ -243,7 +244,7 @@ class Connection:
         if not self._t_init_active:
             subprocess.run(
                 shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
-                            f"{parent_id} netem rate {self.rul}kbit delay {self.dul}ms loss 0%")).check_returncode()
+                            f"{parent_id} netem limit {Connection.calculate_netem_limit(self.dul, self.rul)} rate {self.rul}kbit delay {self.dul}ms loss 0%")).check_returncode()
         else:
             # Variant 1: emulate T_init by packet loss during T_init
             # subprocess.run(
@@ -260,7 +261,7 @@ class Connection:
         if not self._t_init_active:
             subprocess.run(shlex.split(
                 f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} "
-                f"root netem rate {self.rdl}kbit delay {self.ddl}ms loss 0%")).check_returncode()
+                f"root netem limit {Connection.calculate_netem_limit(self.ddl, self.rdl)} rate {self.rdl}kbit delay {self.ddl}ms loss 0%")).check_returncode()
         else:
             # Variant 1: emulate T_init by packet loss during T_init
             # subprocess.run(shlex.split(
@@ -301,6 +302,22 @@ class Connection:
             self.ddl = ddl
         self._update_outgoing()
         self._update_incoming()
+
+    @staticmethod
+    def calculate_netem_limit(delay: float, rate: float) -> int:
+        """
+                Calculate the limit parameter for a netem queuing discipline.
+
+
+                Parameters
+                ----------
+                :param delay: delay [ms]
+                :param rate: data rate [kbit/s]
+                :return limit parameter as integer value [packets]
+        """
+        # Note: assumed average packet size (use a rather small size since a large limit does not hurt much)
+        return math.ceil(((delay*rate)/128)*1.5)
+
 
     def enable_netem(self, consider_t_init: bool = True):
         """(Re)enables the netem qdiscs for this connection"""
