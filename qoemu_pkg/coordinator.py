@@ -23,7 +23,8 @@ import sys
 import traceback
 
 COORDINATOR_RELEASE = "0.1"
-DELAY_TOLERANCE = 20         # delay tolerance for sanity check [ms]
+DELAY_TOLERANCE = 5         # delay tolerance for sanity check [ms]
+PROCESSING_BIAS = 10        # additionaly delay due to processing in emulator [ms]
 
 GEN_LOG_FILE = os.path.join(video_capture_path, 'qoemu.log')
 
@@ -101,7 +102,7 @@ class Coordinator:
         self.emulator.launch(orientation=MobileDeviceOrientation.LANDSCAPE)
         # [t_init, rul, rdl, dul, ddl]
         try:
-            delay_bias_ul_dl = self.emulator.measure_rtt() / 2    # can only measure RTT, assume 50%/50% ul vs. dl
+            delay_bias_ul_dl = (self.emulator.measure_rtt()+PROCESSING_BIAS) / 2    # can only measure RTT, assume 50%/50% ul vs. dl
         except RuntimeError as rte:
             self._gen_log.write(f" measuring delay bias failed - canceled. ")
             log.error(" measuring delay bias failed - check if you have Internet connectivity!")
@@ -171,7 +172,7 @@ class Coordinator:
         capture_thread = threading.Thread(target=self.capture.start_recording, args=(self.output_filename, capture_time))
 
         self.netem.enable_netem()
-        # input("netem active - check conditions on mobile device and press enter to continue...")
+        input("netem active - check conditions on mobile device and press enter to continue...")
 
         if traffic_analysis_live or traffic_analysis_plot:
             self.analysis.start()

@@ -5,10 +5,14 @@
 """
 
 import logging as log
+import os
 import subprocess
 import ipaddress
 import shlex
 import re
+import socket
+import time
+
 from qoemu_pkg.configuration import MobileDeviceOrientation, adb_device_serial
 
 if len(adb_device_serial) > 1:
@@ -16,7 +20,8 @@ if len(adb_device_serial) > 1:
 else:
     ADB_NAME = "adb"
 
-MEASUREMENT_TEST_HOST = "www.youtube.de"
+MEASUREMENT_TEST_HOST = "www.youtube.de" # target host for RTT tests
+MEASUREMENT_DURATION = 3                 # duration of RTT measurement [s]
 
 def check_ext(name):
     log.debug(f"locating {name}")
@@ -36,6 +41,7 @@ class MobileDevice:
         self.vd_name = None
         self.config = None
         self.envOk = False
+        self.ip_address = None
 
     def check_env(self):
         """Checks if the environment is prepared to execute the emulator. Needs to be overriden by subclasses."""
@@ -164,15 +170,16 @@ class MobileDevice:
             ip_address = None
             log.debug("Cannot determine ip addess of mobile device.")
 
+        self.ip_address = ip_address
         return ip_address
 
     def measure_rtt(self) -> float:
         log.debug(f"Measuring RTT (target host: {MEASUREMENT_TEST_HOST})...")
         # first ping is ignored (includes times for DNS etc.)
-        subprocess.run(shlex.split(f"{ADB_NAME} shell ping -c 6 {MEASUREMENT_TEST_HOST}"), stdout=subprocess.PIPE)
+        subprocess.run(shlex.split(f"{ADB_NAME} shell ping -c 1 {MEASUREMENT_TEST_HOST}"), stdout=subprocess.PIPE)
         # now perform the actual measurement
         output = subprocess.run(shlex.split(
-            f"{ADB_NAME} shell ping -c 20 -i 0.2 {MEASUREMENT_TEST_HOST}"),
+            f"{ADB_NAME} shell ping -c {MEASUREMENT_DURATION/0.2} -i 0.2 {MEASUREMENT_TEST_HOST}"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
         pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})\sms"
@@ -185,6 +192,26 @@ class MobileDevice:
             log.error(output.stdout)
             raise RuntimeError("Measuring RTT failed.")
         return float(avg_delay)
+
+    def generate_udp_traffic(self, packet_size: int = 128, packet_rate = 10, duration: float = 10, port: int = 4711):
+        """
+        Send random UDP packet to this mobile device, i.e. to avoid going into power-saving mode.
+
+        :param packet_size: Size of generated data packets (UDP payload, [byte])
+        :param packet_rate: Rate at which packets are generated [pkts/s]
+        :param duration: Duration of time-span for which packets a generated.
+        :param port: Destination port of sent UDP packets.
+        :return:
+        """
+        if not self.ip_address:
+            self.get_ip_address()
+        data = bytearray(os.urandom(packet_size))
+        inter_tx_interval = 1.0 / packet_rate
+        end_time = time.time() + duration
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        while(time.time() < end_time):
+            sock.sendto(data, (str(self.ip_address), port))
+            time.sleep(inter_tx_interval)
 
     def launch(self, orientation=MobileDeviceOrientation.PORTRAIT, playstore=False):
         """
