@@ -85,8 +85,8 @@ class DataCollector:
 
         :param virtual_interface_out: The name of the interface on which outgoing traffic is sniffed
         :param virtual_interface_in: The name of the interface on which incoming traffic is sniffed
-        :param interval: The interval in ms for which packet/byte counts
         :param duration: The duration in seconds for which data will be collected
+        :param interval: The interval in ms for which packet/byte counts
         :param filename: The filename under which the data will be saved (must not include suffix .csv),
                          if None a default will be used.
         :param bin_sizes: list of integers representing the borders between bins for histogram creation
@@ -271,8 +271,8 @@ class Plot:
                  kind: str = None,
                  grid: str = None,
                  stacked=False,
-                 tick_interval: int = 100,
-                 label_interval: int = 1000,
+                 tick_interval: int = -1,
+                 label_interval: int = -1,
                  resolution_mult: int = 1,
                  x_size=1400,
                  y_size=600):
@@ -288,8 +288,8 @@ class Plot:
         :param kind: "bar", "line" or "hist", type of the plot
         :param grid: None, "major", "both" or "minor" (not recommended), grid settings
         :param stacked: boolean, whether the bar plot should be stacked
-        :param tick_interval: Interval in ms between x_ticks
-        :param label_interval: Interval in ms between major x_ticks with labels
+        :param tick_interval: Interval in ms between x_ticks, -1 for auto-scaling
+        :param label_interval: Interval in ms between major x_ticks with labels, -1 for auto-scaling
         :param resolution_mult: multiplier by which the plot will decrease the resolution of the data
         :param x_size: the default x size of plot in pixels
         :param y_size: the default y size of plot in pixels
@@ -303,8 +303,14 @@ class Plot:
         self.stacked = stacked
         self.packets_bytes = packets_bytes
         self.directions = directions
-        self.tick_interval = tick_interval
-        self.label_interval = label_interval
+        if label_interval > 0:
+            self.label_interval = label_interval
+        else:
+            self.label_interval = round((end-start)/10+0.5)*1000
+        if tick_interval > 0:
+            self.tick_interval = tick_interval
+        else:
+            self.tick_interval = self.label_interval / 5
         self.resolution_mult = resolution_mult
         self.x_size = x_size
         self.y_size = y_size
