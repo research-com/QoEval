@@ -43,6 +43,12 @@ def convert_to_seconds(time_str: str)->float:
     s = ts.tm_hour * 3600 + ts.tm_min * 60 + ts.tm_sec
     return s
 
+def convert_to_timestr(time_in_seconds: float)->str:
+    hours = int(time_in_seconds/3600)
+    minutes = int((time_in_seconds - (3600*hours))/60)
+    seconds = int((time_in_seconds - (3600*hours) - (60*minutes)))
+    return f"{hours}:{minutes}:{seconds}"
+
 def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
         emulator_id = "E1-"
         if emulator_type == MobileDeviceType.SDK_EMULATOR:
@@ -252,7 +258,12 @@ if __name__ == '__main__':
                         coordinator = Coordinator()
                         coordinator.prepare(type_id, table_id, entry_id)
                         wait_countdown(2)
-                        coordinator.execute('00:00:20')
+                        excerpt_duration = convert_to_seconds(get_end(type_id, table_id, entry_id)) - \
+                                           convert_to_seconds(get_start(type_id, table_id, entry_id))
+                        # estimate timespan to be recorded - to be careful we double the duration and add some
+                        # extra time during which e.g. the overflow can be shown
+                        time_str = convert_to_timestr(excerpt_duration*2.0+20)
+                        coordinator.execute(time_str)
                         wait_countdown(5)
                     finally:
                         coordinator.finish()
