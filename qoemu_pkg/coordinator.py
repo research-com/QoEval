@@ -260,9 +260,11 @@ if __name__ == '__main__':
                         wait_countdown(2)
                         excerpt_duration = convert_to_seconds(get_end(type_id, table_id, entry_id)) - \
                                            convert_to_seconds(get_start(type_id, table_id, entry_id))
-                        # estimate timespan to be recorded - to be careful we double the duration and add some
+                        # estimate timespan to be recorded - to be careful we double the duration and add four
+                        # minutes (assumed maximum time for youtube to adapt playback to rate) and add some
                         # extra time during which e.g. the overflow can be shown
-                        time_str = convert_to_timestr(excerpt_duration*2.0+20)
+                        time_str = convert_to_timestr(excerpt_duration*2.0+180+20)
+                        # time_str = "00:05:00"
                         coordinator.execute(time_str)
                         wait_countdown(5)
                     finally:
@@ -278,9 +280,11 @@ if __name__ == '__main__':
                 postprocessor = PostProcessor()
                 print(f"Processing: {video_id_in}")
                 t_init_buf = str(
-                    input(f"Time for until playback starts (T_init + time to fill playback buffer) [hh:mm:ss.xxx]: "))
+                    input(f"Time until playback starts (T_init + time to fill playback buffer) [hh:mm:ss.xxx]: "))
                 t_raw_start = str(input(f"Time when relevant section starts in raw stimuli video [hh:mm:ss.xxx]: "))
-                postprocessor.process(video_id_in, video_id_out, t_init_buf, t_raw_start)
+                d_start_to_end = int(input(f"Duration from t_start to t_end in seconds [s]: "))
+                postprocessor.process(video_id_in, video_id_out, t_init_buf, t_raw_start,
+                                      convert_to_timestr(d_start_to_end))
                 print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
     except RuntimeError as err:
