@@ -104,7 +104,8 @@ class CaptureRealDevice(Capture):
         scrcpy_output.terminate()
 
         # re-encoding to compressed format (we do not delete the raw dest_tmp on purpose, so it can be compared later)
-        command = f"{FFMPEG} -i {dest_tmp}.mp4 -i {dest_tmp}.wav -map 0:v -map 1:a -c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 -shortest -y {dest}.avi"
+        command = f"{FFMPEG} -i {dest_tmp}.mp4 -i {dest_tmp}.wav -filter:v fps=60 -map 0:v -map 1:a " \
+                  f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 -shortest -y {dest}.avi"
         log.debug(f"re-encoding cmd: {command}")
         subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                 universal_newlines=True).check_returncode()
@@ -230,7 +231,8 @@ class CaptureEmulator(Capture):
                                 universal_newlines=True).check_returncode()
 
         # re-encoding to compressed format (we do not delete the raw dest_tmp on purpose, so it can be compared later)
-        command = f"{FFMPEG} -i {dest_tmp}.avi -c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 -y {dest}.avi"
+        command = f"{FFMPEG} -i {dest_tmp}.avi -c:v mpeg4 -vtag xvid -filter:v fps=60 -qscale:v 1 " \
+                  f"-c:a libmp3lame -qscale:a 1 -y {dest}.avi"
         log.debug(f"re-encoding cmd: {command}")
         subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                 universal_newlines=True).check_returncode()
@@ -240,7 +242,7 @@ class PostProcessor:
         self._prefix_video = importlib_resources.files(t_init) / "youtube_tinit.avi"
         log.debug(f"Using prefix video {self._prefix_video} for post-processing.")
 
-    def process(self,  input_filename: str,  output_filename: str, initbuf_len: str, main_video_start_time: str):
+    def process(self,  input_filename: str,  output_filename: str, initbuf_len: str, main_video_start_time: str, main_video_duration: str = None):
         tmp_dir = tempfile.mkdtemp()
 
         with importlib_resources.as_file(self._prefix_video) as prefix_video_path:
@@ -249,13 +251,21 @@ class PostProcessor:
             #
             # Step 1: Create prefix-video with desired length
             video_step1 = f"{os.path.join(tmp_dir, 'step_1')}.avi"
-            command = f"{FFMPEG} -i {prefix_video_path} -t {initbuf_len} {video_step1} "
+            command = f"{FFMPEG} -i {prefix_video_path} -vcodec copy -acodec copy -t {initbuf_len} " \
+                      f"{video_step1} "
             log.debug(f"postproc initbuf cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                     universal_newlines=True).check_returncode()
             # Step 2: Cut main stimuli video
             video_step2 = f"{os.path.join(tmp_dir, 'step_2')}.avi"
-            command = f"{FFMPEG} -i {os.path.join(video_capture_path, input_filename)}.avi -ss {main_video_start_time} {video_step2} "
+            if main_video_duration:
+                param_duration = f"-t {main_video_duration}"
+            else:
+                param_duration = ""
+
+            command = f"{FFMPEG} -i {os.path.join(video_capture_path, input_filename)}.avi -vcodec copy -acodec copy " \
+                      f"-ss {main_video_start_time}" \
+                      f" {param_duration} {video_step2} "
             log.debug(f"postproc main cut cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                     universal_newlines=True).check_returncode()
@@ -265,7 +275,8 @@ class PostProcessor:
                 file.write(f"file \'{video_step1}\'\n")
                 file.write(f"file \'{video_step2}\'\n")
             # Step 4: Concatenate prefix and shortened main stimuli video to create post-processed video
-            command = f"{FFMPEG} -f concat -safe 0 -i \"{input_list}\" -y {os.path.join(video_capture_path, output_filename)}.avi "
+            command = f"{FFMPEG} -f concat -safe 0 -i \"{input_list}\" -reset_timestamps 1 -c copy " \
+                      f"-y {os.path.join(video_capture_path, output_filename)}.avi "
             log.debug(f"postproc concat cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                     universal_newlines=True).check_returncode()
