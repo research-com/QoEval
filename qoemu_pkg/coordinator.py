@@ -125,7 +125,7 @@ class Coordinator:
                                 rul=params['rul'], rdl=params['rdl'],
                                 dul=(params['dul']-delay_bias_ul_dl),
                                 ddl=(params['ddl']-delay_bias_ul_dl),
-                                # cannot use mobile dev ip in hostap mode android_ip=self.emulator.get_ip_address(),
+                                android_ip=self.emulator.get_ip_address(), # note: only valid, if not in host-ap mode
                                 exclude_ports=[22, 5000, 5002])  # exclude ports used for nomachine/ssh remote control
 
         # set and execute a Youtube use case
@@ -262,7 +262,7 @@ if __name__ == '__main__':
     type_id = 'VS'
     table_id = 'B'
     ids_to_evaluate = get_entry_ids(type_id, table_id)
-    # ids_to_evaluate =  ['6'] #,'5','4','3','2','1']
+    # ids_to_evaluate =  ['9'] #,'5','4','3','2','1']
 
     try:
         if do_generate_stimuli:
