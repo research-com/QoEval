@@ -3,7 +3,10 @@
     Stimuli campaign coordinator
 """
 from qoemu_pkg.analysis import analysis
-from qoemu_pkg.capture.capture import CaptureEmulator,CaptureRealDevice,PostProcessor
+from qoemu_pkg.capture.capture import CaptureEmulator,CaptureRealDevice
+from qoemu_pkg.postprocessing.postprocessor import PostProcessor
+from qoemu_pkg.postprocessing.determine_video_start import determine_video_start
+from qoemu_pkg.postprocessing.determine_image_timestamp import determine_frame, frame_to_time
 from qoemu_pkg.configuration import emulator_type, video_capture_path, traffic_analysis_live, \
     traffic_analysis_plot, adb_device_serial, net_device_name, net_em_sanity_check
 from qoemu_pkg.configuration import MobileDeviceType, MobileDeviceOrientation
@@ -23,7 +26,7 @@ import sys
 import traceback
 
 COORDINATOR_RELEASE = "0.1"
-DELAY_TOLERANCE_MIN = 5     # minimum delay tolerance for sanity check [ms]
+DELAY_TOLERANCE_MIN = 10    # minimum delay tolerance for sanity check [ms]
 DELAY_TOLERANCE_REL = 0.05  # relative delay tolerance for sanity check [0..1]
 PROCESSING_BIAS = 10        # additionaly delay due to processing in emulator [ms]
 
@@ -42,6 +45,12 @@ def convert_to_seconds(time_str: str)->float:
     ts = time.strptime(time_str, "%H:%M:%S")
     s = ts.tm_hour * 3600 + ts.tm_min * 60 + ts.tm_sec
     return s
+
+def convert_to_timestr(time_in_seconds: float)->str:
+    hours = int(time_in_seconds/3600)
+    minutes = int((time_in_seconds - (3600*hours))/60)
+    seconds = int((time_in_seconds - (3600*hours) - (60*minutes)))
+    return f"{hours}:{minutes}:{seconds}"
 
 def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
         emulator_id = "E1-"
@@ -116,7 +125,7 @@ class Coordinator:
                                 rul=params['rul'], rdl=params['rdl'],
                                 dul=(params['dul']-delay_bias_ul_dl),
                                 ddl=(params['ddl']-delay_bias_ul_dl),
-                                # cannot use mobile dev ip in hostap mode android_ip=self.emulator.get_ip_address(),
+                                android_ip=self.emulator.get_ip_address(), # note: only valid, if not in host-ap mode
                                 exclude_ports=[22, 5000, 5002])  # exclude ports used for nomachine/ssh remote control
 
         # set and execute a Youtube use case
@@ -151,8 +160,9 @@ class Coordinator:
         if traffic_analysis_live or traffic_analysis_plot:
             length_in_sec = convert_to_seconds(capture_time)
             self.stats_filepath = os.path.join(video_capture_path, f"{self.output_filename}_stats")
-            self.analysis = analysis.DataCollector(self.netem.virtual_device_out, self.netem.virtual_device_in,
-                                                   10, uc_duration, filename= self.stats_filepath,
+            self.analysis = analysis.DataCollector(virtual_interface_out=self.netem.virtual_device_out,
+                                                   virtual_interface_in=self.netem.virtual_device_in,
+                                                   duration=uc_duration, interval=100, filename=self.stats_filepath,
                                                    bpf_filter=self._get_bpf_rule())
             self.analysis.start_threads()
 
@@ -203,6 +213,15 @@ class Coordinator:
                                  [analysis.IN],[analysis.ALL],analysis.BAR)
             plot.save_pdf(f"{self.stats_filepath}_in")
             plot.save_png(f"{self.stats_filepath}_in")
+            # TODO: bugfix histogram plots - currenlty, the visualized data frames are empty
+            # plot = analysis.Plot(self.stats_filepath,0,convert_to_seconds(capture_time),analysis.BYTES,
+            #                      [analysis.OUT],[analysis.ALL],analysis.HIST)
+            # plot.save_pdf(f"{self.stats_filepath}_hist_out")
+            # plot.save_png(f"{self.stats_filepath}_hist_out")
+            # plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time),analysis.BYTES,
+            #                      [analysis.IN],[analysis.ALL],analysis.HIST)
+            # plot.save_pdf(f"{self.stats_filepath}_hist_in")
+            # plot.save_png(f"{self.stats_filepath}_hist_in")
 
 
     def finish(self):
@@ -234,7 +253,7 @@ if __name__ == '__main__':
     print(get_entry_ids('VS', 'B'))
 
     do_generate_stimuli = True
-    do_postprocessing = False
+    do_postprocessing = True
 
 #    print(get_link('VS', 'A', '1'))
 #    print(get_start('VS', 'A', '1'))
@@ -243,7 +262,7 @@ if __name__ == '__main__':
     type_id = 'VS'
     table_id = 'B'
     ids_to_evaluate = get_entry_ids(type_id, table_id)
-    # ids_to_evaluate =  ['6'] #,'5','4','3','2','1']
+    # ids_to_evaluate =  ['9'] #,'5','4','3','2','1']
 
     try:
         if do_generate_stimuli:
@@ -252,24 +271,55 @@ if __name__ == '__main__':
                         coordinator = Coordinator()
                         coordinator.prepare(type_id, table_id, entry_id)
                         wait_countdown(2)
-                        coordinator.execute('00:00:20')
+                        excerpt_duration = convert_to_seconds(get_end(type_id, table_id, entry_id)) - \
+                                           convert_to_seconds(get_start(type_id, table_id, entry_id))
+                        # estimate timespan to be recorded - to be careful we double the duration and add four
+                        # minutes (assumed maximum time for youtube to adapt playback to rate) and add some
+                        # extra time during which e.g. the overflow can be shown
+                        time_str = convert_to_timestr(excerpt_duration*2.0+180+20)
+                        # time_str = "00:01:00"
+                        coordinator.execute(time_str)
                         wait_countdown(5)
                     finally:
                         coordinator.finish()
 
         if do_postprocessing:
-            print ("Semi-manual post-processing starts... ")
-            print ("Please use a video player of your choice to answer the following questions.")
-            print("")
             for entry_id in ids_to_evaluate:
                 video_id_in  = get_video_id(type_id, table_id, entry_id,"0")
                 video_id_out = get_video_id(type_id, table_id, entry_id,"1")
                 postprocessor = PostProcessor()
                 print(f"Processing: {video_id_in}")
-                t_init_buf = str(
-                    input(f"Time for until playback starts (T_init + time to fill playback buffer) [hh:mm:ss.xxx]: "))
-                t_raw_start = str(input(f"Time when relevant section starts in raw stimuli video [hh:mm:ss.xxx]: "))
-                postprocessor.process(video_id_in, video_id_out, t_init_buf, t_raw_start)
+                # print("Semi-manual post-processing starts... ")
+                # print("Please use a video player of your choice to answer the following questions.")
+                # print("")
+                #t_init_buf = str(
+                #    input(f"Time until playback starts (T_init + time to fill playback buffer) [hh:mm:ss.xxx]: "))
+                # t_raw_start = str(input(f"Time when relevant section starts in raw stimuli video [hh:mm:ss.xxx]: "))
+                # d_start_to_end = int(input(f"Duration from t_start to t_end in seconds [s]: "))
+
+                # auto-detect video t_init_buf, t_raw_start, t_raw_end
+                unprocessed_video_path = f"{os.path.join(video_capture_path, video_id_in)}.avi"
+                print("Detecting start of video playback... ", end='')
+                t_init_buf = determine_video_start(unprocessed_video_path)
+                if not t_init_buf:
+                    print(f"failed. (Is the input video \"{unprocessed_video_path}\" correct?)")
+                    continue
+                print(f"{t_init_buf} s")
+                trigger_image_start = os.path.join("../stimuli-params/trigger", f"{type_id}-{table_id}_start.png")
+                trigger_image_end = os.path.join("../stimuli-params/trigger", f"{type_id}-{table_id}_end.png")
+                print("Detecting start of stimuli video section... ", end='')
+                t_raw_start = frame_to_time(unprocessed_video_path, determine_frame(unprocessed_video_path, trigger_image_start))
+                print(f"{t_raw_start} s")
+                print("Detecting end of stimuli video section... ", end='')
+                t_raw_end = frame_to_time(unprocessed_video_path, determine_frame(unprocessed_video_path, trigger_image_end))
+                print(f"{t_raw_end} s")
+                d_start_to_end = t_raw_end - t_raw_start
+
+                print("Cutting and merging video stimuli...")
+                postprocessor.process(video_id_in, video_id_out,
+                                      convert_to_timestr(t_init_buf),
+                                      convert_to_timestr(t_raw_start),
+                                      convert_to_timestr(d_start_to_end))
                 print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
     except RuntimeError as err:
