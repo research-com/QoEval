@@ -3,14 +3,14 @@
     Device control for a physical Android device
 """
 import ipaddress
+import threading
 import time
 
-from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME
+from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME, \
+    MEASUREMENT_DURATION
 from qoemu_pkg.configuration import vd_path
 
 import logging as log
-import configparser
-import os
 import subprocess
 import shlex
 import re
@@ -51,6 +51,19 @@ class PhysicalDevice(MobileDevice):
 
     def is_acceleration_available(self):
         return True
+
+    def measure_rtt(self) -> float:
+        # Note regarding RTT measurements on real physical devices:
+        # Most Android phones have a power saving mode for wifi which leads to highly
+        # varying delays in times without data traffic. In order to avoid this effect,
+        # we send random data to the phone during the RTT measurement procedure
+        # so it (hopefully) will not be able to switch to a power saving mode
+        traffic_gen_thread = threading.Thread(target=self.generate_udp_traffic, args=(128, 100,MEASUREMENT_DURATION+3))
+        traffic_gen_thread.start()
+        time.sleep(0.5)
+        measured_rtt = super().measure_rtt()
+        traffic_gen_thread.join()
+        return measured_rtt
 
     def create_device(self, playstore=False):
         log.debug(f"Trying to create {self.vd_name} - but this is a physical device (ignored)")

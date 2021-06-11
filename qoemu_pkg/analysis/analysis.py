@@ -28,6 +28,7 @@ packet protocol TCP, saving it as pdf with a resolution of 1600*600 pixels
     plt.save_pdf(1600, 600)
 
 """
+from typing import List
 import io
 import logging as log
 import math
@@ -53,9 +54,18 @@ TCP = "TCP"
 BIN = "bin"
 TIME = "time"
 SEP = ":"
+BAR = "bar"
+LINE = "line"
+HIST = "hist"
+MAJOR = "major"
+BOTH = "both"
+MINOR = "minor"
 VALUES = [PACKETS, BYTES]
 DIRECTIONS = [INOUT, IN, OUT]
 PROTOCOLS = [ALL, UDP, TCP]
+KINDS = [BAR, LINE, HIST]
+GRIDS = [MAJOR, BOTH, MINOR]
+
 BINS = []
 
 
@@ -75,9 +85,10 @@ class DataCollector:
 
         :param virtual_interface_out: The name of the interface on which outgoing traffic is sniffed
         :param virtual_interface_in: The name of the interface on which incoming traffic is sniffed
-        :param interval: The interval in ms for which packet/byte counts
         :param duration: The duration in seconds for which data will be collected
-        :param filename: The filename under which the data will be saved, if None a default will be used
+        :param interval: The interval in ms for which packet/byte counts
+        :param filename: The filename under which the data will be saved (must not include suffix .csv),
+                         if None a default will be used.
         :param bin_sizes: list of integers representing the borders between bins for histogram creation
         :param bpf_filter: A bpf_filter (Berkeley Packet Filter) applied to the packets
         """
@@ -90,6 +101,7 @@ class DataCollector:
         self.start_time = None
         self.is_initialized = False
         self.capture_started = False
+        self._count_thread = None
         self.stop_listening_flag = False
         self.bin_sizes = bin_sizes
         self.data_array_size = math.ceil(self.duration / self.interval * 1000)
@@ -124,7 +136,7 @@ class DataCollector:
         cmd = f"tshark -i {self.virtual_interface_in} -i {self.virtual_interface_out} " \
               f"-Tfields -e frame.number -e frame.time_epoch " \
               f"-e frame.cap_len -e frame.interface_name -e _ws.col.Protocol " \
-              f"-f {self.bpf_filter}"  # -e eth.src -e eth.dst"
+              f"{self.bpf_filter}"  # -e eth.src -e eth.dst"
         proc = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE)
         for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
             yield line.rstrip().split("\t")
@@ -166,7 +178,7 @@ class DataCollector:
                 packet_time_frame] += 1
             return
 
-    def _count_thread(self):
+    def _collect_statistics(self):
         """
         This function is meant to runs as a thread and will sort packets yielded by the _listen_on_interface method
         into the data array.
@@ -191,8 +203,7 @@ class DataCollector:
                     log.info(
                         f"Finished listening on interfaces: {self.virtual_interface_out}, {self.virtual_interface_in}")
                     self.stop_listening_flag = True
-                    self._write_to_file()
-                    return
+                    break
                 continue
 
             length = int(packet[2])
@@ -205,6 +216,9 @@ class DataCollector:
                             self.data[f"{SEP}{BYTES}{SEP}{direction}{SEP}{protocol}{SEP}"][packet_time_frame] += length
                             self._put_packet_in_bin(direction, protocol, length, packet_time_frame)
 
+        # all data has been collected - write it to file (thread will terminate afterwards)
+        self._write_to_file()
+
     def _write_to_file(self):
         df = pd.DataFrame.from_dict(self.data)
         if self.filename is None:
@@ -215,15 +229,22 @@ class DataCollector:
 
     def start_threads(self):
         """
-        Starts thread counting packets. Sleeps for 3 seconds afterwards to ensure they are active.
+        Starts thread counting packets. Sleeps for 2 seconds afterwards to ensure they are active.
         """
         # create daemon
-        count_thread = threading.Thread(target=self._count_thread)
-        count_thread.setDaemon(True)
-        count_thread.start()
+        self._count_thread = threading.Thread(target=self._collect_statistics)
+        self._count_thread.setDaemon(True)
+        self._count_thread.start()
 
-        time.sleep(3)
+        time.sleep(2)
         self.is_initialized = True
+
+    def wait_until_completed(self):
+        """
+        Blocks until data collection has been completed and was written to the output file.
+        """
+        if self._count_thread:
+            self._count_thread.join()
 
     def start(self):
         """
@@ -245,20 +266,20 @@ class Plot:
                  start: int,
                  end: int,
                  packets_bytes: str,
-                 directions=None,
-                 protocols=None,
-                 kind=None,
-                 grid=None,
+                 directions: List[str] = [INOUT],
+                 protocols: List[str] = [ALL],
+                 kind: str = None,
+                 grid: str = None,
                  stacked=False,
-                 tick_interval: int = 100,
-                 label_interval: int = 1000,
+                 tick_interval: int = -1,
+                 label_interval: int = -1,
                  resolution_mult: int = 1,
                  x_size=1400,
                  y_size=600):
         """
         Creating this object will create a plot with the given parameters
 
-        :param filename: Name of the file containing the data
+        :param filename: Name of the file containing the data. (must not include suffix .csv)
         :param start: time in seconds from which point on the data should be plotted
         :param end: time in seconds to which point the data should be plotted
         :param packets_bytes: PACKETS or BYTES constant, value to be plotted over time
@@ -267,16 +288,12 @@ class Plot:
         :param kind: "bar", "line" or "hist", type of the plot
         :param grid: None, "major", "both" or "minor" (not recommended), grid settings
         :param stacked: boolean, whether the bar plot should be stacked
-        :param tick_interval: Interval in ms between x_ticks
-        :param label_interval: Interval in ms between major x_ticks with labels
+        :param tick_interval: Interval in ms between x_ticks, -1 for auto-scaling
+        :param label_interval: Interval in ms between major x_ticks with labels, -1 for auto-scaling
         :param resolution_mult: multiplier by which the plot will decrease the resolution of the data
         :param x_size: the default x size of plot in pixels
         :param y_size: the default y size of plot in pixels
         """
-        if directions is None:
-            directions = [INOUT]
-        if protocols is None:
-            protocols = [ALL]
 
         self.filename = filename
         self.start = start
@@ -286,35 +303,51 @@ class Plot:
         self.stacked = stacked
         self.packets_bytes = packets_bytes
         self.directions = directions
-        self.tick_interval = tick_interval
-        self.label_interval = label_interval
+        if label_interval > 0:
+            self.label_interval = label_interval
+        else:
+            self.label_interval = round((end-start)/10+0.5)*1000
+        if tick_interval > 0:
+            self.tick_interval = tick_interval
+        else:
+            self.tick_interval = self.label_interval / 5
         self.resolution_mult = resolution_mult
         self.x_size = x_size
         self.y_size = y_size
         self.protocols = protocols
         self.dataframe = None
 
+        # rudimentary check of all parameters
+        if not all(d in DIRECTIONS for d in self.directions):
+            raise RuntimeError(f"Illegal directions: {self.directions}")
+        if not all(p in PROTOCOLS for p in self.protocols):
+            raise RuntimeError(f"Illegal protocols: {self.protocols}")
+        if not self.packets_bytes in [PACKETS, BYTES]:
+            raise RuntimeError(f"Illegal packet/byte selection: {self.packets_bytes}")
+        if not self.kind in KINDS:
+            raise RuntimeError(f"Illegal plot type: {self.kind}")
+
         self.fig = plt.figure()
 
         self._parse_data()
-        if self.kind == "bar":
+        if self.kind == BAR:
             self._create_bar_plot(self.fig)
-        if self.kind == "line":
+        if self.kind == LINE:
             self._create_line_plot(self.fig)
-        if self.kind == "hist":
+        if self.kind == HIST:
             self._create_histogram(self.fig)
 
         self._set_size(self.x_size, self.y_size)
-
         self._label_axes(self.kind)
+
 
 
     def _parse_data(self):
         """
-        Reads .csv file and creates a pandas dataframe
+        Reads .csv file and creates a pandas dataframe.
         """
 
-        df = pd.read_csv(self.filename)
+        df = pd.read_csv(f"{self.filename}.csv")
 
         self.interval = df[TIME][1] * 1000
 
@@ -360,6 +393,15 @@ class Plot:
         # reduce dataframe to used columns
         df = self.dataframe[columns]
 
+        if df.empty:
+            log.error("Data frame is empty - cannot plot!")
+            return
+
+        if(self.packets_bytes == BYTES):
+            df = self._rescale_to_bits_per_second(df)
+        if(self.packets_bytes == PACKETS):
+            df = self._rescale_to_packets_per_second()
+
         # plot with index set to time
         df.set_index(TIME).plot(kind="line", ax=figure.gca())
 
@@ -395,6 +437,15 @@ class Plot:
         # reduce dataframe to used columns
         df = self.dataframe[columns]
         df.set_index(TIME, inplace=True)
+
+        if df.empty:
+            log.error("Data frame is empty - cannot plot!")
+            return
+
+        if(self.packets_bytes == BYTES):
+            df = self._rescale_to_bits_per_second(df)
+        if(self.packets_bytes == PACKETS):
+            df = self._rescale_to_packets_per_second()
 
         # plot using pandas
         df.plot(kind="bar", stacked=self.stacked, align="edge", width=0.8, ax=figure.gca())
@@ -440,6 +491,10 @@ class Plot:
         df = pd.DataFrame(data)
         df.set_index(BIN, inplace=True)
 
+        if df.empty:
+            log.error("Data frame is empty - cannot plot!")
+            return
+
         # plot using pandas
         df.plot(kind="bar", stacked=self.stacked, align="center", width=0.8, ax=figure.gca())
 
@@ -450,13 +505,13 @@ class Plot:
     def _label_axes(self, type):
         """ Labels the axes of the plot"""
         if type in ["bar", "line"]:
-            self.fig.gca().set_xlabel("Time in seconds")
+            self.fig.gca().set_xlabel("Time [s]")
             if self.packets_bytes == PACKETS:
-                self.fig.gca().set_ylabel(PACKETS)
+                self.fig.gca().set_ylabel("Data Rate [packets/s]")
             if self.packets_bytes == BYTES:
-                self.fig.gca().set_ylabel(BYTES)
+                self.fig.gca().set_ylabel("Data Rate [bits/s]")
         if type == "hist":
-            self.fig.gca().set_xlabel("Packet size (byte)")
+            self.fig.gca().set_xlabel("Packet Size [byte]")
             self.fig.gca().set_ylabel(PACKETS)
 
     def _set_size(self, x, y):
@@ -464,7 +519,21 @@ class Plot:
         dpi = self.fig.get_dpi()
         self.fig.set_size_inches(x / float(dpi), y / float(dpi))
 
-    def save_pdf(self, x_size=None, y_size=None):
+    def _rescale_to_bits_per_second(self, df):
+        """Rescales the respective data values to [bits/s]"""
+        delta_t = df.index[1] - df.index[0]
+        df = df * (1.0/delta_t) * 8.0
+        df.rename(columns={"byte": "bits/s"}, inplace=True)
+        return df
+
+    def _rescale_to_packets_per_second(self, df):
+        """Rescales the respective data values to [packets/s]"""
+        delta_t = df.index[1] - df.index[0]
+        df = df * (1.0/delta_t)
+        df.rename(columns={"packets": "packets/s"}, inplace=True)
+        return df
+
+    def save_pdf(self, filename=None, x_size=None, y_size=None):
         """Saves the plot as a pdf file in the given resolution or the default resolution"""
         if x_size is None:
             x_size = self.x_size
@@ -472,9 +541,11 @@ class Plot:
             y_size = self.y_size
         self._set_size(x_size, y_size)
 
-        self.fig.savefig(f'{self.filename}.pdf')
+        if not filename:
+            filename = self.filename
+        self.fig.savefig(f'{filename}.pdf')
 
-    def save_png(self, x_size=None, y_size=None):
+    def save_png(self, filename=None, x_size=None, y_size=None):
         """Saves the plot as a png file in the given resolution or the default resolution"""
         if x_size is None:
             x_size = self.x_size
@@ -482,7 +553,9 @@ class Plot:
             y_size = self.y_size
         self._set_size(x_size, y_size)
 
-        self.fig.savefig(f'{self.filename}.png')
+        if not filename:
+            filename = self.filename
+        self.fig.savefig(f'{filename}.png')
 
     @staticmethod
     def show():
@@ -496,7 +569,7 @@ class LivePlot:
 
     def __init__(self,
                  data_collector: DataCollector,
-                 value: str,
+                 packets_bytes: str,
                  direction: str,
                  y_lim=None,
                  has_dynamic_x=False):
@@ -505,13 +578,13 @@ class LivePlot:
         Initializes the Plot
 
         :param data_collector: The DataCollector collecting the data to be plotted
-        :param value: PACKETS or BYTES to plot packet count/byte count respectively
+        :param packets_bytes: PACKETS or BYTES to plot packet count/byte count respectively
         :param direction: IN, OUT or INOUT to plot incoming, outgoing or both
         :param y_lim: limit of the y axis range. The default "None" will lead to a dynamic y axis range
         :param has_dynamic_x: Decides if x axis range is static or dynamic
         """
         self.data_collector = data_collector
-        self.value = value
+        self.value = packets_bytes
         self.direction = direction
         self.y_lim = 12
         self.has_dynamic_x = has_dynamic_x
@@ -538,6 +611,7 @@ class LivePlot:
         self.line_counter = 0
         self.bar_counter = 0
         self.draw_interval = 1000  # in ms
+        self._isactive = True
 
     def _animate(self, i):
         """The animate function called by animation.FuncAnimation()"""
@@ -549,6 +623,9 @@ class LivePlot:
             else:
                 value = self.data_collector.data[f"{SEP}{self.value}{SEP}{IN}{SEP}{ALL}{SEP}"][index] \
                         + self.data_collector.data[f"{SEP}{self.value}{SEP}{OUT}{SEP}{ALL}{SEP}"][index]
+
+            if self.bar_collection == None or index > len(self.bar_collection) - 1:
+                break
 
             self.bar_collection[index].set_height(value)
             if self.has_dynamic_y:
@@ -571,7 +648,7 @@ class LivePlot:
         plt.ylim(0, self.y_lim)
 
         # label axes
-        self.fig.gca().set_xlabel("Time in seconds")
+        self.fig.gca().set_xlabel("Time [s]")
         if self.value == PACKETS:
             self.fig.gca().set_ylabel(PACKETS)
         if self.value == BYTES:
@@ -590,3 +667,4 @@ class LivePlot:
         g.set_size_inches(x_size / float(dpi), y_size / float(dpi))
 
         plt.show()
+

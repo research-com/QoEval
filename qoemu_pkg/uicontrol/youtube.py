@@ -9,6 +9,9 @@ from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
 YOUTUBE_URL_PREPREPARE = "https://youtu.be/someinvalidurl"  # preprep url used for triggering the app
 YOUTUBE_URL_PREPARE = "https://www.youtube.com/watch?v=GRVwYbQPFQQ"  # Youtube video used in preparation process
 
+# Audio Settings
+_MEDIA_VOLUME = 20
+
 # View IDs
 _ID_PLAYER = "com.google.android.youtube:id/watch_player"
 _ID_PAUSE = "com.google.android.youtube:id/player_control_play_pause_replay_button"
@@ -126,7 +129,7 @@ class _Youtube(UseCase):
         _pause_player(self._vc)
 
         # set media audio to medium volume
-        self.set_media_volume(22)
+        self.set_media_volume(_MEDIA_VOLUME)
 
         log.info("Prepared to start target video...")
         com.dtmilano.android.viewclient.ViewClient.sleep(5)
