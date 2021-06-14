@@ -315,6 +315,11 @@ if __name__ == '__main__':
                 print(f"{t_raw_end} s")
                 d_start_to_end = t_raw_end - t_raw_start
 
+                if t_init_buf > t_raw_start:
+                    raise RuntimeError(
+                        f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
+                        f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
+
                 print("Cutting and merging video stimuli...")
                 postprocessor.process(video_id_in, video_id_out,
                                       convert_to_timestr(t_init_buf),
