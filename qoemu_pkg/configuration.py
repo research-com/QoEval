@@ -38,7 +38,7 @@ if os.environ.get("QOEMU_CONF"):
     _default_config_file_locations.append(os.environ.get("QOEMU_CONF"))
 
 
-class Configuration:
+class QoEmuConfiguration:
 
     def __init__(self, configparser):
         self.configparser = configparser
@@ -63,7 +63,7 @@ class Configuration:
 
 
 class Option:
-    def __init__(self, config: Configuration, option: str, default: str, section: str = QOEMU_SECTION):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION):
         self.config = config
         self.section = section
         self.option = option
@@ -79,7 +79,7 @@ class Option:
 
 
 class BoolOption(Option):
-    def __init__(self, config: Configuration, option: str, default: bool, section: str = QOEMU_SECTION):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
         super().__init__(config, option, str(default), section)
         self.value = self.config.configparser.getboolean(section=self.section, option=self.option, fallback=self.default)
 
@@ -92,7 +92,7 @@ class BoolOption(Option):
 
 
 class MobileDeviceTypeOption(Option):
-    def __init__(self, config: Configuration, option: str, default: str, section: str = QOEMU_SECTION):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION):
         super().__init__(config, option, default, section)
 
     def get(self) -> MobileDeviceType:
@@ -104,7 +104,7 @@ class MobileDeviceTypeOption(Option):
 
 
 class ListIntOption(Option):
-    def __init__(self, config: Configuration, option: str, default: str, section: str = QOEMU_SECTION):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION):
         super().__init__(config, option, default, section)
 
     def get(self) -> List[int]:
@@ -125,6 +125,6 @@ configparser.read(_default_config_file_locations)  # note: last file will take p
 if QOEMU_SECTION not in configparser:
     raise RuntimeError('No configuration file found - not even the default configuration. Check your installation.')
 
-config = Configuration(configparser)
+config = QoEmuConfiguration(configparser)
 
 
