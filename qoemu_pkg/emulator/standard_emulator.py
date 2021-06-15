@@ -6,7 +6,7 @@ import ipaddress
 import time
 
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME
-from qoemu_pkg.configuration import vd_path
+from qoemu_pkg.configuration import config
 
 import logging as log
 import configparser
@@ -23,7 +23,7 @@ VD_NAME = "qoemu_" + DEVICE_NAME + "_" + TARGET_NAME.replace("-", "_") + "_x86"
 EMU_NAME = "emulator"
 VD_MANAGER_NAME = "avdmanager"
 SDK_MANAGER_NAME = "sdkmanager"
-AVD_INI_FILE = f"{vd_path}/config.ini"
+AVD_INI_FILE = f"{config.vd_path.get()}/config.ini"
 
 
 def is_avd_config_readable() -> bool:
@@ -117,7 +117,7 @@ class StandardEmulator(MobileDevice):
             package = f'system-images;{TARGET_NAME};google_apis;x86'
 
         output = subprocess.run(shlex.split(
-            f"{VD_MANAGER_NAME} create avd --package {package} --path {vd_path} " +
+            f"{VD_MANAGER_NAME} create avd --package {package} --path {config.vd_path.get()} " +
             f"--device \"{DEVICE_NAME}\" --name {self.vd_name}"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
@@ -175,8 +175,8 @@ class StandardEmulator(MobileDevice):
             self.__read_avd_config()
         self.config['hw.initialOrientation'] = orientation.value
         self.config['skin.dynamic'] = 'yes'
-        show_skin = False
-        if show_skin:
+        # show_device_frame = False
+        if config.show_device_frame.get():
             self.config['showDeviceFrame'] = 'yes'
             self.config['skin.name'] = 'pixel_silver'
             self.config['skin.path'] = '/home/qoe-user/Android/Sdk/skins/pixel_silver'  # FIXME: abs path
