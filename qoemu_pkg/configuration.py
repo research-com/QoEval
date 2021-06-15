@@ -46,7 +46,7 @@ class Configuration:
         self.video_capture_path = Option(self, 'VideoCapturePath', _default_video_capture_path)
         self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
-        self.excluded_ports = ListIntOption(self, 'ExcludedPorts', "")
+        self.excluded_ports = ListIntOption(self, 'ExcludedPorts', '22,5000,5002')
         self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
 
         self.adb_device_serial = Option(self, 'AdbDeviceSerial', '')
