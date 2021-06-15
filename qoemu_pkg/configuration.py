@@ -88,7 +88,7 @@ class BoolOption(Option):
 
     def set(self, value: bool):
         self.value = value
-        self.config.configparser.setboolean(section=self.section, option=self.option, value=str(self.value))
+        self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
 
 class MobileDeviceTypeOption(Option):
