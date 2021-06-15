@@ -4,17 +4,11 @@
 """
 from qoemu_pkg.analysis import analysis
 from qoemu_pkg.capture.capture import CaptureEmulator,CaptureRealDevice
-#new
 from qoemu_pkg.postprocessing.postprocessor import PostProcessor
 from qoemu_pkg.postprocessing.determine_video_start import determine_video_start
 from qoemu_pkg.postprocessing.determine_image_timestamp import determine_frame, frame_to_time
-from qoemu_pkg.configuration import emulator_type, video_capture_path, traffic_analysis_live, \
-    traffic_analysis_plot, adb_device_serial, net_device_name, net_em_sanity_check
 from qoemu_pkg.configuration import MobileDeviceType, MobileDeviceOrientation
-# gui
-from qoemu_pkg.configuration import emulator_type
-from qoemu_pkg.emulator.mobiledevice import MobileDeviceType, MobileDeviceOrientation
-
+from qoemu_pkg.configuration import config
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
 from qoemu_pkg.emulator.standard_emulator import StandardEmulator
 from qoemu_pkg.emulator.physical_device import PhysicalDevice
@@ -22,9 +16,6 @@ from qoemu_pkg.netem.netem import Connection
 from qoemu_pkg.uicontrol.uicontrol import UiControl
 from qoemu_pkg.uicontrol.usecase import UseCaseType
 from qoemu_pkg.parser.parser import *
-# gui
-from qoemu_pkg.configuration import video_capture_path
-from qoemu_pkg.configuration import excluded_ports
 
 
 import logging as log
@@ -38,7 +29,7 @@ DELAY_TOLERANCE_MIN = 10    # minimum delay tolerance for sanity check [ms]
 DELAY_TOLERANCE_REL = 0.05  # relative delay tolerance for sanity check [0..1]
 PROCESSING_BIAS = 10        # additionaly delay due to processing in emulator [ms]
 
-GEN_LOG_FILE = os.path.join(video_capture_path, 'qoemu.log')
+GEN_LOG_FILE = os.path.join(config.video_capture_path.get(), 'qoemu.log')
 
 
 def wait_countdown(time_in_sec: int):
@@ -62,11 +53,11 @@ def convert_to_timestr(time_in_seconds: float)->str:
 
 def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
         emulator_id = "E1-"
-        if emulator_type == MobileDeviceType.SDK_EMULATOR:
+        if config.emulator_type.get() == MobileDeviceType.SDK_EMULATOR:
             emulator_id += "S"
-        if emulator_type == MobileDeviceType.GENYMOTION:
+        if config.emulator_type.get() == MobileDeviceType.GENYMOTION:
             emulator_id += "G"
-        if emulator_type == MobileDeviceType.REAL_DEVICE:
+        if config.emulator_type.get() == MobileDeviceType.REAL_DEVICE:
             emulator_id += "R"
 
         emulator_id += f"-{COORDINATOR_RELEASE}"
@@ -77,14 +68,14 @@ def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step
 class Coordinator:
     def __init__(self):
         log.basicConfig(level=log.DEBUG)
-        self.ui_control = UiControl(adb_device_serial)
-        if emulator_type == MobileDeviceType.GENYMOTION:
+        self.ui_control = UiControl(config.adb_device_serial.get())
+        if config.emulator_type.get() == MobileDeviceType.GENYMOTION:
             self.emulator = GenymotionEmulator()
             self.capture = CaptureEmulator()
-        if emulator_type == MobileDeviceType.SDK_EMULATOR:
+        if config.emulator_type.get() == MobileDeviceType.SDK_EMULATOR:
             self.emulator = StandardEmulator()
             self.capture = CaptureEmulator()
-        if emulator_type == MobileDeviceType.REAL_DEVICE:
+        if config.emulator_type.get() == MobileDeviceType.REAL_DEVICE:
             self.emulator = PhysicalDevice()
             self.capture = CaptureRealDevice()
 
@@ -129,14 +120,12 @@ class Coordinator:
             self._gen_log.write(f" delay bias of {delay_bias_ul_dl}ms too high - canceled. ")
             raise RuntimeError(f"Delay bias of {delay_bias_ul_dl}ms exceeds delay parameter of {params['ddl']}ms! Cannot emulate.")
 
-        self.netem = Connection("coord1", net_device_name, t_init=params['t_init'],
+        self.netem = Connection("coord1", config.net_device_name.get(), t_init=params['t_init'],
                                 rul=params['rul'], rdl=params['rdl'],
                                 dul=(params['dul']-delay_bias_ul_dl),
                                 ddl=(params['ddl']-delay_bias_ul_dl),
                                 android_ip=self.emulator.get_ip_address(), # note: only valid, if not in host-ap mode
-                                exclude_ports=[22, 5000, 5002])  # exclude ports used for nomachine/ssh remote control
-
-                                exclude_ports=excluded_ports)  # exclude ports used for nomachine/ssh remote control
+                                exclude_ports=config.excluded_ports.get())  # exclude ports used for nomachine/ssh remote control
         # android_ip=self.emulator.get_ip_address())
         # set and execute a Youtube use case
         # Tagesschau Intro:
@@ -167,9 +156,9 @@ class Coordinator:
         uc_duration = convert_to_seconds(capture_time) + 2  # add 2s safety margin
 
         # initialize traffic analysis - if enabled
-        if traffic_analysis_live or traffic_analysis_plot:
+        if config.traffic_analysis_live.get() or config.traffic_analysis_plot.get():
             length_in_sec = convert_to_seconds(capture_time)
-            self.stats_filepath = os.path.join(video_capture_path, f"{self.output_filename}_stats")
+            self.stats_filepath = os.path.join(config.video_capture_path.get(), f"{self.output_filename}_stats")
             self.analysis = analysis.DataCollector(virtual_interface_out=self.netem.virtual_device_out,
                                                    virtual_interface_in=self.netem.virtual_device_in,
                                                    duration=uc_duration, interval=100, filename=self.stats_filepath,
@@ -177,7 +166,7 @@ class Coordinator:
             self.analysis.start_threads()
 
         # optional sanity check (can be disbled in configuration file)
-        if(net_em_sanity_check):
+        if config.net_em_sanity_check.get():
             self.netem.enable_netem(consider_t_init=False)
             log.debug("network emulation sanity check - measuring delay while emulation is active...")
             params = get_parameters(type_id, table_id, entry_id)
@@ -196,16 +185,16 @@ class Coordinator:
         self.netem.enable_netem()
         # input("netem active - check conditions on mobile device and press enter to continue...")
 
-        if traffic_analysis_live or traffic_analysis_plot:
+        if config.traffic_analysis_live.get() or config.traffic_analysis_plot.get():
             self.analysis.start()
 
-        if traffic_analysis_live:
+        if config.traffic_analysis_live.get():
             live_plot = analysis.LivePlot(self.analysis, analysis.PACKETS, analysis.ALL)
 
         ui_control_thread.start()
         capture_thread.start()
 
-        if traffic_analysis_live:
+        if config.traffic_analysis_live.get():
             log.debug("Showing live plot - close window to continue processing when use-case has finished.")
             live_plot.show()
 
@@ -213,7 +202,7 @@ class Coordinator:
         ui_control_thread.join()
         self.netem.disable_netem()
 
-        if traffic_analysis_plot:
+        if config.traffic_analysis_plot.get():
             self.analysis.wait_until_completed()
             plot = analysis.Plot(self.stats_filepath,0,convert_to_seconds(capture_time),analysis.BYTES,
                                  [analysis.OUT],[analysis.ALL],analysis.BAR)
@@ -257,7 +246,7 @@ class Coordinator:
 if __name__ == '__main__':
     # executed directly as a script
     print("Coordinator main started")
-    load_parameter_file('../stimuli-params/full.csv')
+    load_parameter_file('/home/jk/PycharmProjects/qoemu/stimuli-params/full.csv', False)
     print(get_type_ids())
     print(get_table_ids('VS'))
     print(get_entry_ids('VS', 'B'))
@@ -308,7 +297,7 @@ if __name__ == '__main__':
                 # d_start_to_end = int(input(f"Duration from t_start to t_end in seconds [s]: "))
 
                 # auto-detect video t_init_buf, t_raw_start, t_raw_end
-                unprocessed_video_path = f"{os.path.join(video_capture_path, video_id_in)}.avi"
+                unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
                 print("Detecting start of video playback... ", end='')
                 t_init_buf = determine_video_start(unprocessed_video_path)
                 if not t_init_buf:
