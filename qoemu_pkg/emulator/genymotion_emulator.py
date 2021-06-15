@@ -5,7 +5,6 @@
 import time
 
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME
-from qoemu_pkg.configuration import vd_path
 
 import logging as log
 import os
