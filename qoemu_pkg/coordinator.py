@@ -248,9 +248,9 @@ if __name__ == '__main__':
     # executed directly as a script
     print("Coordinator main started")
     load_parameter_file('../stimuli-params/full.csv')
-    print(get_type_ids())
-    print(get_table_ids('VS'))
-    print(get_entry_ids('VS', 'B'))
+    # print(get_type_ids())
+    # print(get_table_ids('VS'))
+    # print(get_entry_ids('VS', 'A'))
 
     do_generate_stimuli = True
     do_postprocessing = True
@@ -260,7 +260,7 @@ if __name__ == '__main__':
 #    print(get_end('VS', 'A', '1'))
 
     type_id = 'VS'
-    table_id = 'B'
+    table_id = 'A'
     ids_to_evaluate = get_entry_ids(type_id, table_id)
     # ids_to_evaluate =  ['9'] #,'5','4','3','2','1']
 
@@ -319,6 +319,11 @@ if __name__ == '__main__':
                     raise RuntimeError(
                         f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
                         f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
+
+                if t_raw_end > t_raw_start:
+                    raise RuntimeError(
+                        f"Detected start of stimuli section at {t_raw_start}s is later than the detected end "
+                        f"at {t_raw_end}s ! Check trigger images and verify that they are part of the recorded stimuli.")
 
                 print("Cutting and merging video stimuli...")
                 postprocessor.process(video_id_in, video_id_out,
