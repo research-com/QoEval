@@ -12,6 +12,7 @@ import Xlib
 import Xlib.display
 from collections import namedtuple
 from qoemu_pkg.configuration import video_capture_path, audio_device_emu, audio_device_real
+from qoemu_pkg.utils import convert_to_seconds
 
 # Define constants
 FFMPEG = "ffmpeg"
@@ -73,8 +74,7 @@ class CaptureRealDevice(Capture):
 
     def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
         # start video recording from real device
-        ts = time.strptime(duration, "%H:%M:%S")
-        duration_in_secs = ts.tm_hour * 3600 + ts.tm_min * 60 + ts.tm_sec
+        duration_in_secs = convert_to_seconds(duration)
 
         dest_tmp = os.path.join(video_capture_path, 'captured_realdev')
         dest = os.path.join(video_capture_path, output_filename)
