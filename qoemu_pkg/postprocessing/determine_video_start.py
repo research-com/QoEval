@@ -37,7 +37,7 @@ def determine_video_start(video_path: str) -> float:
     for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
 
         if line.lstrip().startswith('<frame key_frame'):
-            print(line)
+            # print(line)
             key = bool(int(re.search(r'\bkey_frame="(.+?)"', line).group(1)))
             time = float(re.search(r'\bpkt_pts_time="(.+?)"', line).group(1))
             size = int(re.search(r'\bpkt_size="(.+?)"', line).group(1))

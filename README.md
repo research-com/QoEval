@@ -1,15 +1,52 @@
 # QoEmu V0.1
 
 ## Installation
+
+Clone the repository and change to the qoemu directory.
+
+```
+git clone --recursive [URL to repo]
+cd qoemu
+```
+
+### git LFS required
 When cloning the git repository, check that git lfs is enabled
 by using the command ``git lfs install`` and ``git lfs fetch``
 
-## Additional Post-Processing Tools
-Currently, the process of creating the stimuli videos requires a final manual
-post-processing step. For this, a *lossless* video manipulation tool is 
-required. We recommend https://github.com/mifi/lossless-cut.git
+### System setup
+We strongly recommend to use a virtual environment
+```
+python3.8 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip3 install -r requirements.txt
+```
 
-### Remarks regarding installation of lossless-cut
+### Building the package
+The python setuptools and a builder (e.g. PyPA build) are used to build the package:
+```
+pip3 install build
+python3.8 -m build
+```
+
+Afterwards, the package can be installed using pip:
+
+```
+pip3 install dist/qoemu-pkg-hm-0.1.0.tar.gz
+```
+
+### Running QoEmu
+A user-friendly GUI for QoEmu is currently under development. Until it is available,
+the ``coordinator.py`` is used to control the emulation.
+
+
+### Optional Additional Post-Processing Tools: Lossless Cut
+Basic postprocessing is performed by QoEmu using trigger frames to detect
+the beginning and the end of a stimuli section. If you want to apply
+additional postprocessing, a *lossless* video manipulation tool can 
+be used. We recommend https://github.com/mifi/lossless-cut.git
+
+#### Remarks regarding installation of lossless-cut
 * For starting lossless-cut, see the developer-notes within the
 lossless-cut repo.
 

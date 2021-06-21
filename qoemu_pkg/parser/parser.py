@@ -41,14 +41,14 @@ def load_parameter_file(file_path=CSV_FILENAME, is_relative_path=True):
             file = open(file_path).read().split("\n")
         file_loaded = True
     except FileNotFoundError:
-        log.error("File not found")
+        log.error(f"Parameter file \"{file_path}\" not found")
 
 
 def get_type_ids():
     """
         Returns a list of all type id's within the loaded file
 
-        The provided paramter file identifies each set of parameters with an ID in the following form
+        The provided parameter file identifies each set of parameters with an ID in the following form
         "VS-B-4"
         The first part of this id corresponds to the type of capture (Video Streaming/Web Browsing) and is
         therefore called type_id in this module.

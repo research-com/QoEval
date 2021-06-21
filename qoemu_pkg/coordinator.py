@@ -16,40 +16,21 @@ from qoemu_pkg.netem.netem import Connection
 from qoemu_pkg.uicontrol.uicontrol import UiControl
 from qoemu_pkg.uicontrol.usecase import UseCaseType
 from qoemu_pkg.parser.parser import *
+from qoemu_pkg.utils import *
 
 
 import logging as log
 import threading
 import time
-import sys
 import traceback
 
 COORDINATOR_RELEASE = "0.1"
 DELAY_TOLERANCE_MIN = 10    # minimum delay tolerance for sanity check [ms]
 DELAY_TOLERANCE_REL = 0.05  # relative delay tolerance for sanity check [0..1]
-PROCESSING_BIAS = 10        # additionaly delay due to processing in emulator [ms]
+PROCESSING_BIAS = 10        # additional delay due to processing in emulator [ms]
+VIDEO_PRE_START = 10.0         # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
 
 GEN_LOG_FILE = os.path.join(config.video_capture_path.get(), 'qoemu.log')
-
-
-def wait_countdown(time_in_sec: int):
-    for i in range(time_in_sec):
-        sys.stdout.write(f"\rWaiting: {time_in_sec - i} s")
-        time.sleep(1)
-        sys.stdout.flush()
-    sys.stdout.write("\r                                              \n")
-
-
-def convert_to_seconds(time_str: str)->float:
-    ts = time.strptime(time_str, "%H:%M:%S")
-    s = ts.tm_hour * 3600 + ts.tm_min * 60 + ts.tm_sec
-    return s
-
-def convert_to_timestr(time_in_seconds: float)->str:
-    hours = int(time_in_seconds/3600)
-    minutes = int((time_in_seconds - (3600*hours))/60)
-    seconds = int((time_in_seconds - (3600*hours) - (60*minutes)))
-    return f"{hours}:{minutes}:{seconds}"
 
 def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
         emulator_id = "E1-"
@@ -109,7 +90,6 @@ class Coordinator:
 
         # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided if use-case requires play services
         self.emulator.launch(orientation=MobileDeviceOrientation.LANDSCAPE)
-        # [t_init, rul, rdl, dul, ddl]
         try:
             delay_bias_ul_dl = (self.emulator.measure_rtt()+PROCESSING_BIAS) / 2    # can only measure RTT, assume 50%/50% ul vs. dl
         except RuntimeError as rte:
@@ -125,22 +105,21 @@ class Coordinator:
                                 dul=(params['dul']-delay_bias_ul_dl),
                                 ddl=(params['ddl']-delay_bias_ul_dl),
                                 android_ip=self.emulator.get_ip_address(), # note: only valid, if not in host-ap mode
-                                exclude_ports=config.excluded_ports.get())  # exclude ports used for nomachine/ssh remote control
-        # android_ip=self.emulator.get_ip_address())
-        # set and execute a Youtube use case
-        # Tagesschau Intro:
-        # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/5lEd5D2J27Y?t=8")
-        # Beethoven
+                                exclude_ports=config.excluded_ports.get())  # exclude ports, e.g. as used for ssh control
 
-        # append ?t=[start time in seconds] to link and create use-case
-        s = convert_to_seconds(get_start(type_id, table_id, entry_id))
         url = f"{get_link(type_id, table_id, entry_id)}"
         if len(url) < 7:
             raise RuntimeError(f"Invalid Url: {url}")
-        if "?" in url:
-            url = f"{url}&t={s}"
-        else:
-            url = f"{url}?t={s}"
+        s = convert_to_seconds(get_start(type_id, table_id, entry_id))
+        s = s - VIDEO_PRE_START
+        if s > 0.0:
+            # append ? or &t=[start time in seconds] to link (note: currently, youtube support only int values)
+            if "?" in url:
+                url = f"{url}&t={int(s)}"
+            else:
+                url = f"{url}?t={int(s)}"
+
+        # create and prepare use-case
         self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url)
         self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; video url: {url}; len: {s}s ")
         self.ui_control.prepare_use_case()
@@ -157,7 +136,6 @@ class Coordinator:
 
         # initialize traffic analysis - if enabled
         if config.traffic_analysis_live.get() or config.traffic_analysis_plot.get():
-            length_in_sec = convert_to_seconds(capture_time)
             self.stats_filepath = os.path.join(config.video_capture_path.get(), f"{self.output_filename}_stats")
             self.analysis = analysis.DataCollector(virtual_interface_out=self.netem.virtual_device_out,
                                                    virtual_interface_in=self.netem.virtual_device_in,
@@ -246,7 +224,12 @@ class Coordinator:
 if __name__ == '__main__':
     # executed directly as a script
     print("Coordinator main started")
-    load_parameter_file('../stimuli-params/full.csv')
+
+    # TODO: move to config
+    trigger_dir = './stimuli-params/trigger'
+    parameter_file = './stimuli-params/full.csv'
+
+    load_parameter_file(parameter_file)
     # print(get_type_ids())
     # print(get_table_ids('VS'))
     # print(get_entry_ids('VS', 'A'))
@@ -261,7 +244,10 @@ if __name__ == '__main__':
     type_id = 'VS'
     table_id = 'A'
     ids_to_evaluate = get_entry_ids(type_id, table_id)
-    # ids_to_evaluate =  ['9'] #,'5','4','3','2','1']
+    # ids_to_evaluate =  ['1'] #,'5','4','3','2','1']
+
+    if ids_to_evaluate == None:
+        raise RuntimeError(f"No Stimuli-IDs to evaluate - check parameter file \"{parameter_file}\"")
 
     try:
         if do_generate_stimuli:
@@ -304,8 +290,8 @@ if __name__ == '__main__':
                     print(f"failed. (Is the input video \"{unprocessed_video_path}\" correct?)")
                     continue
                 print(f"{t_init_buf} s")
-                trigger_image_start = os.path.join("../stimuli-params/trigger", f"{type_id}-{table_id}_start.png")
-                trigger_image_end = os.path.join("../stimuli-params/trigger", f"{type_id}-{table_id}_end.png")
+                trigger_image_start = os.path.join(trigger_dir, f"{type_id}-{table_id}_start.png")
+                trigger_image_end = os.path.join(trigger_dir, f"{type_id}-{table_id}_end.png")
                 print("Detecting start of stimuli video section... ", end='')
                 t_raw_start = frame_to_time(unprocessed_video_path, determine_frame(unprocessed_video_path, trigger_image_start))
                 print(f"{t_raw_start} s")
@@ -319,7 +305,7 @@ if __name__ == '__main__':
                         f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
                         f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
 
-                if t_raw_end > t_raw_start:
+                if t_raw_start > t_raw_end:
                     raise RuntimeError(
                         f"Detected start of stimuli section at {t_raw_start}s is later than the detected end "
                         f"at {t_raw_end}s ! Check trigger images and verify that they are part of the recorded stimuli.")
