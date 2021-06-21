@@ -3,6 +3,7 @@ import multiprocessing
 import re
 import subprocess
 import cv2
+import numpy as np
 
 
 def frame_to_time(video_path, frame_number: int) -> float:
@@ -51,7 +52,7 @@ def determine_frame(video_path: str, image_path: str) -> int:
     # video capture from file
     cap = cv2.VideoCapture(video_path)
 
-    black_level_max = 0
+    black_and_white_level_max = 0
     frame_count = -1
     res = None
     while True:
@@ -61,18 +62,24 @@ def determine_frame(video_path: str, image_path: str) -> int:
         # if we have a next frame
         if ret:
             frame_count += 1
+
             # convert to grayscale
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             diff_frame = gray - ref
+
+            # create mask to compare at full resolution
+            mask = np.zeros(ref.shape[:2], np.uint8)
+            mask[0:1080, 0:1920] = 255
+
             # calculate histogram
-            hist = cv2.calcHist(diff_frame, [0], None, [256], [0, 256])
-            # compare black levels
-            if sum(hist[0:10])[0] > black_level_max:
+            hist = cv2.calcHist([diff_frame], [0], mask, [256], [0, 256])
+
+            # compare black and white levels
+            black_and_white_level = sum(int(e[0]) for e in hist[0:15]) + sum(int(e[0]) for e in hist[-16:])
+
+            if black_and_white_level > black_and_white_level_max:
                 res = frame_count
-                black_level_max = sum(hist[0:10])[0]
-            # at this level we can terminate early(?)
-            # if black_level_max > 2000:
-            #     break
+                black_and_white_level_max = black_and_white_level
 
         else:
             break
@@ -84,8 +91,9 @@ def determine_frame(video_path: str, image_path: str) -> int:
 
 if __name__ == '__main__':
 
-    video_path = '/home/jk/PycharmProjects/qoemu/qoemu_pkg/gui/210418_VS-B/test1.avi'
-    image_path = '/home/jk/PycharmProjects/qoemu/qoemu_pkg/gui/210418_VS-B/screen.png'
+    video_path = '/home/jk/PycharmProjects/qoemu/qoemu_pkg/gui/210418_VS-B/VS-B-6_E1-R-0.1_P0.avi'
+    image_path = '/home/jk/PycharmProjects/qoemu/qoemu_pkg/gui/210418_VS-B/screen13.png'
 
     frame = determine_frame(video_path, image_path)
+    print(frame)
     print(frame_to_time(video_path, frame))
