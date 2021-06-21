@@ -247,7 +247,10 @@ class Coordinator:
 if __name__ == '__main__':
     # executed directly as a script
     print("Coordinator main started")
-    load_parameter_file('../stimuli-params/full.csv')
+
+    parameter_file = './stimuli-params/full.csv'
+
+    load_parameter_file(parameter_file)
     # print(get_type_ids())
     # print(get_table_ids('VS'))
     # print(get_entry_ids('VS', 'A'))
@@ -263,6 +266,9 @@ if __name__ == '__main__':
     table_id = 'A'
     ids_to_evaluate = get_entry_ids(type_id, table_id)
     # ids_to_evaluate =  ['9'] #,'5','4','3','2','1']
+
+    if ids_to_evaluate == None:
+        raise RuntimeError(f"No Stimuli-IDs to evaluate - check parameter file \"{parameter_file}\"")
 
     try:
         if do_generate_stimuli:

@@ -1,0 +1,4 @@
+include README.md
+include requirements.txt
+recursive-include qoemu_pkg *.conf
+recursive-include qoemu_pkg/videos *.avi
