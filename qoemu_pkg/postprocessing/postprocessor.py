@@ -8,6 +8,7 @@ from qoemu_pkg.configuration import config
 from qoemu_pkg.videos import t_init
 
 FFMPEG = "ffmpeg"
+PRESERVE_TEMP_FILES = False   # True: preserve temporary processing files (e.g. for debugging), False: delete them
 
 class PostProcessor:
     def __init__(self):
@@ -48,12 +49,13 @@ class PostProcessor:
                 file.write(f"file \'{video_step2}\'\n")
             # Step 4: Concatenate prefix and shortened main stimuli video to create post-processed video
             command = f"{FFMPEG} -f concat -safe 0 -i \"{input_list}\" -reset_timestamps 1 -c copy " \
-                      f"-y {os.path.join(config.video_capture_path.get(), output_filename)}.avi "
+                      f"-y {os.path.join(video_capture_path, output_filename)}.avi "
             log.debug(f"postproc concat cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                     universal_newlines=True).check_returncode()
         # clean up temporary directory
-        os.remove(video_step1)
-        os.remove(video_step2)
-        os.remove(input_list)
-        os.removedirs(tmp_dir)
+        if not PRESERVE_TEMP_FILES:
+            os.remove(video_step1)
+            os.remove(video_step2)
+            os.remove(input_list)
+            os.removedirs(tmp_dir)
