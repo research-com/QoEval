@@ -4,7 +4,7 @@ import tempfile
 import subprocess
 import shlex
 import importlib_resources
-from qoemu_pkg.configuration import video_capture_path, audio_device_emu, audio_device_real
+from qoemu_pkg.configuration import config
 from qoemu_pkg.videos import t_init
 
 FFMPEG = "ffmpeg"
@@ -36,7 +36,7 @@ class PostProcessor:
             else:
                 param_duration = ""
 
-            command = f"{FFMPEG} -i {os.path.join(video_capture_path, input_filename)}.avi -vcodec copy -acodec copy " \
+            command = f"{FFMPEG} -i {os.path.join(config.video_capture_path.get(), input_filename)}.avi -vcodec copy -acodec copy " \
                       f"-ss {main_video_start_time}" \
                       f" {param_duration} {video_step2} "
             log.debug(f"postproc main cut cmd: {command}")
@@ -48,8 +48,8 @@ class PostProcessor:
                 file.write(f"file \'{video_step1}\'\n")
                 file.write(f"file \'{video_step2}\'\n")
             # Step 4: Concatenate prefix and shortened main stimuli video to create post-processed video
-            command = f"{FFMPEG} -f concat -safe 0 -i \"{input_list}\" -vcodec copy -acodec copy " \
-                      f"-y {os.path.join(video_capture_path, output_filename)}.avi "
+            command = f"{FFMPEG} -f concat -safe 0 -i \"{input_list}\" -reset_timestamps 1 -c copy " \
+                      f"-y {os.path.join(config.video_capture_path.get(), output_filename)}.avi "
             log.debug(f"postproc concat cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                     universal_newlines=True).check_returncode()

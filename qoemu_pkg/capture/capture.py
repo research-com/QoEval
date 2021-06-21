@@ -11,8 +11,9 @@ import shlex
 import Xlib
 import Xlib.display
 from collections import namedtuple
-from qoemu_pkg.configuration import video_capture_path, audio_device_emu, audio_device_real
 from qoemu_pkg.utils import convert_to_seconds
+from qoemu_pkg.configuration import config
+
 
 # Define constants
 FFMPEG = "ffmpeg"
@@ -33,9 +34,9 @@ def check_env():
     check_ext(FFMPEG)
     check_ffmpeg_features()
 
-    if not os.path.exists(video_capture_path):
-        log.debug(f"output directory \"{video_capture_path}\" does not exist - trying to create it")
-        os.makedirs(video_capture_path)
+    if not os.path.exists(config.video_capture_path.get()):
+        log.debug(f"output directory \"{config.video_capture_path.get()}\" does not exist - trying to create it")
+        os.makedirs(config.video_capture_path.get())
 
 def check_ext(name):
     log.debug(f"locating {name}")
@@ -76,18 +77,18 @@ class CaptureRealDevice(Capture):
         # start video recording from real device
         duration_in_secs = convert_to_seconds(duration)
 
-        dest_tmp = os.path.join(video_capture_path, 'captured_realdev')
-        dest = os.path.join(video_capture_path, output_filename)
+        dest_tmp = os.path.join(config.video_capture_path.get(), 'captured_realdev')
+        dest = os.path.join(config.video_capture_path.get(), output_filename)
         scrcpy_output = subprocess.Popen(shlex.split(f"{SCREENCOPY_NAME} {SCREENCOPY_OPTIONS} {dest_tmp}.mp4"), stdout=subprocess.PIPE,
                        universal_newlines=True)
 
-        if audio and audio_device_real == '':
+        if audio and config.audio_device_real.get() == '':
             log.error("Cannot capture audio - audio device not specified - check AudioDeviceReal parameter in config")
             audio = False
 
         if audio:
             # start audio recording - will use ffmpeg for timing the recording
-            command = f"{FFMPEG} -f alsa -i {audio_device_real} -t {duration} -y {dest_tmp}.wav"
+            command = f"{FFMPEG} -f alsa -i {config.audio_device_real.get()} -t {duration} -y {dest_tmp}.wav"
             log.debug(f"start audio recording cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                            universal_newlines=True).check_returncode()
@@ -181,13 +182,13 @@ class CaptureEmulator(Capture):
         self._display.sync()
 
     def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
-        if audio and audio_device_emu == '':
+        if audio and config.audio_device_emu.get() == '':
             log.error("Cannot capture audio - audio device not specified - check AudioDeviceEmu parameter in config")
             audio = False
 
         if audio:
             # pulse:
-            audio_param = f"-f pulse -thread_queue_size 4096 -i {audio_device_emu} -ac 2"
+            audio_param = f"-f pulse -thread_queue_size 4096 -i {config.audio_device_emu.get()} -ac 2"
             # alsa
             # audio_param = f"-f alsa -i hw:0 -ac 2"
         else:
@@ -206,8 +207,8 @@ class CaptureEmulator(Capture):
         self.bring_window_to_foreground(window)
         window_pos = self.get_window_position(window)
         log.info(f'Found emulator window at {window_pos.x},{window_pos.y} dim {window_pos.width},{window_pos.height}')
-        dest = os.path.join(video_capture_path, output_filename)
-        dest_tmp = os.path.join(video_capture_path, 'captured_raw')
+        dest = os.path.join(config.video_capture_path.get(), output_filename)
+        dest_tmp = os.path.join(config.video_capture_path.get(), 'captured_raw')
         # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
         #           f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -c:v libxvid " \
         #           f"-preset ultrafast -y {dest}.avi"
