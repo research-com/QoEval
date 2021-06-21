@@ -50,14 +50,14 @@ def determine_frame(video_path: str, image_path: str) -> int:
     # reference image (grayscale)
     ref = cv2.imread(image_path, 0)
 
-    if ref == None:
+    if ref is None:
         raise RuntimeError(
             f"Cannot read trigger image {image_path}")
 
     # video capture from file
     cap = cv2.VideoCapture(video_path)
 
-    if ref == None:
+    if cap is None:
         raise RuntimeError(
             f"Cannot read video file {video_path}")
 
