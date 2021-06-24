@@ -18,11 +18,12 @@ from qoemu_pkg.uicontrol.usecase import UseCaseType
 from qoemu_pkg.parser.parser import *
 from qoemu_pkg.utils import *
 
-
 import logging as log
 import threading
 import time
 import traceback
+
+from typing import List
 
 COORDINATOR_RELEASE = "0.1"
 DELAY_TOLERANCE_MIN = 10    # minimum delay tolerance for sanity check [ms]
@@ -47,6 +48,10 @@ def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step
         return id
 
 class Coordinator:
+    """
+            Coordinate the emulation run for generating one or more stimuli.
+    """
+
     def __init__(self):
         log.basicConfig(level=log.DEBUG)
         self.ui_control = UiControl(config.adb_device_serial.get())
@@ -67,6 +72,9 @@ class Coordinator:
         self.analysis = None
         self.output_filename = None
         self.stats_filepath = None
+        self._type_id = None
+        self._table_id = None
+        self._entry_id = None
         self._gen_log = open(GEN_LOG_FILE, "a+")
 
     def _get_bpf_rule(self) -> str:
@@ -82,8 +90,11 @@ class Coordinator:
 
 
     def prepare(self, type_id: str, table_id: str, entry_id: str):
+        self._type_id_ = type_id
+        self._table_id = table_id
+        self._entry_id = entry_id
         params = get_parameters(type_id, table_id, entry_id)
-        log.debug(f"Preparing with parameters: {params}")
+        log.debug(f"Preparing {type_id}-{table_id}-{entry_id} with parameters: {params}")
         self.output_filename = get_video_id(type_id, table_id, entry_id)
         time_string = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
         self._gen_log.write(f"{time_string} {self.output_filename} {params} ")
@@ -147,7 +158,7 @@ class Coordinator:
         if config.net_em_sanity_check.get():
             self.netem.enable_netem(consider_t_init=False)
             log.debug("network emulation sanity check - measuring delay while emulation is active...")
-            params = get_parameters(type_id, table_id, entry_id)
+            params = get_parameters(self._type_id, self._table_id, self._entry_id)
             measured_rtt_during_emulation = self.emulator.measure_rtt()
             max_allowed_rtt_during_emulation = params['dul'] + params['ddl'] + \
                                                max(DELAY_TOLERANCE_MIN, DELAY_TOLERANCE_REL*(params['dul'] + params['ddl'] ))
@@ -220,109 +231,144 @@ class Coordinator:
         if self.emulator:
             self.emulator.shutdown()
 
+    """
+            Coordinate the emulation run for generating one or more stimuli.
 
-if __name__ == '__main__':
-    # executed directly as a script
-    print("Coordinator main started")
+            Parameter
+            ----------
+            type_ids : List[str]
+                Specifies parameter stimuli type id, e.g. "VS"
+            table_ids : List[str]
+                Specifies parameter stimuli table id, e.g. "A"
+                
+            Attributes
+            ----------
+            entry_ids : List[str]
+                Specifies parameter stimuli table id, e.g. "A"
+                If an empty list is specified, all entry-ids available will be selected.
+            generate_stimuli : bool
+                Specify if new stimuli should be generated/recorded
+            postprocessing : bool
+                Specify if postprocessing should be applied
+            """
+    def start(self, type_ids: List[str], table_ids: List[str], entry_ids: List[str] = [],
+              generate_stimuli:bool = True, postprocessing:bool = True):
+        # TODO: move to config
+        trigger_dir = './stimuli-params/trigger'
+        parameter_file = './stimuli-params/full.csv'
 
-    # TODO: move to config
-    trigger_dir = './stimuli-params/trigger'
-    parameter_file = './stimuli-params/full.csv'
+        load_parameter_file(parameter_file)
+        # print(get_type_ids())
+        # print(get_table_ids('VS'))
+        # print(get_entry_ids('VS', 'A'))
 
-    load_parameter_file(parameter_file)
-    # print(get_type_ids())
-    # print(get_table_ids('VS'))
-    # print(get_entry_ids('VS', 'A'))
+        #    print(get_link('VS', 'A', '1'))
+        #    print(get_start('VS', 'A', '1'))
+        #    print(get_end('VS', 'A', '1'))
 
-    do_generate_stimuli = True
-    do_postprocessing = True
+        type_id = type_ids[0]  # TODO: extend to process all elements
+        table_id = table_ids[0]
 
-#    print(get_link('VS', 'A', '1'))
-#    print(get_start('VS', 'A', '1'))
-#    print(get_end('VS', 'A', '1'))
+        if len(entry_ids) == 0:
+            ids_to_evaluate = get_entry_ids(type_id, table_id)
+        else:
+            ids_available = get_entry_ids(type_id, table_id)
+            len_ei = len(entry_ids)
+            ids_ok = any(entry_ids == ids_available[i:len_ei + i] for i in range(len(ids_available) - len_ei + 1))
+            if not ids_ok:
+                raise RuntimeError(f"Not all stimuli ids {entry_ids} are available in \"{parameter_file}\"")
+            ids_to_evaluate = entry_ids
 
-    type_id = 'VS'
-    table_id = 'A'
-    ids_to_evaluate = get_entry_ids(type_id, table_id)
-    # ids_to_evaluate =  ['1'] #,'5','4','3','2','1']
+        # ids_to_evaluate =  ['1'] #,'5','4','3','2','1']
 
-    if ids_to_evaluate == None:
-        raise RuntimeError(f"No Stimuli-IDs to evaluate - check parameter file \"{parameter_file}\"")
+        if ids_to_evaluate == None:
+            raise RuntimeError(f"No Stimuli-IDs to evaluate - check parameter file \"{parameter_file}\"")
 
-    try:
-        if do_generate_stimuli:
+        try:
+            if generate_stimuli:
                 for entry_id in ids_to_evaluate:
                     try:
-                        coordinator = Coordinator()
-                        coordinator.prepare(type_id, table_id, entry_id)
+                        self.prepare(type_id, table_id, entry_id)
                         wait_countdown(2)
                         excerpt_duration = convert_to_seconds(get_end(type_id, table_id, entry_id)) - \
                                            convert_to_seconds(get_start(type_id, table_id, entry_id))
                         # estimate timespan to be recorded - to be careful we double the duration and add four
                         # minutes (assumed maximum time for youtube to adapt playback to rate) and add some
                         # extra time during which e.g. the overflow can be shown
-                        time_str = convert_to_timestr(excerpt_duration*2.0+180+20)
+                        time_str = convert_to_timestr(excerpt_duration * 2.0 + 180 + 20)
                         # time_str = "00:01:00"
-                        coordinator.execute(time_str)
+                        self.execute(time_str)
                         wait_countdown(5)
                     finally:
-                        coordinator.finish()
+                        self.finish()
 
-        if do_postprocessing:
-            for entry_id in ids_to_evaluate:
-                video_id_in  = get_video_id(type_id, table_id, entry_id,"0")
-                video_id_out = get_video_id(type_id, table_id, entry_id,"1")
-                postprocessor = PostProcessor()
-                print(f"Processing: {video_id_in}")
-                # print("Semi-manual post-processing starts... ")
-                # print("Please use a video player of your choice to answer the following questions.")
-                # print("")
-                #t_init_buf = str(
-                #    input(f"Time until playback starts (T_init + time to fill playback buffer) [hh:mm:ss.xxx]: "))
-                # t_raw_start = str(input(f"Time when relevant section starts in raw stimuli video [hh:mm:ss.xxx]: "))
-                # d_start_to_end = int(input(f"Duration from t_start to t_end in seconds [s]: "))
+            if postprocessing:
+                for entry_id in ids_to_evaluate:
+                    video_id_in = get_video_id(type_id, table_id, entry_id, "0")
+                    video_id_out = get_video_id(type_id, table_id, entry_id, "1")
+                    postprocessor = PostProcessor()
+                    print(f"Processing: {video_id_in}")
+                    # print("Semi-manual post-processing starts... ")
+                    # print("Please use a video player of your choice to answer the following questions.")
+                    # print("")
+                    # t_init_buf = str(
+                    #    input(f"Time until playback starts (T_init + time to fill playback buffer) [hh:mm:ss.xxx]: "))
+                    # t_raw_start = str(input(f"Time when relevant section starts in raw stimuli video [hh:mm:ss.xxx]: "))
+                    # d_start_to_end = int(input(f"Duration from t_start to t_end in seconds [s]: "))
 
-                # auto-detect video t_init_buf, t_raw_start, t_raw_end
-                unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
-                print("Detecting start of video playback... ", end='')
-                t_init_buf = determine_video_start(unprocessed_video_path)
-                if not t_init_buf:
-                    print(f"failed. (Is the input video \"{unprocessed_video_path}\" correct?)")
-                    continue
-                print(f"{t_init_buf} s")
-                trigger_image_start = os.path.join(trigger_dir, f"{type_id}-{table_id}_start.png")
-                trigger_image_end = os.path.join(trigger_dir, f"{type_id}-{table_id}_end.png")
-                print("Detecting start of stimuli video section... ", end='')
-                t_raw_start = frame_to_time(unprocessed_video_path, determine_frame(unprocessed_video_path, trigger_image_start))
-                print(f"{t_raw_start} s")
-                print("Detecting end of stimuli video section... ", end='')
-                t_raw_end = frame_to_time(unprocessed_video_path, determine_frame(unprocessed_video_path, trigger_image_end))
-                print(f"{t_raw_end} s")
-                d_start_to_end = t_raw_end - t_raw_start
+                    # auto-detect video t_init_buf, t_raw_start, t_raw_end
+                    unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
+                    print("Detecting start of video playback... ", end='')
+                    t_init_buf = determine_video_start(unprocessed_video_path)
+                    if not t_init_buf:
+                        print(f"failed. (Is the input video \"{unprocessed_video_path}\" correct?)")
+                        continue
+                    print(f"{t_init_buf} s")
+                    trigger_image_start = os.path.join(trigger_dir, f"{type_id}-{table_id}_start.png")
+                    trigger_image_end = os.path.join(trigger_dir, f"{type_id}-{table_id}_end.png")
+                    print("Detecting start of stimuli video section... ", end='')
+                    t_raw_start = frame_to_time(unprocessed_video_path,
+                                                determine_frame(unprocessed_video_path, trigger_image_start))
+                    print(f"{t_raw_start} s")
+                    print("Detecting end of stimuli video section... ", end='')
+                    t_raw_end = frame_to_time(unprocessed_video_path,
+                                              determine_frame(unprocessed_video_path, trigger_image_end))
+                    print(f"{t_raw_end} s")
+                    d_start_to_end = t_raw_end - t_raw_start
 
-                if t_init_buf > t_raw_start:
-                    raise RuntimeError(
-                        f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
-                        f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
+                    if t_init_buf > t_raw_start:
+                        raise RuntimeError(
+                            f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
+                            f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
 
-                if t_raw_start > t_raw_end:
-                    raise RuntimeError(
-                        f"Detected start of stimuli section at {t_raw_start}s is later than the detected end "
-                        f"at {t_raw_end}s ! Check trigger images and verify that they are part of the recorded stimuli.")
+                    if t_raw_start > t_raw_end:
+                        raise RuntimeError(
+                            f"Detected start of stimuli section at {t_raw_start}s is later than the detected end "
+                            f"at {t_raw_end}s ! Check trigger images and verify that they are part of the recorded stimuli.")
 
-                print("Cutting and merging video stimuli...")
-                postprocessor.process(video_id_in, video_id_out,
-                                      convert_to_timestr(t_init_buf),
-                                      convert_to_timestr(t_raw_start),
-                                      convert_to_timestr(d_start_to_end))
-                print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
+                    print("Cutting and merging video stimuli...")
+                    postprocessor.process(video_id_in, video_id_out,
+                                          convert_to_timestr(t_init_buf),
+                                          convert_to_timestr(t_raw_start),
+                                          convert_to_timestr(d_start_to_end))
+                    print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
-    except RuntimeError as err:
+        except RuntimeError as err:
             traceback.print_exc()
-            print("******************************************************************************************************")
+            print(
+                "******************************************************************************************************")
             print(f"RuntimeError occured: {err}")
             print(f"Coordinated QoEmu run canceled.")
-            print("******************************************************************************************************")
+            print(
+                "******************************************************************************************************")
 
+
+if __name__ == '__main__':
+    # executed directly as a script
+    print("Coordinator main started")
+
+    coordinator = Coordinator()
+    coordinator.start(['VS'], ['B'], generate_stimuli=True, postprocessing=True)
+    # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=True)
 
     print("Done.")

@@ -39,6 +39,13 @@ pip3 install dist/qoemu-pkg-hm-0.1.0.tar.gz
 A user-friendly GUI for QoEmu is currently under development. Until it is available,
 the ``coordinator.py`` is used to control the emulation.
 
+The package installs a command-line entry point for it - after installing the package, you 
+can simply launch qoemu via command-line. Stimuli type (e.g. "VS") and stimuli table id (e.g. "B") need to be 
+specified. The third parameter specified the stimuli id, use ALL to generate all stimuli within the table.
+```
+qoemu VS B ALL
+```
+
 
 ### Optional Additional Post-Processing Tools: Lossless Cut
 Basic postprocessing is performed by QoEmu using trigger frames to detect
