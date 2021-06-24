@@ -42,8 +42,10 @@ class QoEmuConfiguration:
 
     def __init__(self, configparser):
         self.configparser = configparser
-        self.vd_path = Option(self, 'AVDPath', _default_avd_path)
-        self.video_capture_path = Option(self, 'VideoCapturePath', _default_video_capture_path)
+        self.vd_path = Option(self, 'AVDPath', _default_avd_path, expand_user=True)
+        self.video_capture_path = Option(self, 'VideoCapturePath', _default_video_capture_path, expand_user=True)
+        self.trigger_image_path = Option(self, 'TriggerImagePath', '.', expand_user=True)
+        self.parameter_file = Option(self, 'ParameterFile', './parameters.csv', expand_user=True)
         self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
         self.excluded_ports = ListIntOption(self, 'ExcludedPorts', '22,5000,5002')
@@ -63,12 +65,15 @@ class QoEmuConfiguration:
 
 
 class Option:
-    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION,
+                 expand_user: bool = False):
         self.config = config
         self.section = section
         self.option = option
         self.default = default
         self.value = self.config.configparser.get(section=self.section, option=self.option, fallback=self.default)
+        if expand_user:
+            self.value = os.path.expanduser(self.value)
 
     def get(self):
         return self.value
