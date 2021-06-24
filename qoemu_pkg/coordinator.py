@@ -29,7 +29,7 @@ COORDINATOR_RELEASE = "0.1"
 DELAY_TOLERANCE_MIN = 10    # minimum delay tolerance for sanity check [ms]
 DELAY_TOLERANCE_REL = 0.05  # relative delay tolerance for sanity check [0..1]
 PROCESSING_BIAS = 10        # additional delay due to processing in emulator [ms]
-VIDEO_PRE_START = 10.0         # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
+VIDEO_PRE_START = 3.0       # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
 
 GEN_LOG_FILE = os.path.join(config.video_capture_path.get(), 'qoemu.log')
 
@@ -75,7 +75,6 @@ class Coordinator:
         self._type_id = None
         self._table_id = None
         self._entry_id = None
-        self._gen_log = open(GEN_LOG_FILE, "a+")
 
     def _get_bpf_rule(self) -> str:
         filter_rule = ""
@@ -90,12 +89,16 @@ class Coordinator:
 
 
     def prepare(self, type_id: str, table_id: str, entry_id: str):
-        self._type_id_ = type_id
+        if self._is_prepared:
+            raise RuntimeError(
+                f"Coordinator is already prepared - cannot prepare again before finish has been called.")
+        self._gen_log = open(GEN_LOG_FILE, "a+")
+        self._type_id = type_id
         self._table_id = table_id
         self._entry_id = entry_id
-        params = get_parameters(type_id, table_id, entry_id)
+        params = get_parameters(self._type_id, self._table_id, self._entry_id)
         log.debug(f"Preparing {type_id}-{table_id}-{entry_id} with parameters: {params}")
-        self.output_filename = get_video_id(type_id, table_id, entry_id)
+        self.output_filename = get_video_id(self._type_id, self._table_id, self._entry_id)
         time_string = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
         self._gen_log.write(f"{time_string} {self.output_filename} {params} ")
 
@@ -118,10 +121,10 @@ class Coordinator:
                                 android_ip=self.emulator.get_ip_address(), # note: only valid, if not in host-ap mode
                                 exclude_ports=config.excluded_ports.get())  # exclude ports, e.g. as used for ssh control
 
-        url = f"{get_link(type_id, table_id, entry_id)}"
+        url = f"{get_link(self._type_id, self._table_id, self._entry_id)}"
         if len(url) < 7:
             raise RuntimeError(f"Invalid Url: {url}")
-        s = convert_to_seconds(get_start(type_id, table_id, entry_id))
+        s = convert_to_seconds(get_start(self._type_id, self._table_id, self._entry_id))
         s = s - VIDEO_PRE_START
         if s > 0.0:
             # append ? or &t=[start time in seconds] to link (note: currently, youtube support only int values)
@@ -230,6 +233,7 @@ class Coordinator:
                 log.error(f"exception during ui shutdown: {rte}")
         if self.emulator:
             self.emulator.shutdown()
+        self._is_prepared = False
 
     """
             Coordinate the emulation run for generating one or more stimuli.
