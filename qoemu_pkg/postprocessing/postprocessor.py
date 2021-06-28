@@ -22,9 +22,11 @@ class PostProcessor:
             # Note: We do a 3-step procedure here while a single split and combine ffmpeg command could also be used.
             #       However, it seems that splitting and combining leads to recoding which we would like to avoid.
             #
-            # Step 1: Create prefix-video with desired length
+            # Step 1: Create prefix-video with desired length (mute audio - if you want to keep it, use f"-acodec copy")
             video_step1 = f"{os.path.join(tmp_dir, 'step_1')}.avi"
-            command = f"{FFMPEG} -i {prefix_video_path} -vcodec copy -acodec copy -t {initbuf_len} " \
+            command = f"{FFMPEG} -i {prefix_video_path} -vcodec copy " \
+                      f"-filter:a \"volume=0.0\" " \
+                      f"-t {initbuf_len} " \
                       f"{video_step1} "
             log.debug(f"postproc initbuf cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
