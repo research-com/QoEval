@@ -182,7 +182,7 @@ class MobileDevice:
             f"{ADB_NAME} shell ping -c {MEASUREMENT_DURATION/0.2} -i 0.2 {MEASUREMENT_TEST_HOST}"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
-        pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})\sms"
+        pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})\sms"
         matcher = re.compile(pattern)
         match = (matcher.search(output.stdout))
         if match:

@@ -3,7 +3,7 @@
     Stimuli campaign coordinator
 """
 from qoemu_pkg.analysis import analysis
-from qoemu_pkg.capture.capture import CaptureEmulator,CaptureRealDevice
+from qoemu_pkg.capture.capture import CaptureEmulator, CaptureRealDevice
 from qoemu_pkg.postprocessing.postprocessor import PostProcessor
 from qoemu_pkg.postprocessing.determine_video_start import determine_video_start
 from qoemu_pkg.postprocessing.determine_image_timestamp import determine_frame, frame_to_time
@@ -25,30 +25,18 @@ import traceback
 
 from typing import List
 
-COORDINATOR_RELEASE = "0.1"
-DELAY_TOLERANCE_MIN = 10    # minimum delay tolerance for sanity check [ms]
-DELAY_TOLERANCE_REL = 0.05  # relative delay tolerance for sanity check [0..1]
-PROCESSING_BIAS = 10        # additional delay due to processing in emulator [ms]
-VIDEO_PRE_START = 3.0       # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
-MAX_RETRIES = 2             # number of retries when generating a stimuli fails
-SHORT_WAITING = 3           # short waiting time [s]
-LONG_WAITING = 60           # long waiting time [s]
+DELAY_TOLERANCE_MIN = 10  # minimum delay tolerance for sanity check [ms]
+DELAY_TOLERANCE_REL_NORMAL = 0.05  # relative delay tolerance for sanity check [0..1]
+DELAY_TOLERANCE_REL_LOWBW = 0.2  # relative delay tolerance for sanity check in low-bandwidth conditions [0..1]
+DELAY_MEASUREMENT_BW_THRESH = 100 # threshold data rate for sanity delay measurement [kbit/s]
+PROCESSING_BIAS = 10  # additional delay due to processing in emulator [ms]
+VIDEO_PRE_START = 3.0  # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
+MAX_RETRIES = 2  # number of retries when generating a stimuli fails
+SHORT_WAITING = 3  # short waiting time [s]
+LONG_WAITING = 60  # long waiting time [s]
 
 GEN_LOG_FILE = os.path.join(config.video_capture_path.get(), 'qoemu.log')
 
-def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
-        emulator_id = "E1-"
-        if config.emulator_type.get() == MobileDeviceType.SDK_EMULATOR:
-            emulator_id += "S"
-        if config.emulator_type.get() == MobileDeviceType.GENYMOTION:
-            emulator_id += "G"
-        if config.emulator_type.get() == MobileDeviceType.REAL_DEVICE:
-            emulator_id += "R"
-
-        emulator_id += f"-{COORDINATOR_RELEASE}"
-
-        id = f"{type_id}-{table_id}-{entry_id}_{emulator_id}_P{postprocessing_step}"
-        return id
 
 class Coordinator:
     """
@@ -65,7 +53,7 @@ class Coordinator:
             self.emulator = StandardEmulator()
             self.capture = CaptureEmulator()
         if config.emulator_type.get() == MobileDeviceType.REAL_DEVICE:
-            self.emulator = PhysicalDevice()
+            self.emulator = PhysicalDevice(config.show_device_screen_mirror.get())
             self.capture = CaptureRealDevice()
 
         if not self.emulator:
@@ -84,44 +72,47 @@ class Coordinator:
         if self.netem.android_ip:
             filter_rule = f"host {self.netem.android_ip}"
         for p in self.netem.exclude_ports:
-            if(len(filter_rule)>0):
+            if (len(filter_rule) > 0):
                 filter_rule = f"{filter_rule} && "
             filter_rule = f"{filter_rule} !(tcp port {p}) && !(udp port {p})"
         log.debug(f"_get_bpf_rule filter rule: {filter_rule}")
         return filter_rule
 
-
-    def prepare(self, type_id: str, table_id: str, entry_id: str):
+    def _prepare(self, type_id: str, table_id: str, entry_id: str):
         if self._is_prepared:
             raise RuntimeError(
                 f"Coordinator is already prepared - cannot prepare again before finish has been called.")
+
         self._gen_log = open(GEN_LOG_FILE, "a+")
+
         self._type_id = type_id
         self._table_id = table_id
         self._entry_id = entry_id
-        params = get_parameters(self._type_id, self._table_id, self._entry_id)
-        log.debug(f"Preparing {type_id}-{table_id}-{entry_id} with parameters: {params}")
+        self._params = get_parameters(self._type_id, self._table_id, self._entry_id)
+        log.debug(f"Preparing {type_id}-{table_id}-{entry_id} with parameters: {self._params}")
         self.output_filename = get_video_id(self._type_id, self._table_id, self._entry_id)
         time_string = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
-        self._gen_log.write(f"{time_string} {self.output_filename} {params} ")
+        self._gen_log.write(f"{time_string} {self.output_filename} {self._params} ")
 
         # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided if use-case requires play services
         self.emulator.launch(orientation=MobileDeviceOrientation.LANDSCAPE)
         try:
-            delay_bias_ul_dl = (self.emulator.measure_rtt()+PROCESSING_BIAS) / 2    # can only measure RTT, assume 50%/50% ul vs. dl
+            delay_bias_ul_dl = (
+                                           self.emulator.measure_rtt() + PROCESSING_BIAS) / 2  # can only measure RTT, assume 50%/50% ul vs. dl
         except RuntimeError as rte:
             self._gen_log.write(f" measuring delay bias failed - canceled. ")
             log.error(" measuring delay bias failed - check if you have Internet connectivity!")
             raise rte
-        if delay_bias_ul_dl > params['dul'] or delay_bias_ul_dl > params['ddl']:
+        if delay_bias_ul_dl > self._params['dul'] or delay_bias_ul_dl > self._params['ddl']:
             self._gen_log.write(f" delay bias of {delay_bias_ul_dl}ms too high - canceled. ")
-            raise RuntimeError(f"Delay bias of {delay_bias_ul_dl}ms exceeds delay parameter of {params['ddl']}ms! Cannot emulate.")
+            raise RuntimeError(
+                f"Delay bias of {delay_bias_ul_dl}ms exceeds delay parameter of {self._params['ddl']}ms! Cannot emulate.")
 
-        self.netem = Connection("coord1", config.net_device_name.get(), t_init=params['t_init'],
-                                rul=params['rul'], rdl=params['rdl'],
-                                dul=(params['dul']-delay_bias_ul_dl),
-                                ddl=(params['ddl']-delay_bias_ul_dl),
-                                android_ip=self.emulator.get_ip_address(), # note: only valid, if not in host-ap mode
+        self.netem = Connection("coord1", config.net_device_name.get(), t_init=self._params['t_init'],
+                                rul=self._params['rul'], rdl=self._params['rdl'],
+                                dul=(self._params['dul'] - delay_bias_ul_dl),
+                                ddl=(self._params['ddl'] - delay_bias_ul_dl),
+                                android_ip=self.emulator.get_ip_address(),  # note: only valid, if not in host-ap mode
                                 exclude_ports=config.excluded_ports.get())  # exclude ports, e.g. as used for ssh control
 
         url = f"{get_link(self._type_id, self._table_id, self._entry_id)}"
@@ -143,7 +134,7 @@ class Coordinator:
         self._gen_log.flush()
         self._is_prepared = True
 
-    def execute(self, capture_time:str='00:00:30'):
+    def _execute(self, capture_time: str = '00:00:30'):
         if not self._is_prepared:
             log.error("Cannot execute campaign - not prepared.")
             return
@@ -162,20 +153,29 @@ class Coordinator:
 
         # optional sanity check (can be disbled in configuration file)
         if config.net_em_sanity_check.get():
+            if self._params['rul'] < DELAY_MEASUREMENT_BW_THRESH or self._params['rdl']:
+                log.warning("delay measurement in low-bandwidth situation - using higher relative tolerance")
+                delay_tol_rel = DELAY_TOLERANCE_REL_LOWBW
+            else:
+                delay_tol_rel = DELAY_TOLERANCE_REL_NORMAL
             self.netem.enable_netem(consider_t_init=False)
             log.debug("network emulation sanity check - measuring delay while emulation is active...")
             params = get_parameters(self._type_id, self._table_id, self._entry_id)
             measured_rtt_during_emulation = self.emulator.measure_rtt()
             max_allowed_rtt_during_emulation = params['dul'] + params['ddl'] + \
-                                               max(DELAY_TOLERANCE_MIN, DELAY_TOLERANCE_REL*(params['dul'] + params['ddl'] ))
-            self._gen_log.write(f" emu rtt: {measured_rtt_during_emulation}ms max rtt: {max_allowed_rtt_during_emulation}ms ")
+                                               max(DELAY_TOLERANCE_MIN,
+                                                   delay_tol_rel * (params['dul'] + params['ddl']))
+            self._gen_log.write(
+                f" emu rtt: {measured_rtt_during_emulation}ms max rtt: {max_allowed_rtt_during_emulation}ms ")
             if measured_rtt_during_emulation > max_allowed_rtt_during_emulation:
                 self._gen_log.write(f" network emulation sanity check failed - canceled. ")
-                raise RuntimeError(f"Measured RTT of {measured_rtt_during_emulation}ms exceeds maximum allowed RTT of {max_allowed_rtt_during_emulation}ms! Sanity check failed.")
+                raise RuntimeError(
+                    f"Measured RTT of {measured_rtt_during_emulation}ms exceeds maximum allowed RTT of {max_allowed_rtt_during_emulation}ms! Sanity check failed.")
 
         # execute concurrently in separate threads
         ui_control_thread = threading.Thread(target=self.ui_control.execute_use_case, args=(uc_duration,))
-        capture_thread = threading.Thread(target=self.capture.start_recording, args=(self.output_filename, capture_time))
+        capture_thread = threading.Thread(target=self.capture.start_recording,
+                                          args=(self.output_filename, capture_time))
 
         self.netem.enable_netem()
         # input("netem active - check conditions on mobile device and press enter to continue...")
@@ -199,12 +199,12 @@ class Coordinator:
 
         if config.traffic_analysis_plot.get():
             self.analysis.wait_until_completed()
-            plot = analysis.Plot(self.stats_filepath,0,convert_to_seconds(capture_time),analysis.BYTES,
-                                 [analysis.OUT],[analysis.ALL],analysis.BAR)
+            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
+                                 [analysis.OUT], [analysis.ALL], analysis.BAR)
             plot.save_pdf(f"{self.stats_filepath}_out")
             plot.save_png(f"{self.stats_filepath}_out")
-            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time),analysis.BYTES,
-                                 [analysis.IN],[analysis.ALL],analysis.BAR)
+            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
+                                 [analysis.IN], [analysis.ALL], analysis.BAR)
             plot.save_pdf(f"{self.stats_filepath}_in")
             plot.save_png(f"{self.stats_filepath}_in")
             # TODO: bugfix histogram plots - currenlty, the visualized data frames are empty
@@ -217,8 +217,7 @@ class Coordinator:
             # plot.save_pdf(f"{self.stats_filepath}_hist_in")
             # plot.save_png(f"{self.stats_filepath}_hist_in")
 
-
-    def finish(self):
+    def _finish(self):
         if not self._is_prepared:
             log.warning("finish called for a campaign which is not prepared")
         if self._gen_log:
@@ -238,14 +237,17 @@ class Coordinator:
             self.emulator.shutdown()
         self._is_prepared = False
 
-
-    def _generate_stimuli(self, type_id, table_id, ids_to_generate):
+    def _generate_stimuli(self, type_id, table_id, ids_to_generate, overwrite: bool = False):
         for entry_id in ids_to_generate:
+            if not overwrite and is_stimuli_available(type_id, table_id, entry_id, "0"):
+                print(f" Stimuli {get_video_id(type_id, table_id, entry_id)} already available - skipped. ")
+                continue
+
             retry_counter = 0
             is_successful_or_canceled = False
             while not is_successful_or_canceled:
                 try:
-                    self.prepare(type_id, table_id, entry_id)
+                    self._prepare(type_id, table_id, entry_id)
                     wait_countdown(SHORT_WAITING)
                     excerpt_duration = convert_to_seconds(get_end(type_id, table_id, entry_id)) - \
                                        convert_to_seconds(get_start(type_id, table_id, entry_id))
@@ -254,7 +256,7 @@ class Coordinator:
                     # extra time during which e.g. the overflow can be shown
                     time_str = convert_to_timestr(excerpt_duration * 2.0 + 180 + 20)
                     # time_str = "00:01:00"
-                    self.execute(time_str)
+                    self._execute(time_str)
                     wait_countdown(SHORT_WAITING)
                     is_successful_or_canceled = True
                 except RuntimeError as err:
@@ -266,17 +268,25 @@ class Coordinator:
                         wait_countdown(LONG_WAITING)
                         retry_counter = retry_counter + 1
                     else:
-                        input_text = input(f"Maximum number of retries reached - try again? (y/N)")
-                        if not (input_text == "y" or input_text == "Y"):
+                        # uncomment the following lines to allow manual retries - TODO: should be a flag
+                        # input_text = input(f"Maximum number of retries reached - try again? (y/N)")
+                        # if not (input_text == "y" or input_text == "Y"):
+                        if True:
                             raise
                 finally:
-                    self.finish()
+                    self._finish()
 
-    def _perform_postprocessing(self, type_id, table_id, ids_to_process):
+    def _perform_postprocessing(self, type_id, table_id, ids_to_process, overwrite: bool = False):
         trigger_dir = config.trigger_image_path.get()
         for entry_id in ids_to_process:
             video_id_in = get_video_id(type_id, table_id, entry_id, "0")
             video_id_out = get_video_id(type_id, table_id, entry_id, "1")
+            if not overwrite and is_stimuli_available(type_id, table_id, entry_id, "1"):
+                msg = f" Stimuli {get_video_id(type_id, table_id, entry_id)} postprocessed filed exists - skipped. "
+                print(msg)
+                self._gen_log.write(msg)
+                continue
+
             postprocessor = PostProcessor()
             print(f"Processing: {video_id_in}")
             # print("Semi-manual post-processing starts... ")
@@ -324,7 +334,6 @@ class Coordinator:
                                   convert_to_timestr(d_start_to_end))
             print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
-
         """
         Start coordinating the emulation run for generating one or more stimuli.
 
@@ -345,8 +354,9 @@ class Coordinator:
         postprocessing : bool
             Specify if postprocessing should be applied
         """
+
     def start(self, type_ids: List[str], table_ids: List[str], entry_ids: List[str] = [],
-              generate_stimuli:bool = True, postprocessing:bool = True):
+              generate_stimuli: bool = True, postprocessing: bool = True, overwrite: bool = False):
 
         load_parameter_file(config.parameter_file.get())
 
@@ -360,7 +370,8 @@ class Coordinator:
             len_ei = len(entry_ids)
             ids_ok = any(entry_ids == ids_available[i:len_ei + i] for i in range(len(ids_available) - len_ei + 1))
             if not ids_ok:
-                raise RuntimeError(f"Not all stimuli ids {entry_ids} are available in \"{config.parameter_file.get()}\"")
+                raise RuntimeError(
+                    f"Not all stimuli ids {entry_ids} are available in \"{config.parameter_file.get()}\"")
             ids_to_evaluate = entry_ids
 
         # ids_to_evaluate =  ['1'] #,'5','4','3','2','1']
@@ -370,10 +381,10 @@ class Coordinator:
 
         try:
             if generate_stimuli:
-                self._generate_stimuli(type_id, table_id, ids_to_evaluate)
+                self._generate_stimuli(type_id, table_id, ids_to_evaluate, overwrite)
 
             if postprocessing:
-                self._perform_postprocessing(type_id, table_id, ids_to_evaluate)
+                self._perform_postprocessing(type_id, table_id, ids_to_evaluate, overwrite)
 
         except RuntimeError as err:
             traceback.print_exc()
@@ -390,7 +401,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['VS'], ['B'], generate_stimuli=True, postprocessing=True)
+    coordinator.start(['VS'], ['B'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=True)
 
     print("Done.")
