@@ -57,7 +57,7 @@ class PhysicalDevice(MobileDevice):
         # varying delays in times without data traffic. In order to avoid this effect,
         # we send random data to the phone during the RTT measurement procedure
         # so it (hopefully) will not be able to switch to a power saving mode
-        traffic_gen_thread = threading.Thread(target=self.generate_udp_traffic, args=(128, 50, MEASUREMENT_DURATION+3))
+        traffic_gen_thread = threading.Thread(target=self.generate_udp_traffic, args=(128, 100, MEASUREMENT_DURATION+3))
         traffic_gen_thread.start()
         time.sleep(0.5)
         measured_rtt = super().measure_rtt()
