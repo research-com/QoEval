@@ -66,7 +66,8 @@ class Capture:
         raise RuntimeError(f"Method not implemented.");
 
 SCREENCOPY_NAME = "scrcpy"
-SCREENCOPY_OPTIONS ="--stay-awake -N --record"  # note: must end with option for file recording
+SCREENCOPY_OPTIONS_WITH_MIRROR = "--stay-awake -N --record"  # note: must end with option for file recording
+SCREENCOPY_OPTIONS_NO_MIRROR = "--no-display --stay-awake -N --record"
 
 class CaptureRealDevice(Capture):
     def __init__(self):
@@ -79,7 +80,11 @@ class CaptureRealDevice(Capture):
 
         dest_tmp = os.path.join(config.video_capture_path.get(), 'captured_realdev')
         dest = os.path.join(config.video_capture_path.get(), output_filename)
-        scrcpy_output = subprocess.Popen(shlex.split(f"{SCREENCOPY_NAME} {SCREENCOPY_OPTIONS} {dest_tmp}.mp4"), stdout=subprocess.PIPE,
+        if config.show_device_screen_mirror.get():
+            scrcpy_opts = SCREENCOPY_OPTIONS_WITH_MIRROR
+        else:
+            scrcpy_opts = SCREENCOPY_OPTIONS_NO_MIRROR
+        scrcpy_output = subprocess.Popen(shlex.split(f"{SCREENCOPY_NAME} {scrcpy_opts} {dest_tmp}.mp4"), stdout=subprocess.PIPE,
                        universal_newlines=True)
 
         if audio and config.audio_device_real.get() == '':

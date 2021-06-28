@@ -47,6 +47,7 @@ class QoEmuConfiguration:
         self.trigger_image_path = Option(self, 'TriggerImagePath', '.', expand_user=True)
         self.parameter_file = Option(self, 'ParameterFile', './parameters.csv', expand_user=True)
         self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
+        self.show_device_screen_mirror = BoolOption(self, 'ShowDeviceScreenMirror', True)
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
         self.excluded_ports = ListIntOption(self, 'ExcludedPorts', '22,5000,5002')
         self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
