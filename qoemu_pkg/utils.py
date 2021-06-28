@@ -27,7 +27,7 @@ def convert_to_timestr(time_in_seconds: float)->str:
     minutes = int((time_in_seconds - (3600*hours))/60)
     seconds = int((time_in_seconds - (3600*hours) - (60*minutes)))
     ms = int(((time_in_seconds - (3600*hours) - (60*minutes)) - seconds)*1000)
-    return f"{hours}:{minutes}:{seconds}.{ms}"
+    return f"{hours}:{minutes}:{seconds}.{ms:03d}"
 
 def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
     emulator_id = "E1-"
