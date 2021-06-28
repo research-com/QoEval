@@ -287,9 +287,7 @@ class Coordinator:
             video_id_in = get_video_id(type_id, table_id, entry_id, "0")
             video_id_out = get_video_id(type_id, table_id, entry_id, "1")
             if not overwrite and is_stimuli_available(type_id, table_id, entry_id, "1"):
-                msg = f" Stimuli {get_video_id(type_id, table_id, entry_id)} postprocessed filed exists - skipped. "
-                print(msg)
-                self._gen_log.write(msg)
+                print(f" Stimuli {get_video_id(type_id, table_id, entry_id)} postprocessed filed exists - skipped. ")
                 continue
 
             postprocessor = PostProcessor()
