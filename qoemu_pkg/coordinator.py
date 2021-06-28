@@ -27,7 +27,7 @@ from typing import List
 
 DELAY_TOLERANCE_MIN = 10  # minimum delay tolerance for sanity check [ms]
 DELAY_TOLERANCE_REL_NORMAL = 0.05  # relative delay tolerance for sanity check [0..1]
-DELAY_TOLERANCE_REL_LOWBW = 0.2  # relative delay tolerance for sanity check in low-bandwidth conditions [0..1]
+DELAY_TOLERANCE_REL_LOWBW = 0.25  # relative delay tolerance for sanity check in low-bandwidth conditions [0..1]
 DELAY_MEASUREMENT_BW_THRESH = 100 # threshold data rate for sanity delay measurement [kbit/s]
 PROCESSING_BIAS = 10  # additional delay due to processing in emulator [ms]
 VIDEO_PRE_START = 3.0  # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
@@ -160,17 +160,22 @@ class Coordinator:
                 delay_tol_rel = DELAY_TOLERANCE_REL_NORMAL
             self.netem.enable_netem(consider_t_init=False)
             log.debug("network emulation sanity check - measuring delay while emulation is active...")
-            params = get_parameters(self._type_id, self._table_id, self._entry_id)
             measured_rtt_during_emulation = self.emulator.measure_rtt()
-            max_allowed_rtt_during_emulation = params['dul'] + params['ddl'] + \
+            max_allowed_rtt_during_emulation = self._params['dul'] + self._params['ddl'] + \
                                                max(DELAY_TOLERANCE_MIN,
-                                                   delay_tol_rel * (params['dul'] + params['ddl']))
+                                                   delay_tol_rel * (self._params['dul'] + self._params['ddl']))
             self._gen_log.write(
                 f" emu rtt: {measured_rtt_during_emulation}ms max rtt: {max_allowed_rtt_during_emulation}ms ")
             if measured_rtt_during_emulation > max_allowed_rtt_during_emulation:
-                self._gen_log.write(f" network emulation sanity check failed - canceled. ")
+                self._gen_log.write(f" network emulation sanity check failed - too high - canceled. ")
                 raise RuntimeError(
-                    f"Measured RTT of {measured_rtt_during_emulation}ms exceeds maximum allowed RTT of {max_allowed_rtt_during_emulation}ms! Sanity check failed.")
+                    f"Measured RTT of {measured_rtt_during_emulation}ms exceeds maximum allowed RTT of "
+                    f"{max_allowed_rtt_during_emulation}ms! Sanity check failed.")
+            if measured_rtt_during_emulation < self._params['dul'] + self._params['ddl']:
+                self._gen_log.write(f" network emulation sanity check failed - too low - canceled. ")
+                raise RuntimeError(
+                    f"Measured RTT of {measured_rtt_during_emulation}ms is lower than the minimum allowed RTT of "
+                    f"{self._params['dul'] + self._params['ddl']}ms! Sanity check failed.")
 
         # execute concurrently in separate threads
         ui_control_thread = threading.Thread(target=self.ui_control.execute_use_case, args=(uc_duration,))
