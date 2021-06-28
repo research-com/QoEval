@@ -200,7 +200,6 @@ class Coordinator:
 
         capture_thread.join()
         ui_control_thread.join()
-        self.netem.disable_netem()
 
         if config.traffic_analysis_plot.get():
             self.analysis.wait_until_completed()
@@ -221,6 +220,8 @@ class Coordinator:
             #                      [analysis.IN],[analysis.ALL],analysis.HIST)
             # plot.save_pdf(f"{self.stats_filepath}_hist_in")
             # plot.save_png(f"{self.stats_filepath}_hist_in")
+
+        self.netem.disable_netem()
 
     def _finish(self):
         if not self._is_prepared:
