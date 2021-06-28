@@ -76,6 +76,14 @@ For controlling a real Android phone:
 * For audio capturing, the phone must be connected via line-out or Bluetooth
   to the qoemu host
 
+### Mobile Device Control and Screen Capturing
+For controlling the mobile device and screen capturing, the Genymobile tool *scrcpy* is used. It can be downloaded at https://github.com/Genymobile/scrcpy
+
+Follow the instructions on the Genymobile srccpy website to install and test *scrcpy*. 
+
+QoEmu has been tested with the following versions of *scrcpy*:
+v1.18
+
 ### Routing WLAN Traffic of Real Device via QoEmu
 In order to enable QoEmu to emulate various networking conditions,
 we must route all data traffic of the real mobile device via QoEmu. Therefore,
