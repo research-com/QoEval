@@ -95,6 +95,7 @@ class PhysicalDevice(MobileDevice):
             log.debug(f"physical device orientation: {surface_orientation_number}")
         else:
             log.error("Cannot determine orientation of physical device.")
+            raise RuntimeError(f"Cannot determine orientation of device - ADB dumpsys output did not match.")
         if surface_orientation_number == 1 or surface_orientation_number == 3:
             return MobileDeviceOrientation.LANDSCAPE
         else:
