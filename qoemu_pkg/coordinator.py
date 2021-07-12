@@ -29,7 +29,7 @@ DELAY_TOLERANCE_MIN = 10  # minimum delay tolerance for sanity check [ms]
 DELAY_TOLERANCE_REL_NORMAL = 0.05  # relative delay tolerance for sanity check [0..1]
 DELAY_TOLERANCE_REL_LOWBW = 0.25  # relative delay tolerance for sanity check in low-bandwidth conditions [0..1]
 DELAY_MEASUREMENT_BW_THRESH = 100 # threshold data rate for sanity delay measurement [kbit/s]
-PROCESSING_BIAS = 10  # additional delay due to processing in emulator [ms]
+PROCESSING_BIAS = 8  # additional delay due to processing in emulator [ms]
 VIDEO_PRE_START = 1.0  # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
                        # Note: Be careful with VIDEO_PRE_START - if set too high, we might miss rebuffering
 MAX_RETRIES = 2  # number of retries when generating a stimuli fails
