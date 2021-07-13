@@ -8,7 +8,7 @@ DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = 20000
 # size [B] of differential frame that triggers start of video (high relevance, strong indicator)
 DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE = 40000
 # number of frames needed above the threshold to avoid false positives
-DIFF_THRESHOLD_NR_FRAMES = 5
+DIFF_THRESHOLD_NR_FRAMES = 7
 # allow the frame size to dip below the threshold this many times to avoid false negatives
 DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED = 4
 
@@ -30,9 +30,12 @@ def determine_video_start(video_path: str) -> float:
                              '-select_streams', 'v:0',
                              video_path], stdout=subprocess.PIPE)
 
+    # currently predicted start time
     prediction = None
-    counter = 0
-    countdown = -1
+    # number of differential frames observed which indicate a started video
+    counter_positive = 0
+    # remaining number of tolerated diffenential frames observed indicating an not-started video
+    remaining_tolerated = -1
 
     for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
 
@@ -43,26 +46,28 @@ def determine_video_start(video_path: str) -> float:
             size = int(re.search(r'\bpkt_size="(.+?)"', line).group(1))
 
             if not key:
+                # print(f"counter: {counter_positive}  countdown: {remaining_tolerated}")
                 if size > DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE:
                     if size > DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE:
                         increment = 3
                     else:
                         increment = 1
-                    if counter > 0:
-                        counter += increment
-                    if counter == 0:
+                    if counter_positive > 0:
+                        counter_positive += increment
+                    if counter_positive == 0:
+                        # found a new possible start time
                         prediction = time
-                        counter = increment
-                        countdown = DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED
-                    if counter >= DIFF_THRESHOLD_NR_FRAMES:
+                        counter_positive = increment
+                        remaining_tolerated = DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED
+                    if counter_positive >= DIFF_THRESHOLD_NR_FRAMES:
                         proc.terminate()
                         return prediction
                 else:
-                    if countdown <= 0:
-                        countdown = -1
-                        counter = 0
-                    if countdown > 0:
-                        countdown -= 1
+                    if remaining_tolerated == 0:
+                        remaining_tolerated = -1
+                        counter_positive = 0
+                    if remaining_tolerated > 0:
+                        remaining_tolerated -= 1
 
     proc.terminate()
     return None
