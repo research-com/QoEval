@@ -304,21 +304,25 @@ class Coordinator:
 
             # auto-detect video t_init_buf, t_raw_start, t_raw_end
             unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
-            print("Detecting start of video playback... ", end='')
-            t_init_buf = determine_video_start(unprocessed_video_path)
+            trigger_image_start = os.path.join(trigger_dir, f"{type_id}-{table_id}_start.png")
+            trigger_image_end = os.path.join(trigger_dir, f"{type_id}-{table_id}_end.png")
+            print("Detecting start of stimuli video section... ", end='')
+            start_frame_nr = determine_frame(unprocessed_video_path, trigger_image_start)
+            t_raw_start = frame_to_time(unprocessed_video_path, start_frame_nr)
+            print(f"{t_raw_start} s")
+
+            t_detect_start = max(0, t_raw_start - (2 * VIDEO_PRE_START))
+
+            print(f"Detecting start of video playback (search starts at: {t_detect_start} s) ... ", end='')
+            t_init_buf = determine_video_start(unprocessed_video_path, t_detect_start)
             if not t_init_buf:
                 print(f"failed. (Is the input video \"{unprocessed_video_path}\" correct?)")
                 continue
             print(f"{t_init_buf} s")
-            trigger_image_start = os.path.join(trigger_dir, f"{type_id}-{table_id}_start.png")
-            trigger_image_end = os.path.join(trigger_dir, f"{type_id}-{table_id}_end.png")
-            print("Detecting start of stimuli video section... ", end='')
-            t_raw_start = frame_to_time(unprocessed_video_path,
-                                        determine_frame(unprocessed_video_path, trigger_image_start))
-            print(f"{t_raw_start} s")
+
             print("Detecting end of stimuli video section... ", end='')
             t_raw_end = frame_to_time(unprocessed_video_path,
-                                      determine_frame(unprocessed_video_path, trigger_image_end))
+                                      determine_frame(unprocessed_video_path, trigger_image_end, start_frame_nr))
             print(f"{t_raw_end} s")
             d_start_to_end = t_raw_end - t_raw_start
 
@@ -406,7 +410,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['VS'], ['B'], generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['VS'], ['C'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=True)
 
     print("Done.")

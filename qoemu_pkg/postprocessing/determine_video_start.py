@@ -4,19 +4,20 @@ import subprocess
 import re
 
 # size [B] of differential frame that triggers start of video (normal relevance)
-DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = 20000
+DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = 10000
 # size [B] of differential frame that triggers start of video (high relevance, strong indicator)
 DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE = 40000
 # number of frames needed above the threshold to avoid false positives
-DIFF_THRESHOLD_NR_FRAMES = 7
+DIFF_THRESHOLD_NR_FRAMES = 3
 # allow the frame size to dip below the threshold this many times to avoid false negatives
 DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED = 4
 
 
-def determine_video_start(video_path: str) -> float:
+def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> float:
     """
 
     :param video_path: the absolute path to the video
+    :param minimum_start_time: minimum value (to avoid misdetection before known minimum start time)
     :return: the determined playback start of the video as float, None if the algorithm fails to determine it
     """
     cpu_count = multiprocessing.cpu_count()
@@ -45,8 +46,11 @@ def determine_video_start(video_path: str) -> float:
             time = float(re.search(r'\bpkt_pts_time="(.+?)"', line).group(1))
             size = int(re.search(r'\bpkt_size="(.+?)"', line).group(1))
 
+            if time < minimum_start_time:
+                continue
+
             if not key:
-                # print(f"counter: {counter_positive}  countdown: {remaining_tolerated}")
+                # print(f"time: {time}  size:{size}  counter: {counter_positive}  countdown: {remaining_tolerated}")
                 if size > DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE:
                     if size > DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE:
                         increment = 3
