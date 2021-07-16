@@ -7,8 +7,7 @@ from qoemu_pkg.capture.capture import CaptureEmulator, CaptureRealDevice
 from qoemu_pkg.postprocessing.postprocessor import PostProcessor
 from qoemu_pkg.postprocessing.determine_video_start import determine_video_start
 from qoemu_pkg.postprocessing.determine_image_timestamp import determine_frame, frame_to_time
-from qoemu_pkg.configuration import MobileDeviceType, MobileDeviceOrientation
-from qoemu_pkg.configuration import config
+from qoemu_pkg.configuration import MobileDeviceType, MobileDeviceOrientation, config
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
 from qoemu_pkg.emulator.standard_emulator import StandardEmulator
 from qoemu_pkg.emulator.physical_device import PhysicalDevice
@@ -142,6 +141,10 @@ class Coordinator:
 
         # calculate approximate duration of use-case
         uc_duration = convert_to_seconds(capture_time) + 2  # add 2s safety margin
+
+        # store a copy of the qoemu configuration used to generate the stimuli (to be reproducible)
+        cfg_log = os.path.join(config.video_capture_path.get(), f"{self.output_filename}.cfg")
+        config.save_to_file(cfg_log)
 
         # initialize traffic analysis - if enabled
         if config.traffic_analysis_live.get() or config.traffic_analysis_plot.get():
@@ -320,16 +323,16 @@ class Coordinator:
                 continue
             print(f"{t_init_buf} s")
 
+            if t_init_buf > t_raw_start:
+                raise RuntimeError(
+                    f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
+                    f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
+
             print("Detecting end of stimuli video section... ", end='')
             t_raw_end = frame_to_time(unprocessed_video_path,
                                       determine_frame(unprocessed_video_path, trigger_image_end, start_frame_nr))
             print(f"{t_raw_end} s")
             d_start_to_end = t_raw_end - t_raw_start
-
-            if t_init_buf > t_raw_start:
-                raise RuntimeError(
-                    f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
-                    f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
 
             if t_raw_start > t_raw_end:
                 raise RuntimeError(
@@ -410,7 +413,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['VS'], ['C'], generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['VS'], ['A'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=True)
 
     print("Done.")

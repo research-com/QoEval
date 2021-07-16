@@ -9,10 +9,12 @@ from qoemu_pkg.videos import t_init
 
 FFMPEG = "ffmpeg"
 PRESERVE_TEMP_FILES = False   # True: preserve temporary processing files (e.g. for debugging), False: delete them
+TINIT_VIDEO_FILENAME = "youtube_tinit.avi"
+
 
 class PostProcessor:
     def __init__(self):
-        self._prefix_video = importlib_resources.files(t_init) / "youtube_tinit.avi"
+        self._prefix_video = importlib_resources.files(t_init) / TINIT_VIDEO_FILENAME
         log.debug(f"Using prefix video {self._prefix_video} for post-processing.")
 
     def process(self,  input_filename: str,  output_filename: str, initbuf_len: str, main_video_start_time: str, main_video_duration: str = None):

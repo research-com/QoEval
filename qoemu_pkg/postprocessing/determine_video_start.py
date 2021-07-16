@@ -2,15 +2,19 @@ import io
 import multiprocessing
 import subprocess
 import re
+from qoemu_pkg.configuration import config
 
 # size [B] of differential frame that triggers start of video (normal relevance)
-DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = 10000
+DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = config.vid_start_detect_thr_size_normal_relevance.get()
 # size [B] of differential frame that triggers start of video (high relevance, strong indicator)
-DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE = 40000
+DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE = config.vid_start_detect_thr_size_high_relevance.get()
 # number of frames needed above the threshold to avoid false positives
-DIFF_THRESHOLD_NR_FRAMES = 3
+DIFF_THRESHOLD_NR_FRAMES = config.vid_start_detect_thr_nr_frames.get()
+
 # allow the frame size to dip below the threshold this many times to avoid false negatives
-DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED = 4
+DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED = 7
+# assumed accuracy for time [s] - times less then TIME_ACCURARY apart will be considered identical
+TIME_ACCURACY = 0.001
 
 
 def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> float:
@@ -50,7 +54,7 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
                 continue
 
             if not key:
-                # print(f"time: {time}  size:{size}  counter: {counter_positive}  countdown: {remaining_tolerated}")
+                print(f"time: {time}  size:{size}  counter: {counter_positive}  countdown: {remaining_tolerated}")
                 if size > DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE:
                     if size > DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE:
                         increment = 3
@@ -64,8 +68,8 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
                         counter_positive = increment
                         remaining_tolerated = DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED
                     if counter_positive >= DIFF_THRESHOLD_NR_FRAMES:
-                        proc.terminate()
-                        return prediction
+                        # prediction seems to be a valid start time - stop searching
+                        break
                 else:
                     if remaining_tolerated == 0:
                         remaining_tolerated = -1
@@ -74,7 +78,16 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
                         remaining_tolerated -= 1
 
     proc.terminate()
-    return None
+
+    if prediction == None:
+        raise RuntimeError(f"Failed to detect video start time - check threshold parameters for {video_path}")
+
+    if abs(minimum_start_time-prediction) < TIME_ACCURACY:
+        raise RuntimeError(f"Detected start time is identical to minimum start time. "
+                           f"Video might already be started at time {minimum_start_time} or parameters "
+                           f"for start detection in {video_path} are not set correctly.")
+
+    return prediction
 
 
 if __name__ == '__main__':

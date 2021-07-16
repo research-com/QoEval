@@ -59,9 +59,17 @@ class QoEmuConfiguration:
         self.traffic_analysis_plot = BoolOption(self, 'TrafficAnalysisPlot', True)
         self.net_em_sanity_check = BoolOption(self, 'NetEmSanityCheck', True)
 
+        self.vid_start_detect_thr_size_normal_relevance = IntOption(self, 'VidStartDetectThrSizeNormalRelevance', 10000)
+        self.vid_start_detect_thr_size_high_relevance = IntOption(self, 'VidStartDetectThrSizeHighRelevance', 40000)
+        self.vid_start_detect_thr_nr_frames = IntOption(self, 'VidStartDetectThrNrFrames', 3)
 
-    def save_to_file(self):
-        with open(_default_config_file_locations[0], 'w') as configfile:
+    def save_to_file(self, file: str = None):
+        if file != None:
+            file_path = file
+        else:
+            file_path = _default_config_file_locations[0]
+
+        with open(file_path, 'w') as configfile:
             self.configparser.write(configfile)
 
 
@@ -96,6 +104,18 @@ class BoolOption(Option):
         self.value = value
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
+
+class IntOption(Option):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
+        super().__init__(config, option, str(default), section)
+        self.value = int(self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
+
+    def get(self) -> int:
+        return self.value
+
+    def set(self, value: int):
+        self.value = value
+        self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
 class MobileDeviceTypeOption(Option):
     def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION):
