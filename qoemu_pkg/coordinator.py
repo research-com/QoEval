@@ -295,6 +295,10 @@ class Coordinator:
                 print(f" Stimuli {get_video_id(type_id, table_id, entry_id)} postprocessed filed exists - skipped. ")
                 continue
 
+            # store a copy of the qoemu configuration used for post-processing (to be reproducible)
+            cfg_log = os.path.join(config.video_capture_path.get(), f"{video_id_out}.cfg")
+            config.save_to_file(cfg_log)
+
             postprocessor = PostProcessor()
             print(f"Processing: {video_id_in}")
             # print("Semi-manual post-processing starts... ")
@@ -314,7 +318,7 @@ class Coordinator:
             t_raw_start = frame_to_time(unprocessed_video_path, start_frame_nr)
             print(f"{t_raw_start} s")
 
-            t_detect_start = max(0, t_raw_start - (2 * VIDEO_PRE_START))
+            t_detect_start = max(0, t_raw_start - (2.5 * VIDEO_PRE_START))
 
             print(f"Detecting start of video playback (search starts at: {t_detect_start} s) ... ", end='')
             t_init_buf = determine_video_start(unprocessed_video_path, t_detect_start)

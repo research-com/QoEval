@@ -54,7 +54,7 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
                 continue
 
             if not key:
-                print(f"time: {time}  size:{size}  counter: {counter_positive}  countdown: {remaining_tolerated}")
+                # print(f"time: {time}  size:{size}  counter: {counter_positive}  countdown: {remaining_tolerated}")
                 if size > DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE:
                     if size > DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE:
                         increment = 3
