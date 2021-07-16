@@ -5,6 +5,11 @@ import subprocess
 import cv2
 import numpy as np
 
+# Threshold indicating a significant change in accuracy
+SIGNIFICANT_LEVEL_IMPROVEMENT_THRESHOLD = 500
+# Minimum difference in number of frames between two different scenes
+NEW_SCENE_FRAME_THRESHOLD = 60
+
 
 def frame_to_time(video_path, frame_number: int) -> float:
     """
@@ -64,7 +69,7 @@ def determine_frame(video_path: str, image_path: str, start_frame_nr: int = 0) -
 
     black_and_white_level_max = 0
     frame_count = -1
-    res = None
+    res = 0
     while True:
 
         ret, frame = cap.read()
@@ -90,9 +95,16 @@ def determine_frame(video_path: str, image_path: str, start_frame_nr: int = 0) -
             # compare black and white levels
             black_and_white_level = sum(int(e[0]) for e in hist[0:15]) + sum(int(e[0]) for e in hist[-16:])
 
-            if black_and_white_level > black_and_white_level_max:
+            level_improvement = black_and_white_level - black_and_white_level_max
+
+            # update guessed frame number if we are better and in the same scene or it is significantly better
+            # (to avaid misdetection if the same trigger appears later in the video)
+            if level_improvement > 0 and \
+                    (frame_count - res < NEW_SCENE_FRAME_THRESHOLD or
+                     level_improvement > SIGNIFICANT_LEVEL_IMPROVEMENT_THRESHOLD):
                 res = frame_count
                 black_and_white_level_max = black_and_white_level
+                # print(f"frame: {res} level: {black_and_white_level_max}")
 
         else:
             break
