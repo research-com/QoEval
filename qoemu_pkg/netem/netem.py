@@ -315,6 +315,9 @@ class Connection:
                 :param rate: data rate [kbit/s]
                 :return limit parameter as integer value [packets]
         """
+        # Prevent a limit of 0 when delay is 0
+        if delay == 0:
+            delay = 1
         # Note: assumed average packet size (use a rather small size since a large limit does not hurt much)
         return math.ceil(((delay*rate)/128)*1.5)
 
