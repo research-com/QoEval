@@ -31,6 +31,7 @@ DELAY_MEASUREMENT_BW_THRESH = 100 # threshold data rate for sanity delay measure
 PROCESSING_BIAS = 8  # additional delay due to processing in emulator [ms]
 VIDEO_PRE_START = 1.0  # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
                        # Note: Be careful with VIDEO_PRE_START - if set too high, we might miss rebuffering
+VIDEO_T_INIT_TOLERANCE = 0.5 # when detecting end of T_INIT and comparing to start of stimuli, tolerate [s]
 MAX_RETRIES = 2  # number of retries when generating a stimuli fails
 SHORT_WAITING = 3  # short waiting time [s]
 LONG_WAITING = 60  # long waiting time [s]
@@ -328,9 +329,13 @@ class Coordinator:
             print(f"{t_init_buf} s")
 
             if t_init_buf > t_raw_start:
-                raise RuntimeError(
-                    f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
-                    f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
+                if t_init_buf - t_raw_start > VIDEO_T_INIT_TOLERANCE:
+                    raise RuntimeError(
+                        f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
+                        f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
+                else:
+                    log.warning("Detected end of t_init phase is later than detected stimuli start - but within tolerance.")
+                    t_init_buf = t_raw_start
 
             print("Detecting end of stimuli video section... ", end='')
             t_raw_end = frame_to_time(unprocessed_video_path,
@@ -344,10 +349,7 @@ class Coordinator:
                     f"at {t_raw_end}s ! Check trigger images and verify that they are part of the recorded stimuli.")
 
             print("Cutting and merging video stimuli...")
-            postprocessor.process(video_id_in, video_id_out,
-                                  convert_to_timestr(t_init_buf),
-                                  convert_to_timestr(t_raw_start),
-                                  convert_to_timestr(d_start_to_end))
+            postprocessor.process(video_id_in, video_id_out, t_init_buf,t_raw_start,d_start_to_end)
             print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
         """
@@ -417,7 +419,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['VS'], ['A'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['VS'], ['C'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=True)
 
     print("Done.")
