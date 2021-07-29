@@ -14,7 +14,7 @@ When cloning the git repository, check that git lfs is enabled
 by using the command ``git lfs install`` and ``git lfs fetch``
 
 ### System setup
-We strongly recommend to use a virtual environment
+We strongly recommend using a virtual environment
 ```
 python3.8 -m venv venv
 source venv/bin/activate
