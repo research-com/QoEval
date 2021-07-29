@@ -1,3 +1,5 @@
+import dataclasses
+from dataclasses import dataclass, field
 import ipaddress
 import logging as log
 import shlex
@@ -6,11 +8,65 @@ import threading
 import time
 import math
 from typing import List
+import csv
 
 MAX_CONNECTIONS = 1
 
 used_devices = []
 ifb_is_initialized = False
+
+
+@dataclass
+class ParameterSet:
+    """Parameters and timeframe determining for how long the parameters shall be applied for dynamic emulation
+
+    A Value of -1 signals no change of the parameter from the previous value
+    """
+    timeframe: int
+    rul: int
+    rdl: int
+    dul: int = field(default=-1)
+    ddl: int = field(default=-1)
+
+
+@dataclass
+class DynamicParametersSetup:
+    """Contains ParameterSet objects for emulation with dynamic parameters
+
+    Emulation can loop over these ParameterSets and apply their parameters for the given timeframe
+    """
+    parameter_sets: List[ParameterSet] = field(default_factory=list, init=False)
+
+    def append_parameter_set(self, parameter_set: ParameterSet):
+        self.parameter_sets.append(parameter_set)
+
+    def append_parameter_sets(self, parameter_sets: List[ParameterSet]):
+        for parameter in parameter_sets:
+            self.parameter_sets.append(parameter)
+
+    def append_parameter_set_from_list(self, *args):
+        self.parameter_sets.append(ParameterSet(*args))
+
+    def append_parameter_sets_from_lists(self, parameter_sets: List[List[int]]):
+        for parameter_set in parameter_sets:
+            self.parameter_sets.append(ParameterSet(*parameter_set))
+
+    def save_to_csv(self, filename: str):
+        with open(filename, 'w') as file:
+            data = [dataclasses.astuple(parameter_set) for parameter_set in self.parameter_sets]
+
+            writer = csv.writer(file)
+            writer.writerow(data_field.name for data_field in dataclasses.fields(ParameterSet))
+            writer.writerows(data)
+
+    def load_from_csv(self, filename: str):
+        with open(filename, newline='') as file:
+            reader = csv.reader(file)
+            raw_data = list(reader)
+            data = [list(map(int, parameter_set)) for parameter_set in raw_data[1:]]
+            self.parameter_sets = []
+            self.append_parameter_sets_from_lists(data)
+
 
 class Connection:
     """
@@ -48,6 +104,8 @@ class Connection:
             specific ip address (source and destination).
         exclude_ports : List[int]
             List of ports to be excluded from network emulation (e.g. for an ssh control connection)
+        dynamic_parameters_setup: DynamicParametersSetup
+            To emulate dynamic parameters
         """
 
     __CMD_TC = "sudo tc"
@@ -55,7 +113,8 @@ class Connection:
     __CMD_MODPROBE = "sudo modprobe"
 
     def __init__(self, name, device_name, t_init: float = None, rul: float = None, rdl:float = None, dul:float = None,
-                 ddl:float = None, android_ip:ipaddress = None, exclude_ports: List[int] = None):
+                 ddl:float = None, android_ip:ipaddress = None, exclude_ports: List[int] = None,
+                 dynamic_parameters_setup: DynamicParametersSetup = None):
         global used_devices
         self.device = device_name
         self.name = name
@@ -68,7 +127,12 @@ class Connection:
         self.dul = dul
         self.ddl = ddl
         self.exclude_ports = exclude_ports
+        self.dynamic_parameters_setup = dynamic_parameters_setup
+        if self.dynamic_parameters_setup and len(self.dynamic_parameters_setup.parameter_sets) == 0:
+            log.warning(f"DynamicParametersSetup for connection {self.name} is empty")
         self.android_ip = android_ip
+        self._dynamic_emulation_thread = None
+        self.emulation_is_active = False
 
         if(android_ip):
             log.debug(f"network emulation is applied only for IP address: {self.android_ip}")
@@ -322,7 +386,7 @@ class Connection:
         return math.ceil(((delay*rate)/128)*1.5)
 
 
-    def enable_netem(self, consider_t_init: bool = True):
+    def enable_netem(self, consider_t_init: bool = True, consider_dynamic_parameters: bool = True):
         """(Re)enables the netem qdiscs for this connection"""
 
         if self.device is None or self.virtual_device_in is None:
@@ -334,9 +398,17 @@ class Connection:
             return
 
         log.debug(f"Enabling netem for connection: '{self.name}'")
-        if(self.t_init > 0 and consider_t_init):
-            self._t_init_thread = threading.Thread(target=self._emulate_t_init, args=())
-            self._t_init_thread.start()
+        self.emulation_is_active = True
+        emulate_t_init = self.t_init > 0 and consider_t_init
+        emulate_dynamic_parameters = consider_dynamic_parameters \
+                                     and self.dynamic_parameters_setup is not None \
+                                     and len(self.dynamic_parameters_setup.parameter_sets) > 0
+        emulate_dynamically = emulate_t_init or emulate_dynamic_parameters
+        if emulate_dynamically:
+            self._dynamic_emulation_thread = threading.Thread(target=self._emulate_dynamically,
+                                                              args=(emulate_t_init, emulate_dynamic_parameters),
+                                                              daemon=True)
+            self._dynamic_emulation_thread.start()
         else:
             self._update_incoming()
             self._update_outgoing()
@@ -349,6 +421,7 @@ class Connection:
             return
 
         log.debug(f"Disabling netem for connection: '{self.name}'")
+        self.emulation_is_active = False
         params = "rate 1000Gbit loss 0.0% delay 0ms duplicate 0% reorder 0% 0%"
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} parent 1:2 netem {params}")).check_returncode()
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} root netem {params}")).check_returncode()
@@ -412,6 +485,31 @@ class Connection:
         self._update_outgoing()
         log.debug("T_init done")
 
+    def _emulate_dynamic_parameters(self):
+        """Emulate dynamic change of netem parameters"""
+        while self.emulation_is_active:
+            for parameter_set in self.dynamic_parameters_setup.parameter_sets:
+                if self.emulation_is_active:
+                    if parameter_set.rul >= 0:
+                        self.rul = parameter_set.rul
+                    if parameter_set.rdl >= 0:
+                        self.rdl = parameter_set.rdl
+                    if parameter_set.dul >= 0:
+                        self.dul = parameter_set.dul
+                    if parameter_set.ddl >= 0:
+                        self.ddl = parameter_set.ddl
+                    self._update_incoming()
+                    self._update_outgoing()
+                    time.sleep(parameter_set.timeframe/1000.0)
+
+    def _emulate_dynamically(self, emulate_t_init: bool = True, emulate_dynamic_parameters: bool = True):
+        """Emulate the dynamic conditions of a cellular network"""
+        if emulate_t_init:
+            self._emulate_t_init()
+        if emulate_dynamic_parameters:
+            self._emulate_dynamic_parameters()
+
+
     def cleanup_ifb(self):
         """Removes the ifb module from kernel"""
         subprocess.run(shlex.split(f"{self.__CMD_MODPROBE} -r ifb"))
@@ -429,6 +527,7 @@ class Connection:
 
     def cleanup(self):
         """Removes ifb module and all tc rules for actual devices"""
+        self.emulation_is_active = False
         self.cleanup_actual_devices()
         self.cleanup_ifb()
         log.info("Cleaned up all tc rules for actual devices and removed ifb module")
