@@ -9,7 +9,7 @@ from qoemu_pkg.videos import t_init
 
 FFMPEG = "ffmpeg"
 MP4BOX = "MP4Box"
-PRESERVE_TEMP_FILES = True   # True: preserve temporary processing files (e.g. for debugging), False: delete them
+PRESERVE_TEMP_FILES = False   # True: preserve temporary processing files (e.g. for debugging), False: delete them
 TINIT_VIDEO_FILENAME = "youtube_tinit.avi"
 
 
@@ -45,14 +45,14 @@ class PostProcessor:
 
             # Step 2: Cut imported video
             video_step2 = f"{os.path.join(tmp_dir, 'step_2')}.avi"
-            command = f"{MP4BOX} -v -split-chunk {main_video_start_time}:{main_video_start_time+main_video_duration} " \
+            command = f"{MP4BOX} -split-chunk {main_video_start_time}:{main_video_start_time+main_video_duration} " \
                       f"{video_step1} -out {video_step2}"
             log.debug(f"postproc main cut cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                            universal_newlines=True).check_returncode()
 
             # Step 3: Concatenate prefix and shortened main stimuli video to create post-processed video
-            command = f"{MP4BOX} -v -add  {prefix_video_path}:dur={initbuf_len} -cat {video_step2} "\
+            command = f"{MP4BOX} -add  {prefix_video_path}:dur={initbuf_len} -cat {video_step2} "\
                       f"-new {os.path.join(config.video_capture_path.get(), output_filename)}.avi "
             log.debug(f"postproc concat cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
