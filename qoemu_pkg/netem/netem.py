@@ -12,28 +12,38 @@ import csv
 
 MAX_CONNECTIONS = 1
 
-used_devices = []
-ifb_is_initialized = False
+USED_DEVICES = []
+IFB_IS_INITIALIZED = False
 
 
 @dataclass
 class ParameterSet:
     """Parameters and timeframe determining for how long the parameters shall be applied for dynamic emulation
 
-    A Value of -1 signals no change of the parameter from the previous value
+    Except for the timeframe, a value of -1 will leave the parameter as it was
+
+    Attributes:
+        timeframe: the time in ms for which this set of parameters shall be active, set to -1 for an infinite timeframe
+        rul: upload rate in kbit/s
+        rdl: download rate in kbit/s
+        dul: upload delay in ms
+        ddl: download delay in ms
     """
-    timeframe: int
-    rul: int
-    rdl: int
-    dul: int = field(default=-1)
-    ddl: int = field(default=-1)
+    timeframe: float
+    rul: float
+    rdl: float
+    dul: float = field(default=-1)
+    ddl: float = field(default=-1)
 
 
 @dataclass
 class DynamicParametersSetup:
     """Contains ParameterSet objects for emulation with dynamic parameters
 
-    Emulation can loop over these ParameterSets and apply their parameters for the given timeframe
+    Dynamic emulation can loop over these parameter sets and apply their parameters for the given timeframe
+
+    Attributes:
+        parameter_sets: the parameters sets to be looped over by dynamic emulation
     """
     parameter_sets: List[ParameterSet] = field(default_factory=list, init=False)
 
@@ -72,18 +82,13 @@ class Connection:
     """
         The Connection object creates a controllable network connection.
 
-        Parameters
+        Attributes
         ----------
         name : str
             The name of the connection
         device_name : str
             The name of the actual network device to be used by the connection.
             Will be set to None if the connection could not be initialized.
-
-        Attributes
-        ----------
-        name : str
-            The name of the connection
         device : str
             The name of the actual device that the connection uses
         virtual_device_in : str
@@ -98,7 +103,6 @@ class Connection:
             upload delay in ms of the connection
         ddl : float
             download delay in ms of the connection
-
         android_ip : ipaddress
             IP address of android device (emulator or real device). If specified, emulation is limited to this
             specific ip address (source and destination).
@@ -115,7 +119,7 @@ class Connection:
     def __init__(self, name, device_name, t_init: float = None, rul: float = None, rdl:float = None, dul:float = None,
                  ddl:float = None, android_ip:ipaddress = None, exclude_ports: List[int] = None,
                  dynamic_parameters_setup: DynamicParametersSetup = None):
-        global used_devices
+        global USED_DEVICES
         self.device = device_name
         self.name = name
         self.virtual_device_in = None
@@ -174,11 +178,11 @@ class Connection:
         if device_name not in output.stdout:
             log.error(f"Cannot initialize connection: '{self.name}': Device does not exist")
             self.device = None
-        elif device_name in used_devices:
+        elif device_name in USED_DEVICES:
             log.error(f"Cannot initialize connection: '{self.name}': Device already in use")
             self.device = None
         else:
-            used_devices.append(device_name)
+            USED_DEVICES.append(device_name)
             self._init()
 
     def _get_ifb(self):
@@ -188,8 +192,8 @@ class Connection:
             -------
             bool
                 Returns True if ifb devices could be created False otherwise"""
-        global ifb_is_initialized
-        if not ifb_is_initialized:
+        global IFB_IS_INITIALIZED
+        if not IFB_IS_INITIALIZED:
             self._init_ifb(MAX_CONNECTIONS * 2)
 
         log.debug(f"Setting up virtual device for connection: '{self.name}'")
@@ -439,7 +443,7 @@ class Connection:
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} ingress"))
         log.debug(f"Removing virtual device: {self.virtual_device_in}")
         subprocess.run(shlex.split(f"{self.__CMD_IP} link set dev {self.virtual_device_in} down"))
-        used_devices.remove(self.device)
+        USED_DEVICES.remove(self.device)
 
     def _init_ifb(self, numifbs):
         """
@@ -453,8 +457,8 @@ class Connection:
                 """
         log.debug("Adding ifb module to kernel")
         subprocess.run(shlex.split(f"{self.__CMD_MODPROBE} ifb numifbs={numifbs}"))
-        global ifb_is_initialized
-        ifb_is_initialized = True
+        global IFB_IS_INITIALIZED
+        IFB_IS_INITIALIZED = True
 
     def _init_ifb_device(self, ifb_id):
         """
@@ -500,7 +504,10 @@ class Connection:
                         self.ddl = parameter_set.ddl
                     self._update_incoming()
                     self._update_outgoing()
-                    time.sleep(parameter_set.timeframe/1000.0)
+                    if parameter_set.timeframe >= 0:
+                        time.sleep(parameter_set.timeframe/1000.0)
+                    else:
+                        return
 
     def _emulate_dynamically(self, emulate_t_init: bool = True, emulate_dynamic_parameters: bool = True):
         """Emulate the dynamic conditions of a cellular network"""
@@ -514,16 +521,16 @@ class Connection:
         """Removes the ifb module from kernel"""
         subprocess.run(shlex.split(f"{self.__CMD_MODPROBE} -r ifb"))
         log.debug("Removed ifb module from kernel")
-        global ifb_is_initialized
-        ifb_is_initialized = False
+        global IFB_IS_INITIALIZED
+        IFB_IS_INITIALIZED = False
 
     def cleanup_actual_devices(self):
         """Removes tc rules from all actual devices"""
-        for device in used_devices:
+        for device in USED_DEVICES:
             log.debug(f"Removing tc rules for device: {device}")
             subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {device} root"))
             subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {device} ingress"))
-            used_devices.remove(device)
+            USED_DEVICES.remove(device)
 
     def cleanup(self):
         """Removes ifb module and all tc rules for actual devices"""
