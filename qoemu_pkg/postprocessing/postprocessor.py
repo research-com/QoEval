@@ -8,52 +8,66 @@ from qoemu_pkg.configuration import config
 from qoemu_pkg.videos import t_init
 
 FFMPEG = "ffmpeg"
+MP4BOX = "MP4Box"
 PRESERVE_TEMP_FILES = False   # True: preserve temporary processing files (e.g. for debugging), False: delete them
 TINIT_VIDEO_FILENAME = "youtube_tinit.avi"
+DELTA_INITBUF_VIDEO_START_MAX = 5 # maximum time difference of end of buffer initialization and video start
 
 
 class PostProcessor:
     def __init__(self):
         self._prefix_video = importlib_resources.files(t_init) / TINIT_VIDEO_FILENAME
         log.debug(f"Using prefix video {self._prefix_video} for post-processing.")
+        self.check_env(FFMPEG)
+        self.check_env(MP4BOX)
 
-    def process(self,  input_filename: str,  output_filename: str, initbuf_len: str, main_video_start_time: str, main_video_duration: str = None):
+    def check_env(self, name: str):
+        output = subprocess.run(['which', name], stdout=subprocess.PIPE,
+                                universal_newlines=True)
+        if len(output.stdout) == 0:
+            log.error(f"External component {name} not found. Must be in path - please install ffmpeg and gpac.")
+            raise RuntimeError('External component not found.')
+
+    def process(self,  input_filename: str,  output_filename: str, initbuf_len: float, main_video_start_time: float, main_video_duration: float):
         tmp_dir = tempfile.mkdtemp()
+        
+        # plausibility check of time differences
+        if main_video_start_time < initbuf_len:
+            raise RuntimeError(
+                f"Postprocessing error: Start time of main video ({main_video_start_time}s) is less than "
+                f"end of buffer initialization ({initbuf_len}s).")
 
+        if main_video_start_time - initbuf_len > DELTA_INITBUF_VIDEO_START_MAX:
+            raise RuntimeError(
+                f"Postprocessing plausibility check failed: "
+                f"Start time of main video ({main_video_start_time}s) is more than "
+                f"{DELTA_INITBUF_VIDEO_START_MAX}s later than end of buffer initialization ({initbuf_len}s).")
+
+        # perform postprocessing
         with importlib_resources.as_file(self._prefix_video) as prefix_video_path:
-            # Note: We do a 3-step procedure here while a single split and combine ffmpeg command could also be used.
-            #       However, it seems that splitting and combining leads to recoding which we would like to avoid.
+            # Note: We do a 3-step procedure here since MP4Box cannot import only a fragment.
+            #       Therefore, we first import the unprocessed video. Then we cut out
+            #       the relevant stimuli, and lastly we concatenate t_init waiting animation and the stimuli.
             #
-            # Step 1: Create prefix-video with desired length (mute audio - if you want to keep it, use f"-acodec copy")
+            # Step 1: Convert/import input video
             video_step1 = f"{os.path.join(tmp_dir, 'step_1')}.avi"
-            command = f"{FFMPEG} -i {prefix_video_path} -vcodec copy " \
-                      f"-filter:a \"volume=0.0\" " \
-                      f"-t {initbuf_len} " \
-                      f"{video_step1} "
-            log.debug(f"postproc initbuf cmd: {command}")
+            command = f"{MP4BOX} -add {os.path.join(config.video_capture_path.get(), input_filename)}.avi" \
+                      f" -new {video_step1} "
+            log.debug(f"postproc main import cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                     universal_newlines=True).check_returncode()
-            # Step 2: Cut main stimuli video
-            video_step2 = f"{os.path.join(tmp_dir, 'step_2')}.avi"
-            if main_video_duration:
-                param_duration = f"-t {main_video_duration}"
-            else:
-                param_duration = ""
 
-            command = f"{FFMPEG} -i {os.path.join(config.video_capture_path.get(), input_filename)}.avi -vcodec copy -acodec copy " \
-                      f"-ss {main_video_start_time}" \
-                      f" {param_duration} {video_step2} "
+            # Step 2: Cut imported video
+            video_step2 = f"{os.path.join(tmp_dir, 'step_2')}.avi"
+            command = f"{MP4BOX} -split-chunk {main_video_start_time}:{main_video_start_time+main_video_duration} " \
+                      f"{video_step1} -out {video_step2}"
             log.debug(f"postproc main cut cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                                    universal_newlines=True).check_returncode()
-            # Step 3: Create list of files to be concatenated
-            input_list = f"{os.path.join(tmp_dir, 'input_list')}.txt"
-            with open(input_list, 'w') as file:
-                file.write(f"file \'{video_step1}\'\n")
-                file.write(f"file \'{video_step2}\'\n")
-            # Step 4: Concatenate prefix and shortened main stimuli video to create post-processed video
-            command = f"{FFMPEG} -f concat -safe 0 -i \"{input_list}\" -reset_timestamps 1 -c copy " \
-                      f"-y {os.path.join(config.video_capture_path.get(), output_filename)}.avi "
+                           universal_newlines=True).check_returncode()
+
+            # Step 3: Concatenate prefix and shortened main stimuli video to create post-processed video
+            command = f"{MP4BOX} -add  {prefix_video_path}:dur={initbuf_len} -cat {video_step2} "\
+                      f"-new {os.path.join(config.video_capture_path.get(), output_filename)}.avi "
             log.debug(f"postproc concat cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                                     universal_newlines=True).check_returncode()
@@ -61,5 +75,4 @@ class PostProcessor:
         if not PRESERVE_TEMP_FILES:
             os.remove(video_step1)
             os.remove(video_step2)
-            os.remove(input_list)
             os.removedirs(tmp_dir)
