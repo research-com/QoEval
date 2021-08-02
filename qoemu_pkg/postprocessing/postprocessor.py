@@ -11,6 +11,7 @@ FFMPEG = "ffmpeg"
 MP4BOX = "MP4Box"
 PRESERVE_TEMP_FILES = False   # True: preserve temporary processing files (e.g. for debugging), False: delete them
 TINIT_VIDEO_FILENAME = "youtube_tinit.avi"
+DELTA_INITBUF_VIDEO_START_MAX = 5 # maximum time difference of end of buffer initialization and video start
 
 
 class PostProcessor:
@@ -29,7 +30,20 @@ class PostProcessor:
 
     def process(self,  input_filename: str,  output_filename: str, initbuf_len: float, main_video_start_time: float, main_video_duration: float):
         tmp_dir = tempfile.mkdtemp()
+        
+        # plausibility check of time differences
+        if main_video_start_time < initbuf_len:
+            raise RuntimeError(
+                f"Postprocessing error: Start time of main video ({main_video_start_time}s) is less than "
+                f"end of buffer initialization ({initbuf_len}s).")
 
+        if main_video_start_time - initbuf_len > DELTA_INITBUF_VIDEO_START_MAX:
+            raise RuntimeError(
+                f"Postprocessing plausibility check failed: "
+                f"Start time of main video ({main_video_start_time}s) is more than "
+                f"{DELTA_INITBUF_VIDEO_START_MAX}s later than end of buffer initialization ({initbuf_len}s).")
+
+        # perform postprocessing
         with importlib_resources.as_file(self._prefix_video) as prefix_video_path:
             # Note: We do a 3-step procedure here since MP4Box cannot import only a fragment.
             #       Therefore, we first import the unprocessed video. Then we cut out
