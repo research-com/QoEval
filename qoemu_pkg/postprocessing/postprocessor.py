@@ -10,7 +10,7 @@ from qoemu_pkg.videos import t_init
 FFMPEG = "ffmpeg"
 MP4BOX = "MP4Box"
 PRESERVE_TEMP_FILES = False   # True: preserve temporary processing files (e.g. for debugging), False: delete them
-TINIT_VIDEO_FILENAME = "youtube_tinit.avi"
+TINIT_VIDEO_FILENAME = "youtube_tinit_v2.avi"
 DELTA_INITBUF_VIDEO_START_MAX = 5 # maximum time difference of end of buffer initialization and video start
 
 
@@ -30,7 +30,7 @@ class PostProcessor:
 
     def process(self,  input_filename: str,  output_filename: str, initbuf_len: float, main_video_start_time: float, main_video_duration: float):
         tmp_dir = tempfile.mkdtemp()
-        
+
         # plausibility check of time differences
         if main_video_start_time < initbuf_len:
             raise RuntimeError(
