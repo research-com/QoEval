@@ -16,6 +16,7 @@ _CHROME_PACKAGE = 'com.android.chrome'
 _CHROME_ACTIVITY = 'com.google.android.apps.chrome.Main'
 _CHROME_COMPONENT =  _CHROME_PACKAGE + "/" + _CHROME_ACTIVITY
 _PREPARATION_URL = "about:blank"
+_ARBITRARY_CONTENT_URI = "https://www.hm.edu"   # a valid, arbitrary content URI
 _CHROME_HISTORY_URL = "chrome://history"
 
 # view IDs to controlling the use-case
@@ -62,7 +63,7 @@ class _WebBrowsing(UseCase):
         self._touch_view_by_id("com.android.chrome:id/menu_button")
         self._touch_view_by_text("Alle Tabs schließen", 5)
         self._touch_view_by_id("com.android.chrome:id/new_tab_view")
-        self.device.startActivity(component=_CHROME_COMPONENT, uri=_PREPARATION_URL)
+        self.device.startActivity(component=_CHROME_COMPONENT, uri=_ARBITRARY_CONTENT_URI)  # to add something to history
         ViewClient.sleep(5)
         # self._touch_view_by_id(_ID_MENU, 5)
         # ViewClient.sleep(3)
@@ -74,6 +75,7 @@ class _WebBrowsing(UseCase):
         self._touch_view_by_id(_ID_CLEAR_BROWSING_DATA, 5)
         self._touch_view_by_id(_ID_CONFIRM_CLEAR, 5)
         self._touch_view_by_id(_ID_HOME, 5)
+        ViewClient.sleep(2)
         self.device.startActivity(component=_CHROME_COMPONENT, uri=_PREPARATION_URL)
         ViewClient.sleep(5)
 
