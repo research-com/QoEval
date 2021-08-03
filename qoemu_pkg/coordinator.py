@@ -28,7 +28,7 @@ DELAY_TOLERANCE_MIN = 10  # minimum delay tolerance for sanity check [ms]
 DELAY_TOLERANCE_REL_NORMAL = 0.05  # relative delay tolerance for sanity check [0..1]
 DELAY_TOLERANCE_REL_LOWBW = 0.25  # relative delay tolerance for sanity check in low-bandwidth conditions [0..1]
 DELAY_MEASUREMENT_BW_THRESH = 100 # threshold data rate for sanity delay measurement [kbit/s]
-PROCESSING_BIAS = 8  # additional delay due to processing in emulator [ms]
+PROCESSING_BIAS = 3  # additional delay due to processing in emulator [ms]
 VIDEO_PRE_START = 1.0  # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
                        # Note: Be careful with VIDEO_PRE_START - if set too high, we might miss rebuffering
 VIDEO_T_INIT_TOLERANCE = 0.5 # when detecting end of T_INIT and comparing to start of stimuli, tolerate [s]
@@ -79,6 +79,19 @@ class Coordinator:
         log.debug(f"_get_bpf_rule filter rule: {filter_rule}")
         return filter_rule
 
+    def _get_uc_type(self) -> UseCaseType:
+        if self._type_id.startswith("VS"):
+            return UseCaseType.YOUTUBE
+        if self._type_id.startswith("WB"):
+            return UseCaseType.WEB_BROWSING
+        return None
+
+    def _get_uc_orientation(self) -> MobileDeviceOrientation:
+        if self._get_uc_type() == UseCaseType.YOUTUBE:
+            return MobileDeviceOrientation.LANDSCAPE
+        else:
+            return MobileDeviceOrientation.PORTRAIT
+
     def _prepare(self, type_id: str, table_id: str, entry_id: str):
         if self._is_prepared:
             raise RuntimeError(
@@ -96,7 +109,7 @@ class Coordinator:
         self._gen_log.write(f"{time_string} {self.output_filename} {self._params} ")
 
         # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided if use-case requires play services
-        self.emulator.launch(orientation=MobileDeviceOrientation.LANDSCAPE)
+        self.emulator.launch(orientation=self._get_uc_orientation())
         try:
             delay_bias_ul_dl = (
                                            self.emulator.measure_rtt() + PROCESSING_BIAS) / 2  # can only measure RTT, assume 50%/50% ul vs. dl
@@ -119,18 +132,22 @@ class Coordinator:
         url = f"{get_link(self._type_id, self._table_id, self._entry_id)}"
         if len(url) < 7:
             raise RuntimeError(f"Invalid Url: {url}")
-        s = convert_to_seconds(get_start(self._type_id, self._table_id, self._entry_id))
-        s = s - VIDEO_PRE_START
-        if s > 0.0:
-            # append ? or &t=[start time in seconds] to link (note: currently, youtube support only int values)
-            if "?" in url:
-                url = f"{url}&t={int(s)}"
-            else:
-                url = f"{url}?t={int(s)}"
 
         # create and prepare use-case
-        self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url)
-        self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; video url: {url}; len: {s}s ")
+        if self._get_uc_type() == UseCaseType.YOUTUBE:
+            self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url)
+            s = convert_to_seconds(get_start(self._type_id, self._table_id, self._entry_id))
+            s = s - VIDEO_PRE_START
+            if s > 0.0:
+                # append ? or &t=[start time in seconds] to link (note: currently, youtube support only int values)
+                if "?" in url:
+                    url = f"{url}&t={int(s)}"
+                else:
+                    url = f"{url}?t={int(s)}"
+        if self._get_uc_type() == UseCaseType.WEB_BROWSING:
+            self.ui_control.set_use_case(UseCaseType.WEB_BROWSING, url=url)
+            s = 120  # maximum length of web-browsing use-case
+        self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; url: {url}; len: {s}s ")
         self.ui_control.prepare_use_case()
         self._gen_log.flush()
         self._is_prepared = True
@@ -419,7 +436,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['VS'], ['C'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
-    # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=True)
+    coordinator.start(['WB'], ['A'], generate_stimuli=True, postprocessing=False, overwrite=False)
+    # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")

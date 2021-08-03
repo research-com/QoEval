@@ -251,9 +251,6 @@ def get_start(type_id, table_id, entry_id):
         log.error("No file loaded")
         return
 
-    if type_id == "WB":
-        return None
-
     start_found = False
     start = None
 
@@ -306,9 +303,6 @@ def get_end(type_id, table_id, entry_id):
     if not file_loaded:
         log.error("No file loaded")
         return
-
-    if type_id == "WB":
-        return None
 
     end_found = False
     end = None

@@ -24,19 +24,6 @@ _ID_RESOLUTION = "com.google.android.youtube:id/list_item_text_secondary"
 
 _SHOW_RESOLUTION_TIMESPAN = 15
 
-
-def _touch_view_by_id(vc, id: str):
-    # find and touch Youtube player window
-    vc.dump(window=-1, sleep=0)
-    player_view = vc.findViewById(id)
-    if player_view:
-        # log.debug(f"View {id} found!")
-        # log.debug(player_view.__tinyStr__())
-        player_view.touch()
-    else:
-        log.error(f"View {id} NOT found!")
-
-
 def _pause_player(vc):
     # pause a playing youtube video
     vc.dump(window=-1, sleep=0)
@@ -50,7 +37,6 @@ def _pause_player(vc):
     else:
         log.error(f"View {_ID_PLAYER} NOT found!")
     return player_view
-
 
 def _touch_overflow_button(vc):
     vc.dump(window=-1, sleep=0)
@@ -87,7 +73,6 @@ class _Youtube(UseCase):
         super().__init__(device, serialno)
         self.url = kwargs.get("url")
         self.show_resolution = True
-        self._vc = None
 
     def prepare(self):
         """
@@ -121,7 +106,7 @@ class _Youtube(UseCase):
 
             com.dtmilano.android.viewclient.ViewClient.sleep(3)
 
-            _touch_view_by_id(self._vc, _ID_FULLSCREEN)
+            self._touch_view_by_id(_ID_FULLSCREEN)
 
             log.debug("Waiting...")
             com.dtmilano.android.viewclient.ViewClient.sleep(3)

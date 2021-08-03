@@ -107,8 +107,8 @@ Web-Browsing;;;;;;;;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
 WB-A-1;"Basic set";40;285;50000;18;18;Reference;;o2;"Starten der o2-App
-
-(Web-Version: https://www.o2online.de/)";Throughput
+Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
+Resolution: Auto";https://www.o2online.de/;Throughput
 WB-A-2;"Basic set";40;270;10000;18;18;Assessment;;;;
 WB-A-3;"Basic set";85;250;5000;18;18;Assessment;;;;
 WB-A-4;"Basic set";160;205;2000;18;18;Assessment;;;;
@@ -121,8 +121,8 @@ WB-A-9;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
 WB-B-1;"Basic set";40;350;50000;18;18;Reference;;"Spiegel online";"Starten der Spiegel-App
-
-(Web-Version: https://www.spiegel.de/)";Throughput
+Excerpt from 00:00 (min:sec) to 01:00 (min:sec).
+Resolution: Auto";https://www.spiegel.de/;Throughput
 WB-B-2;"Basic set";40;350;10000;18;18;Assessment;;;;
 WB-B-3;"Basic set";85;300;5000;18;18;Assessment;;;;
 WB-B-4;"Basic set";160;220;2000;18;18;Assessment;;;;
@@ -132,9 +132,10 @@ WB-B-7;"Basic set";190;172;500;18;18;Assessment;;;;
 WB-B-8;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-B-9;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
-"Parameter übernommen von WB-B.";;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
-WB-C-1;"Basic set";40;350;50000;18;18;Reference;;"Google News";https://news.google.de;Throughput
+WB-C-1;"Basic set";40;350;50000;18;18;Reference;;"Google News";"Starten von Google News
+Excerpt from 00:00 (min:sec) to 01:00 (min:sec).
+Resolution: Auto";https://news.google.de/;Throughput
 WB-C-2;"Basic set";40;350;10000;18;18;Assessment;;;;
 WB-C-3;"Basic set";85;300;5000;18;18;Assessment;;;;
 WB-C-4;"Basic set";160;220;2000;18;18;Assessment;;;;
