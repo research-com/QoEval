@@ -2,6 +2,8 @@
 
 ## Installation
 
+*Note: These instructions assume that Ubuntu 21.04 is used.*
+
 Clone the repository and change to the qoemu directory.
 
 ```
@@ -16,7 +18,7 @@ by using the command ``git lfs install`` and ``git lfs fetch``
 ### System setup
 We strongly recommend using a virtual environment
 ```
-python3.8 -m venv venv
+python3.9 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip3 install -r requirements.txt
@@ -26,7 +28,7 @@ pip3 install -r requirements.txt
 The python setuptools and a builder (e.g. PyPA build) are used to build the package:
 ```
 pip3 install build
-python3.8 -m build
+python3.9 -m build
 ```
 
 Afterwards, the package can be installed using pip:
