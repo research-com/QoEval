@@ -177,3 +177,12 @@ that the measured delays are as expected/configured within QoEmu. If the delays 
 than expected or vary to an extremely large extend, update your linux kernel and check that the WLAN
 device driver is working properly and all power-saving features have been disabled.
 
+# Acknowledgements
+We make use of a bunch of other software tools - and thank all authors of these for
+for making them publicly available. These include, but are not limited to:
+* Android View Client https://github.com/dtmilano/AndroidViewClient
+* Genimotion Android Emulator https://www.genymotion.com/
+* Genimotion scrcpy https://github.com/Genymobile/scrcpy
+* The GPAC suite for video and audio processing:
+    GPAC Filters: https://doi.org/10.1145/3339825.3394929
+    GPAC: https://doi.org/10.1145/1291233.1291452

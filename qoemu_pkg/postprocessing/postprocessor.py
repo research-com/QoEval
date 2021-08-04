@@ -75,49 +75,24 @@ class PostProcessor:
                 f"{DELTA_INITBUF_VIDEO_START_MAX}s later than end of buffer initialization ({initbuf_len}s).")
 
         # perform postprocessing
-        tmp_dir = tempfile.mkdtemp()
         with importlib_resources.as_file(self._prefix_video) as prefix_video_path:
-            # Note: We do a 3-step procedure here since MP4Box cannot import only a fragment.
-            #       Therefore, we first import the unprocessed video. Then we cut out
-            #       the relevant stimuli, and lastly we concatenate t_init waiting animation and the stimuli.
-            #
-            video_step1 = f"{os.path.join(tmp_dir, 'step_1')}.mp4"
-            step1_audio = f"{os.path.join(tmp_dir, 'step_1_audio')}.mp3"  # audio part only
-            step1_video = f"{os.path.join(tmp_dir, 'step_1_video')}.mp4"  # video part only
-            command = f"{FFMPEG} -i {os.path.join(config.video_capture_path.get(), input_filename)}.avi -vn " \
-                      f"-acodec copy {step1_audio}"
-            log.debug(f"postproc audio extract cmd: {command}")
+            # Create mpeg4 encoded .avi output file
+            command = f"{FFMPEG} -i {prefix_video_path} " \
+                      f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
+                      f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
+                      f"-filter_complex \"" \
+                      f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
+                      f"[0:a]atrim=0:{initbuf_len},asetpts=PTS-STARTPTS[a0]; " \
+                      f"[1:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v1]; " \
+                      f"[1:a]atrim={main_video_start_time}:{main_video_end_time},asetpts=PTS-STARTPTS[a1]; " \
+                      f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]\" " \
+                      f"-map \"[outv]\" -map \"[outa]\" " \
+                      f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.avi"
+            log.debug(f"postproc mp4 reencoded cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                            universal_newlines=True).check_returncode()
 
-            command = f"{FFMPEG} -i {os.path.join(config.video_capture_path.get(), input_filename)}.avi -an " \
-                      f"-vcodec copy {step1_video}"
-            log.debug(f"postproc video extract cmd: {command}")
-            subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                           universal_newlines=True).check_returncode()
-
-            command = f"{MP4BOX} -add {step1_audio} -add {step1_video}" \
-                      f" -new {video_step1} "
-            log.debug(f"postproc main import cmd: {command}")
-            subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                           universal_newlines=True).check_returncode()
-
-            # Step 2: Cut imported video
-            video_step2 = f"{os.path.join(tmp_dir, 'step_2')}.mp4"
-            command = f"{MP4BOX} -split-chunk {main_video_start_time}:{main_video_end_time} " \
-                      f"{video_step1} -out {video_step2}"
-            log.debug(f"postproc main cut cmd: {command}")
-            subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                           universal_newlines=True).check_returncode()
-
-            # Step 3: Concatenate prefix and shortened main stimuli video to create post-processed video
-            command = f"{MP4BOX} -add  {prefix_video_path}#video:dur={initbuf_len} -cat {video_step2} " \
-                      f"-new {os.path.join(config.video_capture_path.get(), output_filename)}.avi "
-            log.debug(f"postproc concat cmd: {command}")
-            subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                           universal_newlines=True).check_returncode()
-
-            # Addtionally create a H.264 encoded output file
+            # Additionally create a H.264 encoded .mp4 output file
             command = f"{FFMPEG} -i {prefix_video_path} " \
                       f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi  -crf 4 -filter_complex \"" \
                       f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
@@ -130,14 +105,6 @@ class PostProcessor:
             log.debug(f"postproc mp4 reencoded cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                            universal_newlines=True).check_returncode()
-
-        # clean up temporary directory
-        if not PRESERVE_TEMP_FILES:
-            os.remove(step1_audio)
-            os.remove(step1_video)
-            os.remove(video_step1)
-            os.remove(video_step2)
-            os.removedirs(tmp_dir)
 
 
 if __name__ == '__main__':
