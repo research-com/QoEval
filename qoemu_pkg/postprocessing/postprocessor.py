@@ -1,9 +1,10 @@
 import logging as log
 import os
-import tempfile
-import subprocess
 import shlex
+import subprocess
+
 import importlib_resources
+
 from qoemu_pkg.configuration import config
 from qoemu_pkg.videos import t_init
 
@@ -77,31 +78,53 @@ class PostProcessor:
         # perform postprocessing
         with importlib_resources.as_file(self._prefix_video) as prefix_video_path:
             # Create mpeg4 encoded .avi output file
-            command = f"{FFMPEG} -i {prefix_video_path} " \
-                      f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
-                      f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
-                      f"-filter_complex \"" \
-                      f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
-                      f"[0:a]atrim=0:{initbuf_len},asetpts=PTS-STARTPTS[a0]; " \
-                      f"[1:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v1]; " \
-                      f"[1:a]atrim={main_video_start_time}:{main_video_end_time},asetpts=PTS-STARTPTS[a1]; " \
-                      f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]\" " \
-                      f"-map \"[outv]\" -map \"[outa]\" " \
-                      f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.avi"
+            if (initbuf_len > 0):
+                command = f"{FFMPEG} -i {prefix_video_path} " \
+                          f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
+                          f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
+                          f"-filter_complex \"" \
+                          f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
+                          f"[0:a]atrim=0:{initbuf_len},asetpts=PTS-STARTPTS[a0]; " \
+                          f"[1:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v1]; " \
+                          f"[1:a]atrim={main_video_start_time}:{main_video_end_time},asetpts=PTS-STARTPTS[a1]; " \
+                          f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]\" " \
+                          f"-map \"[outv]\" -map \"[outa]\" " \
+                          f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.avi"
+            else:
+                command = f"{FFMPEG} " \
+                          f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
+                          f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
+                          f"-filter_complex \"" \
+                          f"[0:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v0]; " \
+                          f"[0:a]atrim={main_video_start_time}:{main_video_end_time},asetpts=PTS-STARTPTS[a0] " \
+                          f"\" " \
+                          f"-map \"[v0]\" -map \"[a0]\" " \
+                          f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.avi"
             log.debug(f"postproc mp4 reencoded cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                            universal_newlines=True).check_returncode()
 
             # Additionally create a H.264 encoded .mp4 output file
-            command = f"{FFMPEG} -i {prefix_video_path} " \
-                      f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi  -crf 4 -filter_complex \"" \
-                      f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
-                      f"[0:a]atrim=0:{initbuf_len},asetpts=PTS-STARTPTS[a0]; " \
-                      f"[1:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v1]; " \
-                      f"[1:a]atrim={main_video_start_time}:{main_video_end_time},asetpts=PTS-STARTPTS[a1]; " \
-                      f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]\" " \
-                      f"-map \"[outv]\" -map \"[outa]\" " \
-                      f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.mp4"
+            if (initbuf_len > 0):
+                command = f"{FFMPEG} -i {prefix_video_path} " \
+                          f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi  -crf 4 -filter_complex \"" \
+                          f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
+                          f"[0:a]atrim=0:{initbuf_len},asetpts=PTS-STARTPTS[a0]; " \
+                          f"[1:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v1]; " \
+                          f"[1:a]atrim={main_video_start_time}:{main_video_end_time},asetpts=PTS-STARTPTS[a1]; " \
+                          f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]\" " \
+                          f"-map \"[outv]\" -map \"[outa]\" " \
+                          f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.mp4"
+            else:
+                command = f"{FFMPEG} " \
+                          f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
+                          f"-crf 4 " \
+                          f"-filter_complex \"" \
+                          f"[0:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v0]; " \
+                          f"[0:a]atrim={main_video_start_time}:{main_video_end_time},asetpts=PTS-STARTPTS[a0] " \
+                          f"\" " \
+                          f"-map \"[v0]\" -map \"[a0]\" " \
+                          f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.mp4"
             log.debug(f"postproc mp4 reencoded cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                            universal_newlines=True).check_returncode()
@@ -109,6 +132,6 @@ class PostProcessor:
 
 if __name__ == '__main__':
     p = PostProcessor()
-    p.process("WB-A-1_E1-R-0.1_P0","test",5,5,10)
+    p.process("WB-A-1_E1-R-0.1_P0", "test", 0, 5, 10)
 
     print("Done.")

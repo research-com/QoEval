@@ -146,7 +146,7 @@ class Coordinator:
                     url = f"{url}?t={int(s)}"
         if self._get_uc_type() == UseCaseType.WEB_BROWSING:
             self.ui_control.set_use_case(UseCaseType.WEB_BROWSING, url=url)
-            s = 120  # maximum length of web-browsing use-case
+            s = 60  # maximum length of web-browsing use-case
         self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; url: {url}; len: {s}s ")
         self.ui_control.prepare_use_case()
         self._gen_log.flush()
@@ -306,7 +306,10 @@ class Coordinator:
 
     def _perform_postprocessing(self, type_id, table_id, ids_to_process, overwrite: bool = False):
         trigger_dir = config.trigger_image_path.get()
+        self._type_id = type_id
+        self._table_id = table_id
         for entry_id in ids_to_process:
+            self._entry_id = entry_id
             video_id_in = get_video_id(type_id, table_id, entry_id, "0")
             video_id_out = get_video_id(type_id, table_id, entry_id, "1")
             if not overwrite and is_stimuli_available(type_id, table_id, entry_id, "1"):
@@ -327,6 +330,12 @@ class Coordinator:
             # t_raw_start = str(input(f"Time when relevant section starts in raw stimuli video [hh:mm:ss.xxx]: "))
             # d_start_to_end = int(input(f"Duration from t_start to t_end in seconds [s]: "))
 
+            # only some of the use-case types require a detection of the initialization phase (t-init)
+            if self._get_uc_type() == UseCaseType.YOUTUBE:
+                is_detecting_t_init = True
+            else:
+                is_detecting_t_init = False
+
             # auto-detect video t_init_buf, t_raw_start, t_raw_end
             unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
             trigger_image_start = os.path.join(trigger_dir, f"{type_id}-{table_id}_start.png")
@@ -338,12 +347,15 @@ class Coordinator:
 
             t_detect_start = max(0, t_raw_start - (2.5 * VIDEO_PRE_START))
 
-            print(f"Detecting start of video playback (search starts at: {t_detect_start} s) ... ", end='')
-            t_init_buf = determine_video_start(unprocessed_video_path, t_detect_start)
-            if not t_init_buf:
-                print(f"failed. (Is the input video \"{unprocessed_video_path}\" correct?)")
-                continue
-            print(f"{t_init_buf} s")
+            if is_detecting_t_init:
+                print(f"Detecting start of video playback (search starts at: {t_detect_start} s) ... ", end='')
+                t_init_buf = determine_video_start(unprocessed_video_path, t_detect_start)
+                if not t_init_buf:
+                    print(f"failed. (Is the input video \"{unprocessed_video_path}\" correct?)")
+                    continue
+                print(f"{t_init_buf} s")
+            else:
+                t_init_buf = 0
 
             if t_init_buf > t_raw_start:
                 if t_init_buf - t_raw_start > VIDEO_T_INIT_TOLERANCE:
@@ -436,7 +448,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['WB'], ['A'], generate_stimuli=True, postprocessing=False, overwrite=False)
+    coordinator.start(['WB'], ['A'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")
