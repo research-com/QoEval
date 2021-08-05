@@ -2,6 +2,8 @@
 
 ## Installation
 
+*Note: These instructions assume that Ubuntu 21.04 is used.*
+
 Clone the repository and change to the qoemu directory.
 
 ```
@@ -16,7 +18,7 @@ by using the command ``git lfs install`` and ``git lfs fetch``
 ### System setup
 We strongly recommend using a virtual environment
 ```
-python3.8 -m venv venv
+python3.9 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip3 install -r requirements.txt
@@ -26,7 +28,7 @@ pip3 install -r requirements.txt
 The python setuptools and a builder (e.g. PyPA build) are used to build the package:
 ```
 pip3 install build
-python3.8 -m build
+python3.9 -m build
 ```
 
 Afterwards, the package can be installed using pip:
@@ -175,3 +177,12 @@ that the measured delays are as expected/configured within QoEmu. If the delays 
 than expected or vary to an extremely large extend, update your linux kernel and check that the WLAN
 device driver is working properly and all power-saving features have been disabled.
 
+# Acknowledgements
+We make use of a bunch of other software tools - and thank all authors of these for
+for making them publicly available. These include, but are not limited to:
+* Android View Client https://github.com/dtmilano/AndroidViewClient
+* Genimotion Android Emulator https://www.genymotion.com/
+* Genimotion scrcpy https://github.com/Genymobile/scrcpy
+* The GPAC suite for video and audio processing:
+    GPAC Filters: https://doi.org/10.1145/3339825.3394929
+    GPAC: https://doi.org/10.1145/1291233.1291452
