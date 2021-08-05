@@ -62,12 +62,14 @@ class DynamicParametersSetup:
 
     @staticmethod
     def from_nested_lists(parameter_sets: List[List[int]], verbose: bool = False):
+        '''Creates a DynamicParamterSetup from nested lists, each list representing a ParameterSet'''
         result = DynamicParametersSetup(verbose=verbose)
         result._append_parameter_sets_from_nested_lists(parameter_sets)
         return result
 
     @staticmethod
     def from_csv(filename: str, verbose: bool = False):
+        '''Loads a DynamicParamterSetup from a .csv file'''
         result = DynamicParametersSetup(verbose=verbose)
         result._append_from_csv(filename)
         return result
@@ -89,6 +91,7 @@ class DynamicParametersSetup:
             self.parameter_sets.append(ParameterSet(*parameter_set))
 
     def save_to_csv(self, filename: str):
+        ''' Saves the ParameterSetup as .csv file'''
         with open(filename, 'w') as file:
             data = [dataclasses.astuple(parameter_set) for parameter_set in self.parameter_sets]
 
@@ -97,6 +100,7 @@ class DynamicParametersSetup:
             writer.writerows(data)
 
     def _append_from_csv(self, filename: str):
+        ''' Append ParamterSets to the list of ParamtersSets from a .csv file'''
         with open(filename, newline='') as file:
             reader = csv.reader(file)
             raw_data = list(reader)
