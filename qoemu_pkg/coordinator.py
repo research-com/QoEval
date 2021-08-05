@@ -344,6 +344,11 @@ class Coordinator:
 
             # auto-detect video t_init_buf, t_raw_start, t_raw_end
             unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
+
+            if not os.path.isfile(unprocessed_video_path):
+                log.error(f"Cannot open unprocessed video file {unprocessed_video_path}")
+                raise RuntimeError(f"Video file {unprocessed_video_path} does not exist.")
+
             trigger_image_start = os.path.join(trigger_dir, f"{type_id}-{table_id}_start.png")
             trigger_image_end = os.path.join(trigger_dir, f"{type_id}-{table_id}_end.png")
             print("Detecting start of stimuli video section... ", end='')
@@ -454,7 +459,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['VS'], ['A'], generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['VS'], ['B'], generate_stimuli=False, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")
