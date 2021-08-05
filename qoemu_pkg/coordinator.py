@@ -107,12 +107,11 @@ class Coordinator:
         self.output_filename = get_video_id(self._type_id, self._table_id, self._entry_id)
         time_string = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
         self._gen_log.write(f"{time_string} {self.output_filename} {self._params} ")
-
         # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided if use-case requires play services
         self.emulator.launch(orientation=self._get_uc_orientation())
         try:
-            delay_bias_ul_dl = (
-                                           self.emulator.measure_rtt() + PROCESSING_BIAS) / 2  # can only measure RTT, assume 50%/50% ul vs. dl
+            delay_bias_ul_dl = \
+                (self.emulator.measure_rtt() + PROCESSING_BIAS) / 2  # can only measure RTT, assume 50%/50% ul vs. dl
         except RuntimeError as rte:
             self._gen_log.write(f" measuring delay bias failed - canceled. ")
             log.error(" measuring delay bias failed - check if you have Internet connectivity!")
@@ -162,6 +161,7 @@ class Coordinator:
 
         # store a copy of the qoemu configuration used to generate the stimuli (to be reproducible)
         cfg_log = os.path.join(config.video_capture_path.get(), f"{self.output_filename}.cfg")
+        config.store_netem_params(self._params)
         config.save_to_file(cfg_log)
 
         # initialize traffic analysis - if enabled
@@ -313,12 +313,16 @@ class Coordinator:
             video_id_in = get_video_id(type_id, table_id, entry_id, "0")
             video_id_out = get_video_id(type_id, table_id, entry_id, "1")
             if not overwrite and is_stimuli_available(type_id, table_id, entry_id, "1"):
-                print(f" Stimuli {get_video_id(type_id, table_id, entry_id)} postprocessed filed exists - skipped. ")
+                print(f" Stimuli {get_video_id(type_id, table_id, entry_id)} post-processed file exists - skipped. ")
                 continue
 
-            # store a copy of the qoemu configuration used for post-processing (to be reproducible)
             cfg_log = os.path.join(config.video_capture_path.get(), f"{video_id_out}.cfg")
-            config.save_to_file(cfg_log)
+            if os.path.isfile(cfg_log):
+                log.debug(f"Found an existing configuration - loading {cfg_log}")
+                config.load_from_file(cfg_log)
+            else:
+                # store a copy of the qoemu configuration used for post-processing (to be reproducible)
+                config.save_to_file(cfg_log)
 
             postprocessor = PostProcessor()
             print(f"Processing: {video_id_in}")
@@ -333,8 +337,10 @@ class Coordinator:
             # only some of the use-case types require a detection of the initialization phase (t-init)
             if self._get_uc_type() == UseCaseType.YOUTUBE:
                 is_detecting_t_init = True
+                is_normalizing_audio = True
             else:
                 is_detecting_t_init = False
+                is_normalizing_audio = False
 
             # auto-detect video t_init_buf, t_raw_start, t_raw_end
             unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
@@ -377,7 +383,8 @@ class Coordinator:
                     f"at {t_raw_end}s ! Check trigger images and verify that they are part of the recorded stimuli.")
 
             print("Cutting and merging video stimuli...")
-            postprocessor.process(video_id_in, video_id_out, t_init_buf,t_raw_start,d_start_to_end)
+            postprocessor.process(video_id_in, video_id_out, t_init_buf,t_raw_start,d_start_to_end,
+                                  normalize_audio=is_normalizing_audio)
             print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
         """
@@ -447,7 +454,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['WB'], ['I'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['VS'], ['A'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")

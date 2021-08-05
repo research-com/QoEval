@@ -14,10 +14,13 @@ from typing import List
 # default file name of configuration file and mandatory section name
 QOEMU_CONF = 'qoemu.conf'
 QOEMU_SECTION = 'QOEMU'
+NETEM_SECTION = 'NETEM'
+
 
 class MobileDeviceOrientation(Enum):
     PORTRAIT = 'portrait'
     LANDSCAPE = 'landscape'
+
 
 class MobileDeviceType(Enum):
     NONE = 'none'
@@ -30,8 +33,8 @@ class MobileDeviceType(Enum):
 _default_avd_path = os.path.join(pathlib.Path.home(), 'qoemu_avd')
 _default_video_capture_path = os.path.join(pathlib.Path.home(), 'stimuli')
 
-_default_config_file_locations = [os.path.join(os.path.dirname(__file__),QOEMU_CONF),
-    f'./{QOEMU_CONF}', os.path.join(pathlib.Path.home(), QOEMU_CONF),
+_default_config_file_locations = [os.path.join(os.path.dirname(__file__), QOEMU_CONF),
+                                  f'./{QOEMU_CONF}', os.path.join(pathlib.Path.home(), QOEMU_CONF),
                                   ]
 
 if os.environ.get("QOEMU_CONF"):
@@ -63,6 +66,8 @@ class QoEmuConfiguration:
         self.vid_start_detect_thr_size_high_relevance = IntOption(self, 'VidStartDetectThrSizeHighRelevance', 40000)
         self.vid_start_detect_thr_nr_frames = IntOption(self, 'VidStartDetectThrNrFrames', 3)
 
+        self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
+
     def save_to_file(self, file: str = None):
         if file != None:
             file_path = file
@@ -71,6 +76,21 @@ class QoEmuConfiguration:
 
         with open(file_path, 'w') as configfile:
             self.configparser.write(configfile)
+
+    def read_from_file(self, file: str = None):
+        if file != None:
+            file_path = file
+        else:
+            file_path = _default_config_file_locations[0]
+
+        with open(file_path, 'r') as configfile:
+            self.configparser.read(configfile)
+
+        self.__init__(configparser)
+
+    def store_netem_params(self, emulation_parameters):
+        for p in emulation_parameters:
+            FloatOption(self, p, 0.0, NETEM_SECTION).set(emulation_parameters[p])
 
 
 class Option:
@@ -95,7 +115,8 @@ class Option:
 class BoolOption(Option):
     def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
         super().__init__(config, option, str(default), section)
-        self.value = self.config.configparser.getboolean(section=self.section, option=self.option, fallback=self.default)
+        self.value = self.config.configparser.getboolean(section=self.section, option=self.option,
+                                                         fallback=self.default)
 
     def get(self) -> bool:
         return self.value
@@ -114,6 +135,19 @@ class IntOption(Option):
         return self.value
 
     def set(self, value: int):
+        self.value = value
+        self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
+
+
+class FloatOption(Option):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
+        super().__init__(config, option, str(default), section)
+        self.value = float(self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
+
+    def get(self) -> float:
+        return self.value
+
+    def set(self, value: float):
         self.value = value
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
@@ -152,5 +186,3 @@ if QOEMU_SECTION not in configparser:
     raise RuntimeError('No configuration file found - not even the default configuration. Check your installation.')
 
 config = QoEmuConfiguration(configparser)
-
-
