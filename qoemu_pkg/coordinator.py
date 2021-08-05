@@ -313,7 +313,7 @@ class Coordinator:
             video_id_in = get_video_id(type_id, table_id, entry_id, "0")
             video_id_out = get_video_id(type_id, table_id, entry_id, "1")
             if not overwrite and is_stimuli_available(type_id, table_id, entry_id, "1"):
-                print(f" Stimuli {get_video_id(type_id, table_id, entry_id)} postprocessed filed exists - skipped. ")
+                print(f" Stimuli {get_video_id(type_id, table_id, entry_id)} post-processed file exists - skipped. ")
                 continue
 
             cfg_log = os.path.join(config.video_capture_path.get(), f"{video_id_out}.cfg")
@@ -337,8 +337,10 @@ class Coordinator:
             # only some of the use-case types require a detection of the initialization phase (t-init)
             if self._get_uc_type() == UseCaseType.YOUTUBE:
                 is_detecting_t_init = True
+                is_normalizing_audio = True
             else:
                 is_detecting_t_init = False
+                is_normalizing_audio = False
 
             # auto-detect video t_init_buf, t_raw_start, t_raw_end
             unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
@@ -381,7 +383,8 @@ class Coordinator:
                     f"at {t_raw_end}s ! Check trigger images and verify that they are part of the recorded stimuli.")
 
             print("Cutting and merging video stimuli...")
-            postprocessor.process(video_id_in, video_id_out, t_init_buf,t_raw_start,d_start_to_end)
+            postprocessor.process(video_id_in, video_id_out, t_init_buf,t_raw_start,d_start_to_end,
+                                  normalize_audio=is_normalizing_audio)
             print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
         """
@@ -451,7 +454,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['VS'], ['A'], generate_stimuli=True, postprocessing=False, overwrite=False)
+    coordinator.start(['VS'], ['A'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")

@@ -66,6 +66,8 @@ class QoEmuConfiguration:
         self.vid_start_detect_thr_size_high_relevance = IntOption(self, 'VidStartDetectThrSizeHighRelevance', 40000)
         self.vid_start_detect_thr_nr_frames = IntOption(self, 'VidStartDetectThrNrFrames', 3)
 
+        self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
+
     def save_to_file(self, file: str = None):
         if file != None:
             file_path = file
