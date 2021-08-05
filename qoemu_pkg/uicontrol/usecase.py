@@ -30,7 +30,42 @@ class UseCase:
         if self.serialno == None:
             raise RuntimeError("no serial")
         self.time_end = None
+        self._vc = None
         self.state = UseCaseState.CREATED
+
+    def _touch_view_by_id(self, id: str, max_waiting_time: float = 0.5, text_input = None):
+        end_time = time.time() + max_waiting_time
+        while (time.time() < end_time):
+            # find view and touch element with specified id
+            self._vc.dump(window=-1, sleep=0)
+            target_view = self._vc.findViewById(id)
+            if target_view:
+                # log.debug(f"View {id} found!")
+                # log.debug(target_view.__tinyStr__())
+                target_view.touch()
+                if text_input:
+                    self.device.type(text_input)
+                return
+
+        log.error(f"View {id} NOT found!")
+        raise RuntimeError(f"View {id} NOT found!")
+
+    def _touch_view_by_text(self, text: str, max_waiting_time: float = 0.5, text_input = None):
+        end_time = time.time() + max_waiting_time
+        while (time.time() < end_time):
+            # find view and touch element with specified text
+            self._vc.dump(window=-1, sleep=0)
+            target_view = self._vc.findViewWithText(text)
+            if target_view:
+                # log.debug(f"View {id} found!")
+                # log.debug(target_view.__tinyStr__())
+                target_view.touch()
+                if text_input:
+                    self.device.type(text_input)
+                return
+
+        log.error(f"View with text {text} NOT found!")
+        raise RuntimeError(f"View with text {text} NOT found!")
 
     def prepare(self):
         pass

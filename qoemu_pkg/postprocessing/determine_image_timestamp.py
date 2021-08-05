@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 # Threshold indicating a significant change in accuracy
-SIGNIFICANT_LEVEL_IMPROVEMENT_THRESHOLD = 500
+SIGNIFICANT_LEVEL_IMPROVEMENT_THRESHOLD = 5000
 # Minimum difference in number of frames between two different scenes
 NEW_SCENE_FRAME_THRESHOLD = 60
 
