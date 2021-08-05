@@ -4,19 +4,6 @@ import subprocess
 import re
 from qoemu_pkg.configuration import config
 
-# size [B] of differential frame that triggers start of video (normal relevance)
-DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = config.vid_start_detect_thr_size_normal_relevance.get()
-# size [B] of differential frame that triggers start of video (high relevance, strong indicator)
-DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE = config.vid_start_detect_thr_size_high_relevance.get()
-# number of frames needed above the threshold to avoid false positives
-DIFF_THRESHOLD_NR_FRAMES = config.vid_start_detect_thr_nr_frames.get()
-
-# allow the frame size to dip below the threshold this many times to avoid false negatives
-DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED = 7
-# assumed accuracy for time [s] - times less then TIME_ACCURARY apart will be considered identical
-TIME_ACCURACY = 0.001
-
-
 def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> float:
     """
 
@@ -34,6 +21,19 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
                              '-print_format', 'xml',
                              '-select_streams', 'v:0',
                              video_path], stdout=subprocess.PIPE)
+
+    # config parameters (must be read upon each call since they can change over time)
+    #   size [B] of differential frame that triggers start of video (normal relevance)
+    DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = config.vid_start_detect_thr_size_normal_relevance.get()
+    #   size [B] of differential frame that triggers start of video (high relevance, strong indicator)
+    DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE = config.vid_start_detect_thr_size_high_relevance.get()
+    #   number of frames needed above the threshold to avoid false positives
+    DIFF_THRESHOLD_NR_FRAMES = config.vid_start_detect_thr_nr_frames.get()
+
+    # allow the frame size to dip below the threshold this many times to avoid false negatives
+    DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED = 7
+    # assumed accuracy for time [s] - times less then TIME_ACCURARY apart will be considered identical
+    TIME_ACCURACY = 0.001
 
     # currently predicted start time
     prediction = None

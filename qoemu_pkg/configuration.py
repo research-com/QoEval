@@ -81,12 +81,10 @@ class QoEmuConfiguration:
         if file != None:
             file_path = file
         else:
-            file_path = _default_config_file_locations[0]
-
-        with open(file_path, 'r') as configfile:
-            self.configparser.read(configfile)
-
-        self.__init__(configparser)
+            file_path = _default_config_file_locations
+        self.configparser.read(file_path)
+        # print({section: dict(self.configparser[section]) for section in self.configparser.sections()})
+        self.__init__(self.configparser)
 
     def store_netem_params(self, emulation_parameters):
         for p in emulation_parameters:
@@ -142,7 +140,8 @@ class IntOption(Option):
 class FloatOption(Option):
     def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
         super().__init__(config, option, str(default), section)
-        self.value = float(self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
+        self.value = float(
+            self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
 
     def get(self) -> float:
         return self.value
@@ -150,6 +149,7 @@ class FloatOption(Option):
     def set(self, value: float):
         self.value = value
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
+
 
 class MobileDeviceTypeOption(Option):
     def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION):
@@ -178,11 +178,11 @@ class ListIntOption(Option):
         self.config.configparser.set(self.section, self.option, self.value)
 
 
-configparser = configparser.ConfigParser()
+parser = configparser.ConfigParser()
 
-configparser.read(_default_config_file_locations)  # note: last file will take precedence in case of overlap
+parser.read(_default_config_file_locations)  # note: last file will take precedence in case of overlap
 
-if QOEMU_SECTION not in configparser:
+if QOEMU_SECTION not in parser:
     raise RuntimeError('No configuration file found - not even the default configuration. Check your installation.')
 
-config = QoEmuConfiguration(configparser)
+config = QoEmuConfiguration(parser)

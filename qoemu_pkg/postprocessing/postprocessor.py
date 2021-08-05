@@ -65,7 +65,6 @@ def check_env(name: str):
 class PostProcessor:
     def __init__(self):
         self._prefix_video = None
-        log.debug(f"Using prefix video {self._prefix_video} for post-processing.")
         check_env(FFMPEG)
         check_env(FFPROBE)
         check_env(MP4BOX)
@@ -109,7 +108,8 @@ class PostProcessor:
         # perform postprocessing
         with importlib_resources.as_file(self._prefix_video) as prefix_video_path:
             # Create mpeg4 encoded .avi output file
-            if (initbuf_len > 0):
+            if initbuf_len > 0:
+                log.debug(f"Using prefix video {self._prefix_video} for post-processing.")
                 command = f"{FFMPEG} -i {prefix_video_path} " \
                           f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
                           f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
@@ -138,7 +138,7 @@ class PostProcessor:
                            universal_newlines=True).check_returncode()
 
             # Additionally create a H.264 encoded .mp4 output file
-            if (initbuf_len > 0):
+            if initbuf_len > 0:
                 command = f"{FFMPEG} -i {prefix_video_path} " \
                           f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi  " \
                           f"-crf 4 -filter_complex \"" \

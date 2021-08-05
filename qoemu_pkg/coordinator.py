@@ -319,7 +319,7 @@ class Coordinator:
             cfg_log = os.path.join(config.video_capture_path.get(), f"{video_id_out}.cfg")
             if os.path.isfile(cfg_log):
                 log.debug(f"Found an existing configuration - loading {cfg_log}")
-                config.load_from_file(cfg_log)
+                config.read_from_file(cfg_log)
             else:
                 # store a copy of the qoemu configuration used for post-processing (to be reproducible)
                 config.save_to_file(cfg_log)
@@ -454,7 +454,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['VS'], ['A'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['VS'], ['A'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")
