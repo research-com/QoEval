@@ -447,7 +447,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['WB'], ['A'], generate_stimuli=False, postprocessing=True, overwrite=True)
+    coordinator.start(['WB'], ['I'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")
