@@ -345,9 +345,8 @@ class Coordinator:
             t_raw_start = frame_to_time(unprocessed_video_path, start_frame_nr)
             print(f"{t_raw_start} s")
 
-            t_detect_start = max(0, t_raw_start - (2.5 * VIDEO_PRE_START))
-
             if is_detecting_t_init:
+                t_detect_start = max(0, t_raw_start - (2.5 * VIDEO_PRE_START))
                 print(f"Detecting start of video playback (search starts at: {t_detect_start} s) ... ", end='')
                 t_init_buf = determine_video_start(unprocessed_video_path, t_detect_start)
                 if not t_init_buf:
@@ -448,7 +447,7 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['WB'], ['A'], generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['WB'], ['A'], generate_stimuli=False, postprocessing=True, overwrite=True)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")
