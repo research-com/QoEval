@@ -9,6 +9,7 @@ import time
 import math
 from typing import List
 import csv
+from timeit import default_timer as timer
 
 MAX_CONNECTIONS = 1
 
@@ -44,21 +45,47 @@ class DynamicParametersSetup:
 
     Attributes:
         parameter_sets: the parameters sets to be looped over by dynamic emulation
+        verbose: decides whether netem changes are being logged
+
+    Example Usage:
+
+        A_5000 = DynamicParametersSetup.from_csv("../../stimuli-params/variable_throughput/A_5000.csv")
+
+        connection = Connection("enp51s0", "enp51s0", rul=50000, rdl=10000, dul=50, ddl=50, t_init=100,
+                      dynamic_parameters_setup=A_5000)
+        connection.enable_netem(consider_t_init=True, consider_dynamic_parameters=True)
+
+
     """
     parameter_sets: List[ParameterSet] = field(default_factory=list, init=False)
+    verbose: bool = field(default=False)
 
-    def append_parameter_set(self, parameter_set: ParameterSet):
+    @staticmethod
+    def from_nested_lists(parameter_sets: List[List[int]], verbose: bool = False):
+        result = DynamicParametersSetup(verbose=verbose)
+        result._append_parameter_sets_from_nested_lists(parameter_sets)
+        return result
+
+    @staticmethod
+    def from_csv(filename: str, verbose: bool = False):
+        result = DynamicParametersSetup(verbose=verbose)
+        result._append_from_csv(filename)
+        return result
+
+    def _append_parameter_set(self, parameter_set: ParameterSet):
         self.parameter_sets.append(parameter_set)
 
-    def append_parameter_sets(self, parameter_sets: List[ParameterSet]):
+    def _append_parameter_sets(self, parameter_sets: List[ParameterSet]):
         for parameter in parameter_sets:
             self.parameter_sets.append(parameter)
 
-    def append_parameter_set_from_list(self, *args):
+    def _append_parameter_set_from_list(self, *args):
         self.parameter_sets.append(ParameterSet(*args))
 
-    def append_parameter_sets_from_lists(self, parameter_sets: List[List[int]]):
+    def _append_parameter_sets_from_nested_lists(self, parameter_sets: List[List[int]]):
         for parameter_set in parameter_sets:
+            if len(parameter_set) == 0:
+                continue
             self.parameter_sets.append(ParameterSet(*parameter_set))
 
     def save_to_csv(self, filename: str):
@@ -69,13 +96,13 @@ class DynamicParametersSetup:
             writer.writerow(data_field.name for data_field in dataclasses.fields(ParameterSet))
             writer.writerows(data)
 
-    def load_from_csv(self, filename: str):
+    def _append_from_csv(self, filename: str):
         with open(filename, newline='') as file:
             reader = csv.reader(file)
             raw_data = list(reader)
             data = [list(map(int, parameter_set)) for parameter_set in raw_data[1:]]
-            self.parameter_sets = []
-            self.append_parameter_sets_from_lists(data)
+            self._append_parameter_sets_from_nested_lists(data)
+
 
 
 class Connection:
@@ -305,10 +332,13 @@ class Connection:
         else:
             raise RuntimeError('Uable to initialize device.')
 
-    def _update_outgoing(self):
+    def _update_outgoing(self, verbose=True):
         """Updates the netem qdisc for outgoing traffic for this connection"""
-        log.debug(f"Changing egress netem qdisc for connection: '{self.name}'")
+
         parent_id = "parent 1:2"
+
+        start = timer()
+
         if not self._t_init_active:
             subprocess.run(
                 shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
@@ -323,9 +353,16 @@ class Connection:
                shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
                            f"{parent_id} netem rate {self.rul}kbit delay {self.t_init}ms loss 0%")).check_returncode()
 
-    def _update_incoming(self):
+        end = timer()
+
+        if verbose:
+            log.debug(f"Changed egress netem qdisc for connection: '{self.name}'. It took {end - start} seconds")
+
+    def _update_incoming(self, verbose=True):
         """Updates the netem qdisc for incoming traffic for this connection"""
-        log.debug(f"Changing ingress netem qdisc for connection: '{self.name}'")
+
+        start = timer()
+
         if not self._t_init_active:
             subprocess.run(shlex.split(
                 f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} "
@@ -339,6 +376,11 @@ class Connection:
             subprocess.run(shlex.split(
                 f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} "
                 f"root netem rate {self.rdl}kbit delay {self.t_init}ms loss 0%")).check_returncode()
+
+        end = timer()
+
+        if verbose:
+            log.debug(f"Changed ingress netem qdisc for connection: '{self.name}'. It took {end - start} seconds")
 
     def change_parameters(self, t_init:float=None, rul:float=None, rdl:float=None, dul:float=None, ddl:float=None):
         """
@@ -491,6 +533,8 @@ class Connection:
 
     def _emulate_dynamic_parameters(self):
         """Emulate dynamic change of netem parameters"""
+        next_change = timer()
+
         while self.emulation_is_active:
             for parameter_set in self.dynamic_parameters_setup.parameter_sets:
                 if self.emulation_is_active:
@@ -502,10 +546,15 @@ class Connection:
                         self.dul = parameter_set.dul
                     if parameter_set.ddl >= 0:
                         self.ddl = parameter_set.ddl
-                    self._update_incoming()
-                    self._update_outgoing()
+                    self._update_incoming(self.dynamic_parameters_setup.verbose)
+                    self._update_outgoing(self.dynamic_parameters_setup.verbose)
+
                     if parameter_set.timeframe >= 0:
-                        time.sleep(parameter_set.timeframe/1000.0)
+                        timeframe_in_seconds = parameter_set.timeframe/1000.0
+                        next_change += timeframe_in_seconds
+                        time.sleep(timeframe_in_seconds*0.8)
+                        while timer() < next_change:
+                            pass
                     else:
                         return
 
