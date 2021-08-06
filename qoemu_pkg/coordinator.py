@@ -389,7 +389,7 @@ class Coordinator:
 
             print("Cutting and merging video stimuli...")
             postprocessor.process(video_id_in, video_id_out, t_init_buf,t_raw_start,d_start_to_end,
-                                  normalize_audio=is_normalizing_audio)
+                                  normalize_audio=is_normalizing_audio, erase_box=config.vid_erase_box.get())
             print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
         """
@@ -459,7 +459,8 @@ if __name__ == '__main__':
     print("Coordinator main started")
 
     coordinator = Coordinator()
-    coordinator.start(['VS'], ['B'], generate_stimuli=False, postprocessing=True, overwrite=False)
+
+    coordinator.start(['VS'], ['C'], ['1'], generate_stimuli=False, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")

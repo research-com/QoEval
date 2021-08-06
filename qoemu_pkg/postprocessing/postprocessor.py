@@ -69,11 +69,8 @@ class PostProcessor:
         check_env(FFPROBE)
         check_env(MP4BOX)
 
-    def _calculate_audio_gain(self):
-        pass
-
     def process(self, input_filename: str, output_filename: str, initbuf_len: float, main_video_start_time: float,
-                main_video_duration: float, normalize_audio: bool = False):
+                main_video_duration: float, normalize_audio: bool = False, erase_box = None):
 
         main_video_end_time = main_video_start_time + main_video_duration
 
@@ -105,6 +102,13 @@ class PostProcessor:
                           f"target volume: {target_volume})")
                 ffmpeg_audio_filter = f"volume={volume}dB,"
 
+        # configure optional erasing of a box (e.g. logo)
+        if erase_box and len(erase_box) > 0:
+            ffmpeg_video_filter = f"drawbox=x={erase_box[0]}:y={erase_box[1]}:" \
+                                  f"w={erase_box[2]}:h={erase_box[3]}:color=black:t=fill,"
+        else:
+            ffmpeg_video_filter = "" # default is no video filtering/erasing
+
         # perform postprocessing
         with importlib_resources.as_file(self._prefix_video) as prefix_video_path:
             # Create mpeg4 encoded .avi output file
@@ -116,7 +120,8 @@ class PostProcessor:
                           f"-filter_complex \"" \
                           f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
                           f"[0:a]atrim=0:{initbuf_len},asetpts=PTS-STARTPTS[a0]; " \
-                          f"[1:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v1]; " \
+                          f"[1:v]trim={main_video_start_time}:{main_video_end_time}," \
+                          f"{ffmpeg_video_filter}setpts=PTS-STARTPTS[v1]; " \
                           f"[1:a]atrim={main_video_start_time}:{main_video_end_time}," \
                           f"{ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a1]; " \
                           f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]\" " \
@@ -127,7 +132,8 @@ class PostProcessor:
                           f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
                           f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
                           f"-filter_complex \"" \
-                          f"[0:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v0]; " \
+                          f"[0:v]trim={main_video_start_time}:{main_video_end_time}," \
+                          f"{ffmpeg_video_filter}setpts=PTS-STARTPTS[v0]; " \
                           f"[0:a]atrim={main_video_start_time}:{main_video_end_time}," \
                           f"{ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a0] " \
                           f"\" " \
@@ -144,7 +150,8 @@ class PostProcessor:
                           f"-crf 4 -filter_complex \"" \
                           f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
                           f"[0:a]atrim=0:{initbuf_len},asetpts=PTS-STARTPTS[a0]; " \
-                          f"[1:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v1]; " \
+                          f"[1:v]trim={main_video_start_time}:{main_video_end_time}," \
+                          f"{ffmpeg_video_filter}setpts=PTS-STARTPTS[v1]; " \
                           f"[1:a]atrim={main_video_start_time}:{main_video_end_time}," \
                           f"{ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a1]; " \
                           f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]\" " \
@@ -155,7 +162,8 @@ class PostProcessor:
                           f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
                           f"-crf 4 " \
                           f"-filter_complex \"" \
-                          f"[0:v]trim={main_video_start_time}:{main_video_end_time},setpts=PTS-STARTPTS[v0]; " \
+                          f"[0:v]trim={main_video_start_time}:{main_video_end_time}," \
+                          f"{ffmpeg_video_filter}setpts=PTS-STARTPTS[v0]; " \
                           f"[0:a]atrim={main_video_start_time}:{main_video_end_time}," \
                           f"{ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a0] " \
                           f"\" " \
@@ -168,6 +176,6 @@ class PostProcessor:
 
 if __name__ == '__main__':
     p = PostProcessor()
-    p.process("VS-A-1_E1-R-0.1_P0", "test", 2, 5, 10, normalize_audio=True)
+    p.process("VS-C-1_E1-R-0.1_P0", "test", 2, 5, 10, normalize_audio=True, erase_box=[2180, 930, 130, 130])
 
     print("Done.")

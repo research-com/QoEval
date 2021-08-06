@@ -65,6 +65,7 @@ class QoEmuConfiguration:
         self.vid_start_detect_thr_size_normal_relevance = IntOption(self, 'VidStartDetectThrSizeNormalRelevance', 10000)
         self.vid_start_detect_thr_size_high_relevance = IntOption(self, 'VidStartDetectThrSizeHighRelevance', 40000)
         self.vid_start_detect_thr_nr_frames = IntOption(self, 'VidStartDetectThrNrFrames', 3)
+        self.vid_erase_box = ListIntOption(self, 'VidEraseBox', None)
 
         self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
 
@@ -168,10 +169,11 @@ class ListIntOption(Option):
         super().__init__(config, option, default, section)
 
     def get(self) -> List[int]:
-        excluded_ports = []
-        for port in self.value.split(','):
-            excluded_ports.append(int(port))
-        return excluded_ports
+        result_list = []
+        if self.value:
+            for value in self.value.split(','):
+                result_list.append(int(value))
+        return result_list
 
     def set(self, value: List[int]):
         self.value = ",".join([str(i) for i in value])
