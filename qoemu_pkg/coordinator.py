@@ -134,7 +134,6 @@ class Coordinator:
 
         # create and prepare use-case
         if self._get_uc_type() == UseCaseType.YOUTUBE:
-            self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url)
             s = convert_to_seconds(get_start(self._type_id, self._table_id, self._entry_id))
             s = s - VIDEO_PRE_START
             if s > 0.0:
@@ -143,6 +142,7 @@ class Coordinator:
                     url = f"{url}&t={int(s)}"
                 else:
                     url = f"{url}?t={int(s)}"
+            self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url)
         if self._get_uc_type() == UseCaseType.WEB_BROWSING:
             self.ui_control.set_use_case(UseCaseType.WEB_BROWSING, url=url)
             s = 60  # maximum length of web-browsing use-case
@@ -460,7 +460,7 @@ if __name__ == '__main__':
 
     coordinator = Coordinator()
 
-    coordinator.start(['VS'], ['C'], ['1'], generate_stimuli=False, postprocessing=True, overwrite=False)
+    coordinator.start(['VS'], ['C'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")
