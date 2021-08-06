@@ -2,6 +2,7 @@ import io
 import multiprocessing
 import subprocess
 import re
+import logging as log
 from qoemu_pkg.configuration import config
 
 def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> float:
@@ -45,7 +46,7 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
     for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
 
         if line.lstrip().startswith('<frame key_frame'):
-            # print(line)
+            # log.debug(line)
             key = bool(int(re.search(r'\bkey_frame="(.+?)"', line).group(1)))
             time = float(re.search(r'\bpkt_pts_time="(.+?)"', line).group(1))
             size = int(re.search(r'\bpkt_size="(.+?)"', line).group(1))
@@ -54,7 +55,7 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
                 continue
 
             if not key:
-                # print(f"time: {time}  size:{size}  counter: {counter_positive}  countdown: {remaining_tolerated}")
+                log.debug(f"time: {time}  size:{size}  counter: {counter_positive}  countdown: {remaining_tolerated}")
                 if size > DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE:
                     if size > DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE:
                         increment = 3
