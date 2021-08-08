@@ -11,7 +11,7 @@ from qoemu_pkg.configuration import MobileDeviceType, MobileDeviceOrientation, c
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
 from qoemu_pkg.emulator.standard_emulator import StandardEmulator
 from qoemu_pkg.emulator.physical_device import PhysicalDevice
-from qoemu_pkg.netem.netem import Connection
+from qoemu_pkg.netem.netem import Connection, DynamicParametersSetup
 from qoemu_pkg.uicontrol.uicontrol import UiControl
 from qoemu_pkg.uicontrol.usecase import UseCaseType
 from qoemu_pkg.parser.parser import *
@@ -121,12 +121,28 @@ class Coordinator:
             raise RuntimeError(
                 f"Delay bias of {delay_bias_ul_dl}ms exceeds delay parameter of {self._params['ddl']}ms! Cannot emulate.")
 
-        self.netem = Connection("coord1", config.net_device_name.get(), t_init=self._params['t_init'],
-                                rul=self._params['rul'], rdl=self._params['rdl'],
-                                dul=(self._params['dul'] - delay_bias_ul_dl),
-                                ddl=(self._params['ddl'] - delay_bias_ul_dl),
-                                android_ip=self.emulator.get_ip_address(),  # note: only valid, if not in host-ap mode
-                                exclude_ports=config.excluded_ports.get())  # exclude ports, e.g. as used for ssh control
+        if self._params['dynamic'] and len(self._params['dynamic']) > 0:
+            dynamic_parameter_variant = self._params['dynamic']
+            dynamic_parameter_file = os.path.join(config.dynamic_parameter_path.get(),
+                                                  f"{dynamic_parameter_variant}_{int(self._params['rdl'])}.csv")
+            log.debug(f"Dynamic connection parameters are active, using parameter file:{dynamic_parameter_file}")
+            adaptive_params = DynamicParametersSetup.from_csv(dynamic_parameter_file, verbose=False)
+
+            self.netem = Connection("coord1", config.net_device_name.get(), t_init=self._params['t_init'],
+                                    rul=self._params['rul'], rdl=self._params['rdl'],
+                                    dul=(self._params['dul'] - delay_bias_ul_dl),
+                                    ddl=(self._params['ddl'] - delay_bias_ul_dl),
+                                    android_ip=self.emulator.get_ip_address(), # note: only valid, if not in host-ap mode
+                                    exclude_ports=config.excluded_ports.get(), # exclude ports, e.g. as used for ssh control
+                                    dynamic_parameters_setup=adaptive_params)  # set of dynamic connection parameters
+        else:
+            # connection parameters are static, no dynamic_parameters_setup required
+            self.netem = Connection("coord1", config.net_device_name.get(), t_init=self._params['t_init'],
+                                    rul=self._params['rul'], rdl=self._params['rdl'],
+                                    dul=(self._params['dul'] - delay_bias_ul_dl),
+                                    ddl=(self._params['ddl'] - delay_bias_ul_dl),
+                                    android_ip=self.emulator.get_ip_address(),  # note: only valid, if not in host-ap mode
+                                    exclude_ports=config.excluded_ports.get())  # exclude ports, e.g. as used for ssh control
 
         url = f"{get_link(self._type_id, self._table_id, self._entry_id)}"
         if len(url) < 7:
@@ -204,7 +220,9 @@ class Coordinator:
         capture_thread = threading.Thread(target=self.capture.start_recording,
                                           args=(self.output_filename, capture_time))
 
-        self.netem.enable_netem()
+        is_using_dynamic_params = self._params['dynamic'] and (len(self._params['dynamic']) > 0)
+
+        self.netem.enable_netem(consider_t_init=True, consider_dynamic_parameters=is_using_dynamic_params)
         # input("netem active - check conditions on mobile device and press enter to continue...")
 
         if config.traffic_analysis_live.get() or config.traffic_analysis_plot.get():
@@ -460,7 +478,7 @@ if __name__ == '__main__':
 
     coordinator = Coordinator()
 
-    coordinator.start(['VS'], ['C'], ['1'], generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['VS'], ['H'], ['2'], generate_stimuli=True, postprocessing=False, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")

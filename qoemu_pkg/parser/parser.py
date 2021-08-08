@@ -397,14 +397,16 @@ def get_parameters(type_id, table_id, entry_id):
         log.error("No file loaded")
         return
 
-    parameter_names = ['t_init', 'rul', 'rdl', 'dul', 'ddl']
+    parameter_names = ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic']
 
     for line in file:
         if line.startswith(f"{type_id}-{table_id}-{entry_id}"):
-            parameter_values_str = line.split(";")[2:7]
-            parameter_values = [float(i) for i in parameter_values_str]
+            float_parameter_values_str = line.split(";")[2:7]
+            float_parameter_values = [float(i) for i in float_parameter_values_str]
+            # evaluate string parameters
+            str_parameter_values = line.split(";")[7:10]
             it_name = iter(parameter_names)
-            it_value = iter(parameter_values)
+            it_value = iter(float_parameter_values + str_parameter_values)
             return dict(zip(it_name,it_value))
 
 
