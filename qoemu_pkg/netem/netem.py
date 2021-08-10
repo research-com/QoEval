@@ -360,7 +360,8 @@ class Connection:
         end = timer()
 
         if verbose:
-            log.debug(f"Changed egress netem qdisc for connection: '{self.name}'. It took {end - start} seconds")
+            delay = (end - start) * 1000.0
+            log.debug(f"Changed egress netem qdisc for connection: '{self.name}'. It took {delay:.2f} ms.")
 
     def _update_incoming(self, verbose=True):
         """Updates the netem qdisc for incoming traffic for this connection"""
@@ -384,7 +385,8 @@ class Connection:
         end = timer()
 
         if verbose:
-            log.debug(f"Changed ingress netem qdisc for connection: '{self.name}'. It took {end - start} seconds")
+            delay = (end - start) * 1000.0
+            log.debug(f"Changed egress netem qdisc for connection: '{self.name}'. It took {delay:.2f} ms.")
 
     def change_parameters(self, t_init:float=None, rul:float=None, rdl:float=None, dul:float=None, ddl:float=None):
         """
@@ -453,6 +455,9 @@ class Connection:
         emulate_dynamic_parameters = consider_dynamic_parameters \
                                      and self.dynamic_parameters_setup is not None \
                                      and len(self.dynamic_parameters_setup.parameter_sets) > 0
+        if consider_dynamic_parameters and not emulate_dynamic_parameters:
+            log.warning(f"Dynamic parameters cannot be considered - dynamic parameter setup is not available.")
+
         emulate_dynamically = emulate_t_init or emulate_dynamic_parameters
         if emulate_dynamically:
             self._dynamic_emulation_thread = threading.Thread(target=self._emulate_dynamically,
@@ -556,9 +561,9 @@ class Connection:
                     if parameter_set.timeframe >= 0:
                         timeframe_in_seconds = parameter_set.timeframe/1000.0
                         next_change += timeframe_in_seconds
-                        time.sleep(timeframe_in_seconds*0.8)
-                        while timer() < next_change:
-                            pass
+                        if self.dynamic_parameters_setup.verbose:
+                            log.debug(f"[{timer()}] Updated all dynamic connection parameters - next change will occur at {next_change} in {int((next_change-timer())*1000)} ms")
+                        time.sleep(next_change-timer())
                     else:
                         return
 
