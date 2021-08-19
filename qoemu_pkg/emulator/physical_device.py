@@ -8,7 +8,6 @@ import time
 
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME, \
     MEASUREMENT_DURATION
-from qoemu_pkg.configuration import vd_path
 
 import logging as log
 import subprocess
@@ -58,7 +57,7 @@ class PhysicalDevice(MobileDevice):
         # varying delays in times without data traffic. In order to avoid this effect,
         # we send random data to the phone during the RTT measurement procedure
         # so it (hopefully) will not be able to switch to a power saving mode
-        traffic_gen_thread = threading.Thread(target=self.generate_udp_traffic, args=(128, 100,MEASUREMENT_DURATION+3))
+        traffic_gen_thread = threading.Thread(target=self.generate_udp_traffic, args=(128, 100, MEASUREMENT_DURATION+3))
         traffic_gen_thread.start()
         time.sleep(0.5)
         measured_rtt = super().measure_rtt()
@@ -96,6 +95,7 @@ class PhysicalDevice(MobileDevice):
             log.debug(f"physical device orientation: {surface_orientation_number}")
         else:
             log.error("Cannot determine orientation of physical device.")
+            raise RuntimeError(f"Cannot determine orientation of device - ADB dumpsys output did not match.")
         if surface_orientation_number == 1 or surface_orientation_number == 3:
             return MobileDeviceOrientation.LANDSCAPE
         else:

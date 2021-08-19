@@ -13,10 +13,10 @@ import re
 import socket
 import time
 
-from qoemu_pkg.configuration import MobileDeviceOrientation, adb_device_serial
+from qoemu_pkg.configuration import MobileDeviceOrientation, config
 
-if len(adb_device_serial) > 1:
-    ADB_NAME = f"adb -s {adb_device_serial}"   #-e selects emulator, -d usb-connected device, -s serialnr
+if len(config.adb_device_serial.get()) > 1:
+    ADB_NAME = f"adb -s {config.adb_device_serial.get()}"   #-e selects emulator, -d usb-connected device, -s serialnr
 else:
     ADB_NAME = "adb"
 
@@ -182,7 +182,7 @@ class MobileDevice:
             f"{ADB_NAME} shell ping -c {MEASUREMENT_DURATION/0.2} -i 0.2 {MEASUREMENT_TEST_HOST}"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
-        pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})/(\d{1,3}.\d{1,3})\sms"
+        pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})\sms"
         matcher = re.compile(pattern)
         match = (matcher.search(output.stdout))
         if match:

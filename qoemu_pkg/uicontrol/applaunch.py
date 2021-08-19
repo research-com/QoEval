@@ -20,8 +20,8 @@ from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
 
 
 class _AppLaunch(UseCase):
-    def __init__(self, device, **kwargs):
-        super().__init__(device)
+    def __init__(self, device, serialno, **kwargs):
+        super().__init__(device, serialno)
         self._package = kwargs.get("package")
         self._activity = kwargs.get("activity")
 

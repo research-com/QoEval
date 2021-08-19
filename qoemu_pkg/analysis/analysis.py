@@ -268,7 +268,7 @@ class Plot:
                  packets_bytes: str,
                  directions: List[str] = [INOUT],
                  protocols: List[str] = [ALL],
-                 kind: str = None,
+                 kind: str = BAR,
                  grid: str = None,
                  stacked=False,
                  tick_interval: int = -1,
@@ -445,7 +445,7 @@ class Plot:
         if(self.packets_bytes == BYTES):
             df = self._rescale_to_bits_per_second(df)
         if(self.packets_bytes == PACKETS):
-            df = self._rescale_to_packets_per_second()
+            df = self._rescale_to_packets_per_second(df)
 
         # plot using pandas
         df.plot(kind="bar", stacked=self.stacked, align="edge", width=0.8, ax=figure.gca())

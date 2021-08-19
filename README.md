@@ -1,15 +1,61 @@
 # QoEmu V0.1
 
 ## Installation
+
+*Note: These instructions assume that Ubuntu 21.04 is used.*
+
+Clone the repository and change to the qoemu directory.
+
+```
+git clone --recursive [URL to repo]
+cd qoemu
+```
+
+### git LFS required
 When cloning the git repository, check that git lfs is enabled
 by using the command ``git lfs install`` and ``git lfs fetch``
 
-## Additional Post-Processing Tools
-Currently, the process of creating the stimuli videos requires a final manual
-post-processing step. For this, a *lossless* video manipulation tool is 
-required. We recommend https://github.com/mifi/lossless-cut.git
+### System setup
+We strongly recommend using a virtual environment
+```
+python3.9 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip3 install -r requirements.txt
+```
 
-### Remarks regarding installation of lossless-cut
+### Building the package
+The python setuptools and a builder (e.g. PyPA build) are used to build the package:
+```
+pip3 install build
+python3.9 -m build
+```
+
+Afterwards, the package can be installed using pip:
+
+```
+pip3 install dist/qoemu-pkg-hm-0.1.0.tar.gz
+```
+
+### Running QoEmu
+A user-friendly GUI for QoEmu is currently under development. Until it is available,
+the ``coordinator.py`` is used to control the emulation.
+
+The package installs a command-line entry point for it - after installing the package, you 
+can simply launch qoemu via command-line. Stimuli type (e.g. "VS") and stimuli table id (e.g. "B") need to be 
+specified. The third parameter specified the stimuli id, use ALL to generate all stimuli within the table.
+```
+qoemu VS B ALL
+```
+
+
+### Optional Additional Post-Processing Tools: Lossless Cut
+Basic postprocessing is performed by QoEmu using trigger frames to detect
+the beginning and the end of a stimuli section. If you want to apply
+additional postprocessing, a *lossless* video manipulation tool can 
+be used. We recommend https://github.com/mifi/lossless-cut.git
+
+#### Remarks regarding installation of lossless-cut
 * For starting lossless-cut, see the developer-notes within the
 lossless-cut repo.
 
@@ -31,6 +77,14 @@ For controlling a real Android phone:
 * The qoemu host must be configured to act as a wireless hotspot for the phone.
 * For audio capturing, the phone must be connected via line-out or Bluetooth
   to the qoemu host
+
+### Mobile Device Control and Screen Capturing
+For controlling the mobile device and screen capturing, the Genymobile tool *scrcpy* is used. It can be downloaded at https://github.com/Genymobile/scrcpy
+
+Follow the instructions on the Genymobile srccpy website to install and test *scrcpy*. 
+
+QoEmu has been tested with the following versions of *scrcpy*:
+v1.18
 
 ### Routing WLAN Traffic of Real Device via QoEmu
 In order to enable QoEmu to emulate various networking conditions,
@@ -123,3 +177,12 @@ that the measured delays are as expected/configured within QoEmu. If the delays 
 than expected or vary to an extremely large extend, update your linux kernel and check that the WLAN
 device driver is working properly and all power-saving features have been disabled.
 
+# Acknowledgements
+We make use of a bunch of other software tools - and thank all authors of these for
+for making them publicly available. These include, but are not limited to:
+* Android View Client https://github.com/dtmilano/AndroidViewClient
+* Genimotion Android Emulator https://www.genymotion.com/
+* Genimotion scrcpy https://github.com/Genymobile/scrcpy
+* The GPAC suite for video and audio processing:
+    GPAC Filters: https://doi.org/10.1145/3339825.3394929
+    GPAC: https://doi.org/10.1145/1291233.1291452

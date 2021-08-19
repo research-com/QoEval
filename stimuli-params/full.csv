@@ -1,23 +1,22 @@
-Video-Streaming;;;;;;;;;;;;;;
+﻿Video-Streaming;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";Codec;;;;Video;Link;Assessment
 VS-A-1;Basic set;720;80;50000;22;22;Reference;Auto;;;;"tagesschau 20:00 Uhr, 14.12.2020
-Excerpt from 14:55 (min:sec) to 15:09 (min:sec).
+Excerpt from 14:51 (min:sec) to 15:09 (min:sec).
 (Alternative excerpt (t.b.d.): from 00:00 to 00:20).
 Resolution: Auto, 720p, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=1dxhytrMmkM;Throughput HD;
-VS-A-2;"Basic set";720;55;10000;22;22;Assessment;Auto;;;;;;
-VS-A-3;"Basic set";720;50;5000;22;22;Assessment;Auto;;;;;;
-VS-A-4;"Basic set";860;41;2000;46;46;Assessment;Auto;;;;;;
-VS-A-5;"Basic set";1800;39;1000;200;200;Assessment;Auto;;;;;;
-VS-A-6;"Basic set";2900;37;750;240;240;Assessment;Auto;;;;;;
-VS-A-7;"Basic set";4000;35;500;305;305;Assessment;Auto;;;;;;
-VS-A-8;"Basic set";5000;34;200;400;400;Assessment;Auto;;;;;;
-VS-A-9;"Basic set";5600;33;100;440;440;Assessment;Auto;;;;;;
+VS-A-2;"Basic set";720;63;20000;22;22;Assessment;Auto;;;;;;
+VS-A-3;"Basic set";720;55;10000;22;22;Assessment;Auto;;;;;;
+VS-A-4;"Basic set";720;50;5000;22;22;Assessment;Auto;;;;;;
+VS-A-5;"Basic set";860;41;2000;46;46;Assessment;Auto;;;;;;
+VS-A-6;"Basic set";1800;39;1000;200;200;Assessment;Auto;;;;;;
+VS-A-7;"Basic set";2900;37;750;240;240;Assessment;Auto;;;;;;
+VS-A-8;"Basic set";4000;35;500;305;305;Assessment;Auto;;;;;;
 ;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";Codec;;;;Video;Link;Assessment
 VS-B-1;"Basic set";720;80;50000;16;16;Reference;Auto;;;;"Beethoven: Symphony no. 5 in C Minor, op. 67 | Christian Thielemann (Full HD 1080p)
-Excerpt from appr. 00:00:55 (h:min:sec) to 00:01:14 (h:min:sec).
+Excerpt from appr. 00:00:57 (h:min:sec) to 00:01:14 (h:min:sec).
 (Alternative excerpt (t.b.d.): from 00:00:57 to 00:01:18).
 Resolution: Auto, 1080p, 720p, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=yTL8j-JU_ow;"Throughput (Full-HD)"
 VS-B-2;"Basic set";720;63;20000;16;16;Assessment;Auto;;;;;;
@@ -32,19 +31,17 @@ VS-B-9;"Basic set";11600;40;100;400;400;Assessment;Auto;;;;;;
 ;;;;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";Codec;;;;Video;Link;Assessment
 VS-C-1;"Basic set";720;100;50000;20;20;Reference;Auto;;;;"Film “Trois couleurs bleu”:
-Excerpt from appr. 00:20 (min:sec) to 00:33 (min:sec).
+Excerpt from appr. 00:20 (min:sec) to 00:40 (min:sec).
 (Alternative excerpt (t.b.d.): from 00:20 to 00:28 or from 00:20 to 00:38).
-Resolution: Auto, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=Hxu6my_t4pM;Throughput
-VS-C-2;"Basic set";720;100;10000;20;20;Assessment;Auto;;;;;;
-VS-C-3;"Basic set";720;100;5000;50;50;Assessment;Auto;;;;;;
-VS-C-4;"Basic set";6000;80;2000;400;400;"Anchor 1";Auto;;;;;;
-VS-C-5;"Basic set";14000;50;1000;700;700;"Anchor 2";Auto;;;;;;
-VS-C-6;"Basic set";15500;40;750;750;750;Assessment;Auto;;;;;;
-VS-C-7;"Basic set";17000;40;500;800;800;Assessment;Auto;;;;;;
-VS-C-8;"Basic set";19000;40;200;850;850;Assessment;Auto;;;;;;
-VS-C-9;"Basic set";20000;40;100;900;900;Assessment;Auto;;;;;;
+Resolution: Auto, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=ZZcRioiaZAU&list=PL9PLl72z7tYk0hLdGTuZVEjuSydBhTtwR;Throughput
+VS-C-2;"Basic set";720;100;20000;20;20;Assessment;Auto;;;;;;
+VS-C-3;"Basic set";720;100;10000;20;20;Assessment;Auto;;;;;;
+VS-C-4;"Basic set";720;100;5000;50;50;Assessment;Auto;;;;;;
+VS-C-5;"Basic set";6000;80;2000;400;400;"Anchor 1";Auto;;;;;;
+VS-C-6;"Basic set";14000;50;1000;700;700;"Anchor 2";Auto;;;;;;
+VS-C-7;"Basic set";15500;40;750;750;750;Assessment;Auto;;;;;;
+VS-C-8;"Basic set";17000;40;500;800;800;Assessment;Auto;;;;;;
 ;;;;;;;;;;;;;;
-"Noch 1 Stimulus frei definierbar.";;;;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";Codec;;;;Video;Link;Assessment
 VS-D-1;"Time to start";720;80;2000;400;400;Reference;Auto;;;;"Film “Trois couleurs bleu”:
 Excerpt from appr. 00:20 (min:sec) to 00:33 (min:sec).
@@ -110,8 +107,8 @@ Web-Browsing;;;;;;;;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
 WB-A-1;"Basic set";40;285;50000;18;18;Reference;;o2;"Starten der o2-App
-
-(Web-Version: https://www.o2online.de/)";Throughput
+Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
+Resolution: Auto";https://www.o2online.de/;Throughput
 WB-A-2;"Basic set";40;270;10000;18;18;Assessment;;;;
 WB-A-3;"Basic set";85;250;5000;18;18;Assessment;;;;
 WB-A-4;"Basic set";160;205;2000;18;18;Assessment;;;;
@@ -124,8 +121,8 @@ WB-A-9;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
 WB-B-1;"Basic set";40;350;50000;18;18;Reference;;"Spiegel online";"Starten der Spiegel-App
-
-(Web-Version: https://www.spiegel.de/)";Throughput
+Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
+Resolution: Auto";https://www.spiegel.de/;Throughput
 WB-B-2;"Basic set";40;350;10000;18;18;Assessment;;;;
 WB-B-3;"Basic set";85;300;5000;18;18;Assessment;;;;
 WB-B-4;"Basic set";160;220;2000;18;18;Assessment;;;;
@@ -135,9 +132,10 @@ WB-B-7;"Basic set";190;172;500;18;18;Assessment;;;;
 WB-B-8;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-B-9;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
-"Parameter übernommen von WB-B.";;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
-WB-C-1;"Basic set";40;350;50000;18;18;Reference;;"Google News";https://news.google.de;Throughput
+WB-C-1;"Basic set";40;350;50000;18;18;Reference;;"Google News";"Starten von Google News
+Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
+Resolution: Auto";https://news.google.de/;Throughput
 WB-C-2;"Basic set";40;350;10000;18;18;Assessment;;;;
 WB-C-3;"Basic set";85;300;5000;18;18;Assessment;;;;
 WB-C-4;"Basic set";160;220;2000;18;18;Assessment;;;;
@@ -222,7 +220,9 @@ WB-H-9;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 "Parameter übernommen von WB-B.";;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
-WB-I-1;"Basic set";40;350;50000;18;18;Reference;;"Search engine task";"https://www.google.de/ → manual input ""Perpignan"" → click on: https://de.wikipedia.org/wiki/Perpignan";Throughput
+WB-I-1;"Basic set";40;350;50000;18;18;Reference;;"Search engine task";"manual input ""Perpignan"" → click on: de.wikipedia.org/wiki/Perpignan
+Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
+Resolution: Auto";https://www.google.de/;Throughput
 WB-I-2;"Basic set";40;350;10000;18;18;Assessment;;;;
 WB-I-3;"Basic set";85;300;5000;18;18;Assessment;;;;
 WB-I-4;"Basic set";160;220;2000;18;18;Assessment;;;;

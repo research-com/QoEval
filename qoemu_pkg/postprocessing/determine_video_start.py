@@ -2,12 +2,14 @@ import io
 import multiprocessing
 import subprocess
 import re
+import logging as log
+from qoemu_pkg.configuration import config
 
-
-def determine_video_start(video_path: str) -> float:
+def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> float:
     """
 
     :param video_path: the absolute path to the video
+    :param minimum_start_time: minimum value (to avoid misdetection before known minimum start time)
     :return: the determined playback start of the video as float, None if the algorithm fails to determine it
     """
     cpu_count = multiprocessing.cpu_count()
@@ -21,44 +23,72 @@ def determine_video_start(video_path: str) -> float:
                              '-select_streams', 'v:0',
                              video_path], stdout=subprocess.PIPE)
 
+    # config parameters (must be read upon each call since they can change over time)
+    #   size [B] of differential frame that triggers start of video (normal relevance)
+    DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = config.vid_start_detect_thr_size_normal_relevance.get()
+    #   size [B] of differential frame that triggers start of video (high relevance, strong indicator)
+    DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE = config.vid_start_detect_thr_size_high_relevance.get()
+    #   number of frames needed above the threshold to avoid false positives
+    DIFF_THRESHOLD_NR_FRAMES = config.vid_start_detect_thr_nr_frames.get()
+
+    # allow the frame size to dip below the threshold this many times to avoid false negatives
+    DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED = 7
+    # assumed accuracy for time [s] - times less then TIME_ACCURARY apart will be considered identical
+    TIME_ACCURACY = 0.001
+
+    # currently predicted start time
     prediction = None
-    counter = 0
-    countdown = -1
+    # number of differential frames observed which indicate a started video
+    counter_positive = 0
+    # remaining number of tolerated diffenential frames observed indicating an not-started video
+    remaining_tolerated = -1
 
     for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
 
         if line.lstrip().startswith('<frame key_frame'):
+            # log.debug(line)
             key = bool(int(re.search(r'\bkey_frame="(.+?)"', line).group(1)))
             time = float(re.search(r'\bpkt_pts_time="(.+?)"', line).group(1))
             size = int(re.search(r'\bpkt_size="(.+?)"', line).group(1))
 
-            # size of differential frame that triggers start of video
-            threshold = 40000
-            # number of frames needed above the threshold to avoid false positives
-            threshold_frames_needed = 20
-            # allow the frame size to dip below the threshold this many times to avoid false negatives
-            lower_frames_allowed = 20
+            if time < minimum_start_time:
+                continue
 
             if not key:
-                if size > threshold:
-                    if counter == threshold_frames_needed:
-                        proc.terminate()
-                        return prediction
-                    if counter > 0:
-                        counter += 1
-                    if counter == 0:
+                log.debug(f"time: {time}  size:{size}  counter: {counter_positive}  countdown: {remaining_tolerated}")
+                if size > DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE:
+                    if size > DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE:
+                        increment = 3
+                    else:
+                        increment = 1
+                    if counter_positive > 0:
+                        counter_positive += increment
+                    if counter_positive == 0:
+                        # found a new possible start time
                         prediction = time
-                        counter = 1
-                        countdown = lower_frames_allowed
+                        counter_positive = increment
+                        remaining_tolerated = DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED
+                    if counter_positive >= DIFF_THRESHOLD_NR_FRAMES:
+                        # prediction seems to be a valid start time - stop searching
+                        break
                 else:
-                    if countdown == 0:
-                        countdown = -1
-                        counter = 0
-                    if countdown > 0:
-                        countdown -= 1
+                    if remaining_tolerated == 0:
+                        remaining_tolerated = -1
+                        counter_positive = 0
+                    if remaining_tolerated > 0:
+                        remaining_tolerated -= 1
 
     proc.terminate()
-    return None
+
+    if prediction == None:
+        raise RuntimeError(f"Failed to detect video start time - check threshold parameters for {video_path}")
+
+    if abs(minimum_start_time-prediction) < TIME_ACCURACY:
+        raise RuntimeError(f"Detected start time is identical to minimum start time. "
+                           f"Video might already be started at time {minimum_start_time} or parameters "
+                           f"for start detection in {video_path} are not set correctly.")
+
+    return prediction
 
 
 if __name__ == '__main__':
