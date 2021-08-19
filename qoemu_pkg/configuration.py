@@ -49,6 +49,7 @@ class QoEmuConfiguration:
         self.video_capture_path = Option(self, 'VideoCapturePath', _default_video_capture_path, expand_user=True)
         self.trigger_image_path = Option(self, 'TriggerImagePath', '.', expand_user=True)
         self.parameter_file = Option(self, 'ParameterFile', './parameters.csv', expand_user=True)
+        self.dynamic_parameter_path = Option(self, 'DynamicParameterPath', '.', expand_user=True)
         self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
         self.show_device_screen_mirror = BoolOption(self, 'ShowDeviceScreenMirror', True)
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
