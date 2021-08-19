@@ -6,12 +6,14 @@ import qoemu_pkg.coordinator as coord
 import threading
 
 
-class LogFrame(tk.Frame):
+class RunFrame(tk.Frame):
     def __init__(self, master):
         super().__init__(master, background="#DCDCDC", bd=1, relief="sunken")
         self.master = master
         self.thread = None
         self.stop_flag = False
+
+        self.logger = getLogger()
 
         # Label
         # self.label = tk.Label(master=self, text="Log", font=("bold", 15), relief="flat")
@@ -34,13 +36,14 @@ class LogFrame(tk.Frame):
         self.dropdown = tk.OptionMenu(self.button_frame, self.loglevel, *levels)
         self.dropdown.pack(fill=tk.BOTH, expand=1, side="left")
 
-        # button
-        self.button_set_default = tk.Button(self.button_frame, text="Run Coordinator", command=self.start_thread)
-        self.button_set_default.pack(fill=tk.BOTH, side="left", expand=1)
+        # Run Coordinator button
+        self.button_run_coordinator = tk.Button(self.button_frame, text="Run Coordinator", command=self.start_thread)
+        self.button_run_coordinator.pack(fill=tk.BOTH, side="left", expand=1)
 
-        # button
-        self.button_set_default = tk.Button(self.button_frame, text="Stop Coordinator", command=self.stop_thread)
-        self.button_set_default.pack(fill=tk.BOTH, side="left", expand=1)
+        # Stop Coordinator button
+        self.button_stop_coordinator = tk.Button(self.button_frame, text="Stop Coordinator", command=self.stop_thread)
+        self.button_stop_coordinator.pack(fill=tk.BOTH, side="left", expand=1)
+        self.button_stop_coordinator["state"] = tk.DISABLED
 
         # Log Box
         self.listbox = tk.Text(self)
@@ -52,7 +55,7 @@ class LogFrame(tk.Frame):
         listbox_scroll_v.pack(fill=tk.BOTH, side="right")
 
         # Logger
-        self.logger = getLogger()
+        # self.logger = getLogger()
         # add handler to the root logger here
         # should be done in the config...
         self.logger.addHandler(ListboxHandler(self.listbox))
@@ -69,9 +72,14 @@ class LogFrame(tk.Frame):
 
     def start_thread(self):
 
+        self.button_run_coordinator["state"] = tk.DISABLED
+        self.button_stop_coordinator["state"] = tk.NORMAL
+        self.master.notebook.tab(0, state="disabled")
+        self.master.notebook.tab(1, state="disabled")
+        self.master.notebook.tab(2, state="disabled")
         self.thread = threading.Thread(target=self.run_coord)
         self.thread.setDaemon(True)
-        self.thread.start()
+        # self.thread.start()
 
     def run_coord(self):
         # executed directly as a script

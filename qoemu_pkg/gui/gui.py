@@ -1,8 +1,8 @@
 from settings_frame import *
 from parameter_select_frame import *
 from analysis_frame import *
-from log_frame import *
-from qoemu_pkg.configuration import *
+from run_frame import *
+import qoemu_pkg.configuration as config
 
 
 class Gui(tk.Tk):
@@ -11,25 +11,36 @@ class Gui(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
 
         self.title("QoEmu GUI")
-        self.geometry("1600x900")
+        self.geometry("900x900")
         self.grid_columnconfigure(0, weight=2)
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=5)
 
-        notebook = ttk.Notebook(self)
-        notebook.pack(fill=tk.BOTH)
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill=tk.BOTH, expand=1)
+
+        # Load/Save Config Frame
+
+        self.button_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
+        self.button_frame.pack(fill=tk.Y, expand=0, side="top")
+
+        self.button_load_default = tk.Button(self.button_frame, text="Load Config")
+        self.button_load_default.pack(fill=tk.X, side="right", expand=2)
+
+        self.button_set_default = tk.Button(self.button_frame, text="Save Config")
+        self.button_set_default.pack(fill=tk.X, side="right", expand=0)
 
         self.parameter_frame = ParameterFrame(self)
         self.settings_frame = SettingsFrame(self)
         self.analysis_frame = AnalysisFrame(self)
-        self.log_frame = LogFrame(self)
+        self.run_frame = RunFrame(self)
 
-        notebook.add(self.parameter_frame, text='Parameter Select')
-        notebook.add(self.settings_frame, text='Emulation Settings')
-        notebook.add(self.analysis_frame, text='Analysis Settings')
-        notebook.add(self.log_frame, text='Log')
+        self.notebook.add(self.parameter_frame, text='Parameter Select')
+        self.notebook.add(self.settings_frame, text='Emulation Settings')
+        self.notebook.add(self.analysis_frame, text='Analysis Settings')
+        self.notebook.add(self.run_frame, text='Run')
 
         # self.parameter_frame.grid(row=0, column=0, sticky="nsew", rowspan=2)
         # self.settings_frame.grid(row=0, column=1, sticky="nsew")
