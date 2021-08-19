@@ -103,6 +103,20 @@ VS-G-6;"Fixed codec";15500;40;750;750;750;Assessment;"640 p x 480 p";;;;;;
 VS-G-7;"Fixed codec";17000;40;500;800;800;Assessment;"640 p x 480 p";;;;;;
 VS-G-8;"Fixed codec";19000;40;200;850;850;Assessment;"640 p x 480 p";;;;;;
 VS-G-9;"Fixed codec";20000;40;100;900;900;Assessment;"640 p x 480 p";;;;;;
+;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";Codec;Dynamic;;;Video;Link;Assessment
+VS-H-1;"Basic set";720;80;50000;16;16;Reference;Auto;A;;;"Beethoven: Symphony no. 5 in C Minor, op. 67 | Christian Thielemann (Full HD 1080p)
+Excerpt from appr. 00:00:57 (h:min:sec) to 00:01:14 (h:min:sec).
+(Alternative excerpt (t.b.d.): from 00:00:57 to 00:01:18).
+Resolution: Auto, 1080p, 720p, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=yTL8j-JU_ow;"Throughput (Full-HD)"
+VS-H-2;"Basic set";720;63;20000;16;16;Assessment;Auto;A;;;;;
+VS-H-3;"Basic set";720;55;10000;16;16;Assessment;Auto;A;;;;;
+VS-H-4;"Basic set";720;50;5000;16;16;Assessment;Auto;A;;;;;
+VS-H-5;"Basic set";3300;45;2000;160;160;Assessment;Auto;A;;;;;
+VS-H-6;"Basic set";6450;42;1000;220;220;Assessment;Auto;A;;;;;
+;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;
 Web-Browsing;;;;;;;;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment

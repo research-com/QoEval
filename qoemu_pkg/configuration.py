@@ -49,6 +49,7 @@ class QoEmuConfiguration:
         self.video_capture_path = Option(self, 'VideoCapturePath', _default_video_capture_path, expand_user=True)
         self.trigger_image_path = Option(self, 'TriggerImagePath', '.', expand_user=True)
         self.parameter_file = Option(self, 'ParameterFile', './parameters.csv', expand_user=True)
+        self.dynamic_parameter_path = Option(self, 'DynamicParameterPath', '.', expand_user=True)
         self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
         self.show_device_screen_mirror = BoolOption(self, 'ShowDeviceScreenMirror', True)
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
@@ -100,14 +101,18 @@ class Option:
         self.option = option
         self.default = default
         self.value = self.config.configparser.get(section=self.section, option=self.option, fallback=self.default)
-        if expand_user:
-            self.value = os.path.expanduser(self.value)
+        self.expand_user = expand_user
 
     def get(self):
+        if self.expand_user:
+            return os.path.expanduser(self.value)
         return self.value
 
     def set(self, value: str):
-        self.value = value
+        if self.expand_user:
+            self.value = value.replace(os.path.expanduser('~'), '~', 1)
+        else:
+            self.value = value
         self.config.configparser.set(section=self.section, option=self.option, value=self.value)
 
 
