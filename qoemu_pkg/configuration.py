@@ -10,6 +10,7 @@ import pathlib
 import configparser
 from enum import Enum
 from typing import List, Union
+import configupdater
 
 # default file name of configuration file and mandatory section name
 import qoemu_pkg.analysis.analysis
@@ -57,7 +58,7 @@ class QoEmuConfiguration:
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
         self.excluded_ports = ListIntOption(self, 'ExcludedPorts', '22,5000,5002')
         self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
-        self.resolution_override = ListOption(self, 'ResolutionOverride', "")
+        self.resolution_override = Option(self, 'ResolutionOverride', "")
 
         self.adb_device_serial = Option(self, 'AdbDeviceSerial', '')
         self.audio_device_emu = Option(self, 'AudioDeviceEmu', '')
@@ -213,8 +214,11 @@ class ListOption(Option):
         self.value = ",".join([i for i in value])
         self.config.configparser.set(self.section, self.option, self.value)
 
-
 parser = configparser.ConfigParser()
+# To keep comments:
+parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value = True)
+# Alternative to consider
+# parser = configupdater.ConfigUpdater()
 
 parser.read(_default_config_file_locations)  # note: last file will take precedence in case of overlap
 

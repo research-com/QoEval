@@ -116,8 +116,14 @@ class ParameterFrame(tk.Frame):
             pass
 
     def print_checked(self):
-        for entry in self.master.tree.get_checked():
+        for entry in self.tree.get_checked():
             print(entry)
+
+    def get_checked_entries(self):
+        result = []
+        for entry in self.tree.get_checked():
+            result.append(entry)
+        return result
 
     def save_selected_entries(self):
         pass

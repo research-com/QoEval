@@ -3,8 +3,12 @@ from parameter_select_frame import *
 from post_processing_frame import *
 from analysis_frame import *
 from run_frame import *
-import qoemu_pkg.configuration as config
+from qoemu_pkg.configuration import *
 import tooltip_strings
+
+
+def save_config():
+    config.save_to_file()
 
 
 class Gui(tk.Tk):
@@ -31,14 +35,14 @@ class Gui(tk.Tk):
         self.button_load_default = tk.Button(self.button_frame, text="Load Config")
         self.button_load_default.pack(fill=tk.X, side="right", expand=2)
 
-        self.button_set_default = tk.Button(self.button_frame, text="Save Config")
+        self.button_set_default = tk.Button(self.button_frame, text="Save Config", command=save_config)
         self.button_set_default.pack(fill=tk.X, side="right", expand=0)
 
         self.parameter_frame = ParameterFrame(self)
         self.settings_frame = EmulationFrame(self)
         self.post_processing_frame = PostProcessingFrame(self)
         self.analysis_frame = AnalysisFrame(self)
-        self.run_frame = RunFrame(self)
+        self.run_frame = RunFrame(self, self.parameter_frame.get_checked_entries)
 
         self.notebook.add(self.parameter_frame, text='Parameter Select')
         self.notebook.add(self.settings_frame, text='Emulation')

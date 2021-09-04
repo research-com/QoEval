@@ -4,14 +4,16 @@ from tkinter import ttk
 from logging import Handler, getLogger
 import qoemu_pkg.coordinator as coord
 import threading
+from typing import Callable, List
 
 
 class RunFrame(tk.Frame):
-    def __init__(self, master):
+    def __init__(self, master, get_checked_entries: Callable[[], List[str]]):
         super().__init__(master, background="#DCDCDC", bd=1, relief="sunken")
         self.master = master
         self.thread = None
         self.stop_flag = False
+        self.get_checked_entries = get_checked_entries
 
         self.logger = getLogger()
 
@@ -80,35 +82,13 @@ class RunFrame(tk.Frame):
         self.master.notebook.tab(3, state="disabled")
         self.thread = threading.Thread(target=self.run_coord)
         self.thread.setDaemon(True)
-        # self.thread.start()
+        self.thread.start()
 
     def run_coord(self):
-        # executed directly as a script
-        print("Coordinator main started")
-        coord.load_parameter_file('/home/jk/PycharmProjects/qoemu/stimuli-params/full.csv')
-        print(coord.get_type_ids())
-        print(coord.get_table_ids('VS'))
-        print(coord.get_entry_ids('VS', 'B'))
+        entries = self.get_checked_entries()
+        for entry in entries:
+            print(entry)
 
-        #    print(get_link('VS', 'A', '1'))
-        #    print(get_start('VS', 'A', '1'))
-        #    print(get_end('VS', 'A', '1'))
-
-        ids_to_evaluate = coord.get_entry_ids('VS', 'B')
-
-        # for id in ids_to_evaluate:
-        for id in ['6', '5', '4', '3', '2', '1']:
-            coordinator = coord.Coordinator()
-            try:
-                coordinator.prepare('VS', 'B', id)
-                coord.wait_countdown(20)
-                coordinator.execute('00:03:00')
-                coord.wait_countdown(30)
-            finally:
-                coordinator.finish()
-                if self.stop_flag:
-                    self.stop_flag = False
-                    return
 
 
 class ListboxHandler(Handler):
