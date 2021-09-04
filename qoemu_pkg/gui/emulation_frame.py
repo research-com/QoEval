@@ -8,7 +8,7 @@ from typing import List
 from subframes import *
 
 
-class SettingsFrame(tk.Frame):
+class EmulationFrame(tk.Frame):
     def __init__(self, master):
         super().__init__(master, background="#DCDCDC", bd=1, relief=RELIEF)
         self.master = master
@@ -33,6 +33,14 @@ class SettingsFrame(tk.Frame):
                                                    config_variable=config.adb_device_serial,
                                                    name="ADB Device Serial")
         self.adb_device_serial_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
+
+        # Resolution
+        self.resolution_frame = StringSelectFrame(self,
+                                                  config_variable=config.resolution_override,
+                                                  name="Resolution override",
+                                                  options=["off / file settings", "auto","144p", "240p", "360p", "480p",
+                                                           "720p", "1080p"])  # TODO refactor this elsewhere
+        self.resolution_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
         # ShowDeviceFrame
         self.show_device_frame_frame = BooleanFrame(self,
@@ -76,7 +84,6 @@ class SettingsFrame(tk.Frame):
                                                              config_variable=config.dynamic_parameter_path,
                                                              name="Dynamic Parameter File Path")
         self.dynamic_parameter_file_path_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
-
 
         # AVDPath
         self.avd_path_frame = FolderFrame(self,

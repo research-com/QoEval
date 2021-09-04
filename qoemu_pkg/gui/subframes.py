@@ -9,7 +9,7 @@ import tooltip_strings
 
 
 class StringSelectFrame(tk.Frame):
-    def __init__(self, master, config_variable: Option,  name: str, options: List[str]):
+    def __init__(self, master, config_variable: Option, name: str, options: List[str]):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
         self.master = master
         self.config_variable = config_variable
@@ -178,6 +178,7 @@ class IntegerFrame(tk.Frame):
         self.config_variable.set(self.value.get())
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
+
 class FloatFrame(tk.Frame):
     def __init__(self, master, config_variable: Option, name: str, min_value: float = None, max_value: float = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
@@ -318,3 +319,36 @@ class IntegerListFrame(tk.Frame):
         self.config_variable.set([int(element) for element in self.listbox.get(0, tk.END)])
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
+
+class CheckboxFrame(tk.Frame):
+
+    def __init__(self, master, config_variable: ListOption, name: str, value_names: List[str]):
+        super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
+        self.master = master
+        self.config_variable = config_variable
+        self.name = name
+        self.value_names = value_names
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
+
+        self.label = tk.Label(master=self, text=f"{self.name}: ")
+        self.label.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.checkboxes_vars = []
+
+        for value_name in value_names:
+            var = tk.IntVar()
+            checkbox = tk.Checkbutton(self, text=value_name, variable=var, command=self._update_config)
+            self.checkboxes_vars.append((checkbox, var))
+
+        for checkbox, var in self.checkboxes_vars:
+            checkbox.pack(fill=tk.BOTH, expand=1, side="left")
+            if checkbox["text"] in self.config_variable.get():
+                checkbox.select()
+
+    def _update_config(self):
+        result = []
+        for checkbox, var in self.checkboxes_vars:
+            if var.get() == 1:
+                result.append(checkbox["text"])
+        self.config_variable.set(result)
+        log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")

@@ -1,5 +1,6 @@
 import tkinter as tk
 from subframes import *
+import qoemu_pkg.analysis.analysis as analysis
 
 
 class AnalysisFrame(tk.Frame):
@@ -31,5 +32,18 @@ class AnalysisFrame(tk.Frame):
                                         config_variable=config.traffic_analysis_bpf_filter,
                                         name="Traffic Analysis BPF Rule")
         self.filter_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
+
+        # Protocol
+        self.protocol_frame = CheckboxFrame(self, config_variable=config.traffic_analysis_protocols,
+                                            name="Protocols",
+                                            value_names=analysis.PROTOCOLS)
+        self.protocol_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
+
+        # Directions
+        self.directions_frame = CheckboxFrame(self, config_variable=config.traffic_analysis_directions,
+                                            name="Directions",
+                                            value_names=analysis.DIRECTIONS)
+        self.directions_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
+
 
 

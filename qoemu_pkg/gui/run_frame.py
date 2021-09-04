@@ -77,6 +77,7 @@ class RunFrame(tk.Frame):
         self.master.notebook.tab(0, state="disabled")
         self.master.notebook.tab(1, state="disabled")
         self.master.notebook.tab(2, state="disabled")
+        self.master.notebook.tab(3, state="disabled")
         self.thread = threading.Thread(target=self.run_coord)
         self.thread.setDaemon(True)
         # self.thread.start()

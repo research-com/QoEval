@@ -1,4 +1,4 @@
-from settings_frame import *
+from emulation_frame import *
 from parameter_select_frame import *
 from post_processing_frame import *
 from analysis_frame import *
@@ -13,7 +13,7 @@ class Gui(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
 
         self.title("QoEmu GUI")
-        self.geometry("900x900")
+        self.geometry("900x700")
         self.grid_columnconfigure(0, weight=2)
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(2, weight=1)
@@ -35,7 +35,7 @@ class Gui(tk.Tk):
         self.button_set_default.pack(fill=tk.X, side="right", expand=0)
 
         self.parameter_frame = ParameterFrame(self)
-        self.settings_frame = SettingsFrame(self)
+        self.settings_frame = EmulationFrame(self)
         self.post_processing_frame = PostProcessingFrame(self)
         self.analysis_frame = AnalysisFrame(self)
         self.run_frame = RunFrame(self)

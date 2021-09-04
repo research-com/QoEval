@@ -12,6 +12,8 @@ from enum import Enum
 from typing import List, Union
 
 # default file name of configuration file and mandatory section name
+import qoemu_pkg.analysis.analysis
+
 QOEMU_CONF = 'qoemu.conf'
 QOEMU_SECTION = 'QOEMU'
 NETEM_SECTION = 'NETEM'
@@ -55,6 +57,7 @@ class QoEmuConfiguration:
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
         self.excluded_ports = ListIntOption(self, 'ExcludedPorts', '22,5000,5002')
         self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
+        self.resolution_override = ListOption(self, 'ResolutionOverride', "")
 
         self.adb_device_serial = Option(self, 'AdbDeviceSerial', '')
         self.audio_device_emu = Option(self, 'AudioDeviceEmu', '')
@@ -62,13 +65,17 @@ class QoEmuConfiguration:
         self.traffic_analysis_live = BoolOption(self, 'TrafficAnalysisLiveVisualization', False)
         self.traffic_analysis_plot = BoolOption(self, 'TrafficAnalysisPlot', True)
         self.traffic_analysis_bpf_filter = Option(self, "TrafficAnalysisBPFFilter", "")
-        self.traffic_analysis_bin_sizes = ListIntOption(self, "TrafficAnalysisBinSizes", [])
+        self.traffic_analysis_bin_sizes = ListIntOption(self, "TrafficAnalysisBinSizes", "")
+        self.traffic_analysis_protocols = ListOption(self, "TrafficAnalysisProtocols", qoemu_pkg.analysis.analysis.ALL)
+        self.traffic_analysis_directions = ListOption(self, "TrafficAnalysisDirections",
+                                                      qoemu_pkg.analysis.analysis.INOUT)
+
         self.net_em_sanity_check = BoolOption(self, 'NetEmSanityCheck', True)
 
         self.vid_start_detect_thr_size_normal_relevance = IntOption(self, 'VidStartDetectThrSizeNormalRelevance', 10000)
         self.vid_start_detect_thr_size_high_relevance = IntOption(self, 'VidStartDetectThrSizeHighRelevance', 40000)
         self.vid_start_detect_thr_nr_frames = IntOption(self, 'VidStartDetectThrNrFrames', 3)
-        self.vid_erase_box = ListIntOption(self, 'VidEraseBox', None)
+        self.vid_erase_box = ListIntOption(self, 'VidEraseBox', "")
 
         self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
 
@@ -134,7 +141,7 @@ class BoolOption(Option):
 
 
 class IntOption(Option):
-    def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: int, section: str = QOEMU_SECTION):
         super().__init__(config, option, str(default), section)
         self.value = int(self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
 
@@ -147,7 +154,7 @@ class IntOption(Option):
 
 
 class FloatOption(Option):
-    def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: float, section: str = QOEMU_SECTION):
         super().__init__(config, option, str(default), section)
         self.value = float(
             self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
@@ -188,6 +195,22 @@ class ListIntOption(Option):
 
     def set(self, value: List[int]):
         self.value = ",".join([str(i) for i in value])
+        self.config.configparser.set(self.section, self.option, self.value)
+
+
+class ListOption(Option):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION):
+        super().__init__(config, option, default, section)
+
+    def get(self) -> List[str]:
+        result_list = []
+        if self.value:
+            for value in self.value.split(','):
+                result_list.append(value)
+        return result_list
+
+    def set(self, value: List[str]):
+        self.value = ",".join([i for i in value])
         self.config.configparser.set(self.section, self.option, self.value)
 
 
