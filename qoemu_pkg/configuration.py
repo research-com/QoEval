@@ -9,7 +9,7 @@ import os
 import pathlib
 import configparser
 from enum import Enum
-from typing import List
+from typing import List, Union
 
 # default file name of configuration file and mandatory section name
 QOEMU_CONF = 'qoemu.conf'
@@ -61,6 +61,7 @@ class QoEmuConfiguration:
         self.audio_device_real = Option(self, 'AudioDeviceReal', '')
         self.traffic_analysis_live = BoolOption(self, 'TrafficAnalysisLiveVisualization', False)
         self.traffic_analysis_plot = BoolOption(self, 'TrafficAnalysisPlot', True)
+        self.traffic_analysis_bpf_filter = Option(self, "TrafficAnalysisBPFFilter", "")
         self.net_em_sanity_check = BoolOption(self, 'NetEmSanityCheck', True)
 
         self.vid_start_detect_thr_size_normal_relevance = IntOption(self, 'VidStartDetectThrSizeNormalRelevance', 10000)
@@ -154,7 +155,7 @@ class FloatOption(Option):
 
     def set(self, value: float):
         self.value = value
-        self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
+        self.config.configparser.set(section=self.section, option=self.option, value=f"{'{:10.4f}'.format(self.value)}")
 
 
 class MobileDeviceTypeOption(Option):
@@ -164,8 +165,11 @@ class MobileDeviceTypeOption(Option):
     def get(self) -> MobileDeviceType:
         return MobileDeviceType[self.value]
 
-    def set(self, value: MobileDeviceType):
-        self.value = value.name
+    def set(self, value: Union[MobileDeviceType, str]):
+        if type(value) == MobileDeviceType:
+            self.value = value.name
+        else:
+            self.value = value
         self.config.configparser.set(self.section, self.option, self.value)
 
 

@@ -1,5 +1,6 @@
 from settings_frame import *
 from parameter_select_frame import *
+from post_processing_frame import *
 from analysis_frame import *
 from run_frame import *
 import qoemu_pkg.configuration as config
@@ -34,12 +35,14 @@ class Gui(tk.Tk):
 
         self.parameter_frame = ParameterFrame(self)
         self.settings_frame = SettingsFrame(self)
+        self.post_processing_frame = PostProcessingFrame(self)
         self.analysis_frame = AnalysisFrame(self)
         self.run_frame = RunFrame(self)
 
         self.notebook.add(self.parameter_frame, text='Parameter Select')
-        self.notebook.add(self.settings_frame, text='Emulation Settings')
-        self.notebook.add(self.analysis_frame, text='Analysis Settings')
+        self.notebook.add(self.settings_frame, text='Emulation')
+        self.notebook.add(self.post_processing_frame, text='Post Processing')
+        self.notebook.add(self.analysis_frame, text='Analysis')
         self.notebook.add(self.run_frame, text='Run')
 
         # self.parameter_frame.grid(row=0, column=0, sticky="nsew", rowspan=2)

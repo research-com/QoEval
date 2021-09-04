@@ -1,5 +1,6 @@
 import tkinter as tk
 from config import *
+from subframes import *
 
 
 class AnalysisFrame(tk.Frame):
@@ -11,33 +12,27 @@ class AnalysisFrame(tk.Frame):
         # self.label = tk.Label(master=self, text="Analysis Settings", font=("bold", 15), relief="flat")
         # self.label.pack(fill=tk.BOTH, expand=0, side="top")
 
-        # EnableFrame
-        self.enable_frame = EnableFrame(self)
-        self.enable_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
+        # TrafficAnalysisPlot
+        self.plot_frame = BooleanFrame(self,
+                                       config_variable=config.traffic_analysis_plot,
+                                       name="Generate Traffic Analysis Plot")
+        self.plot_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
+
+        # TrafficAnalysisLiveVisualization
+        self.live_visualization_frame = BooleanFrame(self,
+                                                     config_variable=config.traffic_analysis_live,
+                                                     name="Live Traffic Analysis")
+        self.live_visualization_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
         # Histogram Bin Size Frame
         self.bin_size_frame = BinSizeFrame(self)
         self.bin_size_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
         # BPF Filter Frame
-        self.filter_frame = FilterFrane(self)
+        self.filter_frame = StringFrame(self,
+                                        config_variable=config.traffic_analysis_bpf_filter,
+                                        name="Traffic Analysis BPF Rule")
         self.filter_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
-
-
-class EnableFrame(tk.Frame):
-    def __init__(self, master):
-        super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
-        self.master = master
-        self.is_enabled = tk.BooleanVar(self)
-
-        self.label = tk.Label(master=self, text="Data Collection: ")
-        self.label.pack(fill=tk.BOTH, expand=0, side="left")
-        self.set_off = tk.Radiobutton(self, text="Disable", variable=self.is_enabled,
-                                      value=False)
-        self.set_off.pack(fill=tk.BOTH, expand=1, side="right")
-        self.set_on = tk.Radiobutton(self, text="Enable", variable=self.is_enabled,
-                                     value=True)
-        self.set_on.pack(fill=tk.BOTH, expand=1, side="right")
 
 
 class BinSizeFrame(tk.Frame):
