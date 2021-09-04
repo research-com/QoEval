@@ -4,6 +4,7 @@ from post_processing_frame import *
 from analysis_frame import *
 from run_frame import *
 import qoemu_pkg.configuration as config
+import tooltip_strings
 
 
 class Gui(tk.Tk):
@@ -45,11 +46,11 @@ class Gui(tk.Tk):
         self.notebook.add(self.analysis_frame, text='Analysis')
         self.notebook.add(self.run_frame, text='Run')
 
-        # self.parameter_frame.grid(row=0, column=0, sticky="nsew", rowspan=2)
-        # self.settings_frame.grid(row=0, column=1, sticky="nsew")
-        # self.analysis_frame.grid(row=0, column=2, sticky="nsew")
-        # self.log_frame.grid(row=1, column=1, sticky="nsew", columnspan=2)
+
+def main():
+    gui = Gui()
+    gui.mainloop()
 
 
-gui = Gui()
-gui.mainloop()
+if __name__ == '__main__':
+    main()

@@ -37,8 +37,8 @@ class Tooltip:
                  bg='#FFFFEA',
                  pad=(5, 3, 5, 3),
                  text='widget info',
-                 waittime=400,
-                 wraplength=250):
+                 waittime=1000,
+                 wraplength=400):
 
         self.waittime = waittime  # in miliseconds, originally 500
         self.wraplength = wraplength  # in pixels, originally 180

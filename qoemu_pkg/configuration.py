@@ -62,6 +62,7 @@ class QoEmuConfiguration:
         self.traffic_analysis_live = BoolOption(self, 'TrafficAnalysisLiveVisualization', False)
         self.traffic_analysis_plot = BoolOption(self, 'TrafficAnalysisPlot', True)
         self.traffic_analysis_bpf_filter = Option(self, "TrafficAnalysisBPFFilter", "")
+        self.traffic_analysis_bin_sizes = ListIntOption(self, "TrafficAnalysisBinSizes", [])
         self.net_em_sanity_check = BoolOption(self, 'NetEmSanityCheck', True)
 
         self.vid_start_detect_thr_size_normal_relevance = IntOption(self, 'VidStartDetectThrSizeNormalRelevance', 10000)
@@ -103,6 +104,7 @@ class Option:
         self.default = default
         self.value = self.config.configparser.get(section=self.section, option=self.option, fallback=self.default)
         self.expand_user = expand_user
+        self.tooltip = ""
 
     def get(self):
         if self.expand_user:

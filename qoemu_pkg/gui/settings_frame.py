@@ -1,6 +1,5 @@
 import tkinter as tk
 import psutil
-from config import *
 from tkinter import filedialog
 from qoemu_pkg.configuration import *
 import logging as log
@@ -65,11 +64,6 @@ class SettingsFrame(tk.Frame):
                                              config_variable=config.audio_device_real,
                                              name="Audio Device Real")
         self.audio_device_real.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
-
-        # Upload Destiation
-        # self.upload_destination_frame = SelectUploadFrame(self)
-        # self.upload_destination_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
-
 
         # ParameterFile
         self.parameter_file_path_frame = FolderFrame(self,

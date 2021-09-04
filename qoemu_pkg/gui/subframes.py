@@ -3,8 +3,9 @@ from config import *
 from tkinter import filedialog
 from qoemu_pkg.configuration import *
 import logging as log
-import tooltip
+from tooltip import Tooltip
 from typing import List
+import tooltip_strings
 
 
 class StringSelectFrame(tk.Frame):
@@ -14,6 +15,7 @@ class StringSelectFrame(tk.Frame):
         self.config_variable = config_variable
         self.name = name
         self.options = options
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
 
         self.value = tk.StringVar(self)
 
@@ -47,6 +49,7 @@ class FolderFrame(tk.Frame):
         self.master = master
         self.config_variable = config_variable
         self.name = name
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
 
         self.path = tk.StringVar(self)
         self.path.set(os.path.expanduser(self.config_variable.get()))
@@ -70,6 +73,7 @@ class BooleanFrame(tk.Frame):
         self.master = master
         self.config_variable = config_variable
         self.name = name
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
 
         self.value = tk.BooleanVar(self)
         self.value.set(self.config_variable.get())
@@ -97,6 +101,7 @@ class StringFrame(tk.Frame):
         self.master = master
         self.config_variable = config_variable
         self.name = name
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
 
         self.value = tk.StringVar(self)
         self.value.set(self.config_variable.get())
@@ -128,6 +133,7 @@ class IntegerFrame(tk.Frame):
         self.name = name
         self.min_value = min_value
         self.max_value = max_value
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
 
         self.value = tk.IntVar(self)
         self.value.set(self.config_variable.get())
@@ -180,6 +186,7 @@ class FloatFrame(tk.Frame):
         self.name = name
         self.min_value = min_value
         self.max_value = max_value
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
 
         self.value = tk.StringVar(self)
         self.value.set(self.config_variable.get())
@@ -235,6 +242,7 @@ class IntegerListFrame(tk.Frame):
         self.value_name = value_name
         self.min_value = min_value
         self.max_value = max_value
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
 
         scrollbar = tk.Scrollbar(self, orient="vertical")
         scrollbar.pack(side="right", fill="y")

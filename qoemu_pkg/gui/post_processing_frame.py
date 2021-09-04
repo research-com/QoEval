@@ -1,6 +1,5 @@
 import tkinter as tk
 import psutil
-from config import *
 from tkinter import filedialog
 from qoemu_pkg.configuration import *
 import logging as log
