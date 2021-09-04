@@ -51,6 +51,7 @@ IN = "in"
 ALL = "all"
 UDP = "UDP"
 TCP = "TCP"
+QUIC = "QUIC"
 BIN = "bin"
 TIME = "time"
 SEP = ":"
@@ -62,7 +63,7 @@ BOTH = "both"
 MINOR = "minor"
 VALUES = [PACKETS, BYTES]
 DIRECTIONS = [INOUT, IN, OUT]
-PROTOCOLS = [ALL, UDP, TCP]
+PROTOCOLS = [ALL, UDP, TCP, QUIC]
 KINDS = [BAR, LINE, HIST]
 GRIDS = [MAJOR, BOTH, MINOR]
 
