@@ -118,7 +118,7 @@ class Option:
 
 class BoolOption(Option):
     def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
-        super().__init__(config, option, str(default), section)
+        super().__init__(config, option, default, section)
         self.value = self.config.configparser.getboolean(section=self.section, option=self.option,
                                                          fallback=self.default)
 
