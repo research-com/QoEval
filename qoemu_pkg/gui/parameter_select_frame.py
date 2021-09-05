@@ -1,7 +1,10 @@
+import os
 import tkinter as tk
 from ttkwidgets import CheckboxTreeview
 import tkinter.ttk as ttk
 from tkinter.filedialog import askopenfilename
+from qoemu_pkg.configuration import config
+import qoemu_pkg
 
 from qoemu_pkg.parser import parser
 
@@ -16,7 +19,7 @@ class ParameterFrame(tk.Frame):
         self.button_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
         self.button_frame.pack(fill=tk.BOTH, expand=False)
 
-        self.button_open_file = tk.Button(self.button_frame, text="Open File", command=self.open_file)
+        self.button_open_file = tk.Button(self.button_frame, text="Open File", command=self.open_file_with_asking)
 
         self.button_open_file.pack(fill=tk.BOTH, side="left", expand=1)
 
@@ -53,7 +56,7 @@ class ParameterFrame(tk.Frame):
 
         # treeview column config
 
-        self.tree['columns'] = ('t_init', 'rul', 'rdl', 'dul', 'ddl', 'link', 'start', 'end', 'codec')
+        self.tree['columns'] = ('t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'link', 'start', 'end')
         self.tree.column("#0", width=30, stretch=True, minwidth=150)
         for column in self.tree['columns']:
             self.tree.heading(column, text=column)
@@ -66,8 +69,16 @@ class ParameterFrame(tk.Frame):
         self.tree.bind('<ButtonRelease-1>', self._tree_copy_click_handler)
         # end
 
-    def open_file(self):
-        filename = askopenfilename()
+
+        path = os.path.abspath(os.path.normpath(os.path.join("../../", config.parameter_file.get())))
+        path = os.path.normpath(path)
+        self.open_file(path)
+
+    def open_file_with_asking(self):
+        self.open_file(askopenfilename())
+
+    def open_file(self, filename):
+
 
         try:
             parser.load_parameter_file(filename, False)
@@ -93,8 +104,7 @@ class ParameterFrame(tk.Frame):
                     data = list(parser.get_parameters(type_id, table_id, k).values())
                     data.extend([parser.get_link(type_id, table_id, k),
                                  parser.get_start(type_id, table_id, k),
-                                 parser.get_end(type_id, table_id, k),
-                                 parser.get_codec(type_id, table_id, k)])
+                                 parser.get_end(type_id, table_id, k)])
                     try:  # in case the entry already exists we get a tk.TclError
                         self.tree.insert(parent=f"{type_id}:{table_id}", text=k, index=k,
                                          iid=f"{type_id}:{table_id}:{k}",
@@ -122,7 +132,7 @@ class ParameterFrame(tk.Frame):
     def get_checked_entries(self):
         result = []
         for entry in self.tree.get_checked():
-            result.append(entry)
+            result.append(entry.split(":"))
         return result
 
     def save_selected_entries(self):

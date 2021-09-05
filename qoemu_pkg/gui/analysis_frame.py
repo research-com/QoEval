@@ -24,26 +24,13 @@ class AnalysisFrame(tk.Frame):
         self.bin_size_frame = IntegerListFrame(self, config_variable=config.traffic_analysis_bin_sizes,
                                                name="Histogram Bin Sizes",
                                                value_name="Bin",
-                                               min_value=2,)
+                                               min_value=2)
         self.bin_size_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
-        # BPF Filter Frame
-        self.filter_frame = StringFrame(self,
-                                        config_variable=config.traffic_analysis_bpf_filter,
-                                        name="Traffic Analysis BPF Rule")
-        self.filter_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
+        # Plots Frame
 
-        # Protocol
-        self.protocol_frame = CheckboxFrame(self, config_variable=config.traffic_analysis_protocols,
-                                            name="Protocols",
-                                            value_names=analysis.PROTOCOLS)
-        self.protocol_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
-
-        # Directions
-        self.directions_frame = CheckboxFrame(self, config_variable=config.traffic_analysis_directions,
-                                            name="Directions",
-                                            value_names=analysis.DIRECTIONS)
-        self.directions_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
-
-
+        self.bin_size_frame = PlotsFrame(self, config_variable=config.traffic_analysis_plot_sets,
+                                              name="Plots to create",
+                                              value_name="Plot")
+        self.bin_size_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 

@@ -1,9 +1,11 @@
 from qoemu_pkg.configuration import config
 
-mobile_device_type_tooltip = ""
-config.traffic_analysis_protocols.tooltip = ''
-config.traffic_analysis_directions.tooltip = ''
 config.resolution_override.tooltip = ''
+config.traffic_analysis_plot_sets.tooltip = 'Choose plot configurations'
+
+config.coordinator_generate_stimuli.tooltip = 'Check to genereate new stimuli videos'
+config.coordinator_postprocessing.tooltip = 'Check to postprocess stimuli videos'
+config.coordinator_overwrite.tooltip = 'Check to overwrite existing files'
 
 config.net_device_name.tooltip = 'name of network interface connecting us to the Internet'
 config.excluded_ports.tooltip = 'Ports not affected by netem'
@@ -22,7 +24,6 @@ config.video_capture_path.tooltip = 'Path where captured video files are stored 
 config.vd_path.tooltip = 'Path where Android virtual devices (avd) files are stored (default: "~/qoemu_avd")'
 config.traffic_analysis_plot.tooltip = 'Enable traffic analysis'
 config.traffic_analysis_live.tooltip = 'Enable live traffic analysis'
-config.traffic_analysis_bpf_filter.tooltip = 'Berkley Packet Filter rule applied to analysis results'
 config.net_em_sanity_check.tooltip = 'Perform additional check to detect invalid network emulation situations'
 config.vid_start_detect_thr_size_normal_relevance.tooltip = 'size [B] of differential frame that triggers start of ' \
                                                             'video (normal relevance) '

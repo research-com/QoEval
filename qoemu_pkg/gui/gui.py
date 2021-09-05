@@ -44,11 +44,11 @@ class Gui(tk.Tk):
         self.analysis_frame = AnalysisFrame(self)
         self.run_frame = RunFrame(self, self.parameter_frame.get_checked_entries)
 
-        self.notebook.add(self.parameter_frame, text='Parameter Select')
-        self.notebook.add(self.settings_frame, text='Emulation')
-        self.notebook.add(self.post_processing_frame, text='Post Processing')
-        self.notebook.add(self.analysis_frame, text='Analysis')
-        self.notebook.add(self.run_frame, text='Run')
+        self.notebook.add(self.parameter_frame,         text='Parameter Select')
+        self.notebook.add(self.settings_frame,          text='   Emulation    ')
+        self.notebook.add(self.post_processing_frame,   text='Post Processing ')
+        self.notebook.add(self.analysis_frame,          text='    Analysis    ')
+        self.notebook.add(self.run_frame,               text='      Run       ')
 
 
 def main():

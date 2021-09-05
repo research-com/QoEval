@@ -1,4 +1,6 @@
 import tkinter as tk
+
+import qoemu_pkg.analysis.analysis
 from config import *
 from tkinter import filedialog
 from qoemu_pkg.configuration import *
@@ -257,13 +259,13 @@ class IntegerListFrame(tk.Frame):
         self.input = tk.Entry(self.button_frame)
         self.input.pack(fill=tk.BOTH, expand=0, side="top")
 
-        self.button_add_port = tk.Button(self.button_frame, text=f"Add {self.value_name}",
-                                         command=self.add_value)
-        self.button_add_port.pack(fill=tk.BOTH, side="top", expand=0)
+        self.button_add = tk.Button(self.button_frame, text=f"Add {self.value_name}",
+                                    command=self.add_value)
+        self.button_add.pack(fill=tk.BOTH, side="top", expand=0)
 
-        self.button_delete_port = tk.Button(self.button_frame, text=f"Delete {self.value_name}",
-                                            command=self.delete_value)
-        self.button_delete_port.pack(fill=tk.BOTH, side="top", expand=0)
+        self.button_delete = tk.Button(self.button_frame, text=f"Delete {self.value_name}",
+                                       command=self.delete_value)
+        self.button_delete.pack(fill=tk.BOTH, side="top", expand=0)
 
         self.initial_values = tk.StringVar()
         self.initial_values.set(self.config_variable.get())
@@ -320,7 +322,7 @@ class IntegerListFrame(tk.Frame):
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
 
-class CheckboxFrame(tk.Frame):
+class CheckboxToListFrame(tk.Frame):
 
     def __init__(self, master, config_variable: ListOption, name: str, value_names: List[str]):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
@@ -333,22 +335,162 @@ class CheckboxFrame(tk.Frame):
         self.label = tk.Label(master=self, text=f"{self.name}: ")
         self.label.pack(fill=tk.BOTH, expand=0, side="left")
 
-        self.checkboxes_vars = []
+        self.checkbox_variable_tuples = []
 
         for value_name in value_names:
-            var = tk.IntVar()
-            checkbox = tk.Checkbutton(self, text=value_name, variable=var, command=self._update_config)
-            self.checkboxes_vars.append((checkbox, var))
+            variable = tk.IntVar()
+            checkbox = tk.Checkbutton(self, text=value_name, variable=variable, command=self._update_config)
+            self.checkbox_variable_tuples.append((checkbox, variable))
 
-        for checkbox, var in self.checkboxes_vars:
+        for checkbox, variable in self.checkbox_variable_tuples:
             checkbox.pack(fill=tk.BOTH, expand=1, side="left")
             if checkbox["text"] in self.config_variable.get():
                 checkbox.select()
 
     def _update_config(self):
         result = []
-        for checkbox, var in self.checkboxes_vars:
+        for checkbox, var in self.checkbox_variable_tuples:
             if var.get() == 1:
                 result.append(checkbox["text"])
         self.config_variable.set(result)
+        log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
+
+
+class CheckboxToBooleanFrame(tk.Frame):
+
+    def __init__(self, master, config_variables: List[BoolOption], name: str, variable_names: List[str]):
+        super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
+        self.master = master
+        self.config_variables = config_variables
+        self.name = name
+        self.variable_names = variable_names
+
+        self.label = tk.Label(master=self, text=f"{self.name}: ")
+        self.label.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.tuples = []
+
+        for i, config_variable in enumerate(config_variables):
+            var = tk.IntVar()
+            checkbox = tk.Checkbutton(self, text=self.variable_names[i], variable=var, command=self._update_config)
+            tooltip = Tooltip(checkbox, text=config_variable.tooltip)
+            self.tuples.append((config_variable, checkbox, var))
+
+            checkbox.pack(fill=tk.BOTH, expand=1, side="left")
+            if config_variable.get():
+                checkbox.select()
+
+    def _update_config(self):
+
+        for config_variable, checkbox, var in self.tuples:
+            if bool(var.get()) != config_variable.get():
+                config_variable.set(bool(var.get()))
+                log.debug(f"Config: '{checkbox['text']}' set to: {config_variable.get()}")
+
+
+class PlotsFrame(tk.Frame):
+    def __init__(self, master, config_variable: ListOption, name: str, value_name: str):
+        super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
+        self.master = master
+        self.config_variable = config_variable
+        self.name = name
+        self.value_name = value_name
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
+
+        self.list_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
+        self.list_frame.pack(fill=tk.BOTH, expand=0, side="top")
+
+        scrollbar = tk.Scrollbar(self, orient="vertical")
+        scrollbar.pack(side="right", fill="y")
+
+        self.label = tk.Label(master=self.list_frame, text=f"{self.name}: ", font=("", 12))
+        self.label.pack(fill=tk.BOTH, expand=0, side="top")
+
+        self.button_frame = tk.Frame(self.list_frame, background="#DCDCDC", bd=1, relief="sunken")
+        self.button_frame.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.button_add = tk.Button(self.button_frame, text=f"Add {self.value_name}",
+                                    command=self.add_value)
+        self.button_add.pack(fill=tk.BOTH, side="top", expand=0)
+
+        self.button_delete = tk.Button(self.button_frame, text=f"Delete {self.value_name}",
+                                       command=self.delete_value)
+        self.button_delete.pack(fill=tk.BOTH, side="top", expand=0)
+
+        self.initial_values = tk.StringVar()
+        self.initial_values.set(self.config_variable.get())
+
+        self.listbox = tk.Listbox(self.list_frame, listvariable=self.initial_values, height=5)
+        self.listbox.pack(fill=tk.BOTH, expand=1, side="top")
+
+        scrollbar.config(command=self.listbox.yview)
+        self.listbox.config(yscrollcommand=scrollbar.set)
+
+        self.protocols_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
+        self.protocols_frame.pack(fill=tk.BOTH, expand=0, side="top")
+        label = tk.Label(master=self.protocols_frame, text=f"Protocols: ", font=("", 12))
+        label.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.protocol_tuples = []
+
+        for protocol in qoemu_pkg.analysis.analysis.PROTOCOLS:
+            variable = tk.IntVar()
+            checkbox = tk.Checkbutton(self.protocols_frame, text=protocol, variable=variable)
+            self.protocol_tuples.append((checkbox, variable))
+            checkbox.pack(fill=tk.BOTH, expand=1, side="left")
+
+        self.directions_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
+        self.directions_frame.pack(fill=tk.BOTH, expand=0, side="top")
+        label = tk.Label(master=self.directions_frame, text=f"Directions: ", font=("", 12))
+        label.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.direction_tuples = []
+
+        for direction in qoemu_pkg.analysis.analysis.DIRECTIONS:
+            variable = tk.IntVar()
+            checkbox = tk.Checkbutton(self.directions_frame, text=direction, variable=variable)
+            self.direction_tuples.append((checkbox, variable))
+            checkbox.pack(fill=tk.BOTH, expand=1, side="left")
+
+        self.kinds_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
+        self.kinds_frame.pack(fill=tk.BOTH, expand=0, side="top")
+        label = tk.Label(master=self.kinds_frame, text=f"Plot Kind: ", font=("", 12))
+        label.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.kinds_variable = tk.StringVar()
+
+        for i, kind in enumerate(qoemu_pkg.analysis.analysis.KINDS):
+            checkbox = tk.Radiobutton(self.kinds_frame, text=kind, variable=self.kinds_variable, value=kind)
+            checkbox.pack(fill=tk.BOTH, expand=1, side="left")
+            if i == 0:
+                checkbox.select()
+
+
+
+    def delete_value(self):
+        try:
+            self.listbox.delete(self.listbox.curselection())
+        except tk.TclError:
+            pass
+
+        self._update_config()
+
+    def add_value(self):
+        result = {"protocols": [], "directions": [], "kind": []}
+        for checkbox, var in self.protocol_tuples:
+            if var.get() == 1:
+                result["protocols"].append(checkbox["text"])
+        for checkbox, var in self.direction_tuples:
+            if var.get() == 1:
+                result["directions"].append(checkbox["text"])
+        result["kind"].append(self.kinds_variable.get())
+
+        if all([len(entry) > 0 for entry in result.values()]) and str(result) not in self.listbox.get(0, "end"):
+            self.listbox.insert('end', result)
+
+        self._update_config()
+
+    def _update_config(self):
+
+        self.config_variable.set([element for element in self.listbox.get(0, tk.END)])
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")

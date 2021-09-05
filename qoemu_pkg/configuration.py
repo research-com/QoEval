@@ -18,6 +18,7 @@ import qoemu_pkg.analysis.analysis
 QOEMU_CONF = 'qoemu.conf'
 QOEMU_SECTION = 'QOEMU'
 NETEM_SECTION = 'NETEM'
+VALUE_SEPERATOR = ";"
 
 
 class MobileDeviceOrientation(Enum):
@@ -56,20 +57,21 @@ class QoEmuConfiguration:
         self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
         self.show_device_screen_mirror = BoolOption(self, 'ShowDeviceScreenMirror', True)
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
-        self.excluded_ports = ListIntOption(self, 'ExcludedPorts', '22,5000,5002')
+        self.excluded_ports = ListIntOption(self, 'ExcludedPorts', '22;5000;5002')
         self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
         self.resolution_override = Option(self, 'ResolutionOverride', "")
+
+        self.coordinator_generate_stimuli = BoolOption(self, "CoordinatorGenerateStimuli", True)
+        self.coordinator_postprocessing = BoolOption(self, "CoordinatorPostprocessing", False)
+        self.coordinator_overwrite = BoolOption(self, "CoordinatorOverwrite", False)
 
         self.adb_device_serial = Option(self, 'AdbDeviceSerial', '')
         self.audio_device_emu = Option(self, 'AudioDeviceEmu', '')
         self.audio_device_real = Option(self, 'AudioDeviceReal', '')
         self.traffic_analysis_live = BoolOption(self, 'TrafficAnalysisLiveVisualization', False)
         self.traffic_analysis_plot = BoolOption(self, 'TrafficAnalysisPlot', True)
-        self.traffic_analysis_bpf_filter = Option(self, "TrafficAnalysisBPFFilter", "")
         self.traffic_analysis_bin_sizes = ListIntOption(self, "TrafficAnalysisBinSizes", "")
-        self.traffic_analysis_protocols = ListOption(self, "TrafficAnalysisProtocols", qoemu_pkg.analysis.analysis.ALL)
-        self.traffic_analysis_directions = ListOption(self, "TrafficAnalysisDirections",
-                                                      qoemu_pkg.analysis.analysis.INOUT)
+        self.traffic_analysis_plot_sets = ListOption(self, 'PlotSettingsList', '')
 
         self.net_em_sanity_check = BoolOption(self, 'NetEmSanityCheck', True)
 
@@ -104,15 +106,15 @@ class QoEmuConfiguration:
 
 
 class Option:
-    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION,
+    def __init__(self, config: QoEmuConfiguration, option: str, default: Union[str, any], section: str = QOEMU_SECTION,
                  expand_user: bool = False):
-        self.config = config
-        self.section = section
-        self.option = option
-        self.default = default
-        self.value = self.config.configparser.get(section=self.section, option=self.option, fallback=self.default)
-        self.expand_user = expand_user
-        self.tooltip = ""
+        self.config: QoEmuConfiguration = config
+        self.section: str = section
+        self.option: str = option
+        self.default: Union[str, any] = default
+        self.value: str = self.config.configparser.get(section=self.section, option=self.option, fallback=self.default)
+        self.expand_user: bool = expand_user
+        self.tooltip: str = ""
 
     def get(self):
         if self.expand_user:
@@ -129,7 +131,7 @@ class Option:
 
 class BoolOption(Option):
     def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
-        super().__init__(config, option, str(default), section)
+        super().__init__(config, option, default, section)
         self.value = self.config.configparser.getboolean(section=self.section, option=self.option,
                                                          fallback=self.default)
 
@@ -165,7 +167,7 @@ class FloatOption(Option):
 
     def set(self, value: float):
         self.value = value
-        self.config.configparser.set(section=self.section, option=self.option, value=f"{'{:10.4f}'.format(self.value)}")
+        self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
 
 class MobileDeviceTypeOption(Option):
@@ -190,12 +192,12 @@ class ListIntOption(Option):
     def get(self) -> List[int]:
         result_list = []
         if self.value:
-            for value in self.value.split(','):
+            for value in self.value.split(VALUE_SEPERATOR):
                 result_list.append(int(value))
         return result_list
 
     def set(self, value: List[int]):
-        self.value = ",".join([str(i) for i in value])
+        self.value = VALUE_SEPERATOR.join([str(i) for i in value])
         self.config.configparser.set(self.section, self.option, self.value)
 
 
@@ -206,17 +208,17 @@ class ListOption(Option):
     def get(self) -> List[str]:
         result_list = []
         if self.value:
-            for value in self.value.split(','):
+            for value in self.value.split(VALUE_SEPERATOR):
                 result_list.append(value)
         return result_list
 
     def set(self, value: List[str]):
-        self.value = ",".join([i for i in value])
+        self.value = VALUE_SEPERATOR.join([i for i in value])
         self.config.configparser.set(self.section, self.option, self.value)
 
 parser = configparser.ConfigParser()
 # To keep comments:
-parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value = True)
+# parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value = True)
 # Alternative to consider
 # parser = configupdater.ConfigUpdater()
 
