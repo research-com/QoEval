@@ -4,12 +4,12 @@ Handle configuration options
 - if no option is given, use default value
 
 """
-
+import ast
 import os
 import pathlib
 import configparser
 from enum import Enum
-from typing import List, Union
+from typing import List, Union, Dict
 import configupdater
 
 # default file name of configuration file and mandatory section name
@@ -57,7 +57,7 @@ class QoEmuConfiguration:
         self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
         self.show_device_screen_mirror = BoolOption(self, 'ShowDeviceScreenMirror', True)
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
-        self.excluded_ports = ListIntOption(self, 'ExcludedPorts', '22;5000;5002')
+        self.excluded_ports = ListIntOption(self, 'ExcludedPorts', [22, 5000, 5002])
         self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
         self.resolution_override = Option(self, 'ResolutionOverride', "")
 
@@ -70,15 +70,15 @@ class QoEmuConfiguration:
         self.audio_device_real = Option(self, 'AudioDeviceReal', '')
         self.traffic_analysis_live = BoolOption(self, 'TrafficAnalysisLiveVisualization', False)
         self.traffic_analysis_plot = BoolOption(self, 'TrafficAnalysisPlot', True)
-        self.traffic_analysis_bin_sizes = ListIntOption(self, "TrafficAnalysisBinSizes", "")
-        self.traffic_analysis_plot_sets = ListOption(self, 'PlotSettingsList', '')
+        self.traffic_analysis_bin_sizes = ListIntOption(self, "TrafficAnalysisBinSizes", [])
+        self.traffic_analysis_plot_sets = ListDictOption(self, 'PlotSettingsList', [])
 
         self.net_em_sanity_check = BoolOption(self, 'NetEmSanityCheck', True)
 
         self.vid_start_detect_thr_size_normal_relevance = IntOption(self, 'VidStartDetectThrSizeNormalRelevance', 10000)
         self.vid_start_detect_thr_size_high_relevance = IntOption(self, 'VidStartDetectThrSizeHighRelevance', 40000)
         self.vid_start_detect_thr_nr_frames = IntOption(self, 'VidStartDetectThrNrFrames', 3)
-        self.vid_erase_box = ListIntOption(self, 'VidEraseBox', "")
+        self.vid_erase_box = ListIntOption(self, 'VidEraseBox', [])
 
         self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
 
@@ -106,7 +106,7 @@ class QoEmuConfiguration:
 
 
 class Option:
-    def __init__(self, config: QoEmuConfiguration, option: str, default: Union[str, any], section: str = QOEMU_SECTION,
+    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION,
                  expand_user: bool = False):
         self.config: QoEmuConfiguration = config
         self.section: str = section
@@ -131,15 +131,15 @@ class Option:
 
 class BoolOption(Option):
     def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
-        super().__init__(config, option, default, section)
-        self.value = self.config.configparser.getboolean(section=self.section, option=self.option,
-                                                         fallback=self.default)
+        super().__init__(config, option, str(default), section)
+        self.value = str(self.config.configparser.getboolean(section=self.section, option=self.option,
+                                                             fallback=self.default))
 
     def get(self) -> bool:
-        return self.value
+        return self.value == "True"
 
     def set(self, value: bool):
-        self.value = value
+        self.value = str(value)
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
 
@@ -186,18 +186,14 @@ class MobileDeviceTypeOption(Option):
 
 
 class ListIntOption(Option):
-    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION):
-        super().__init__(config, option, default, section)
+    def __init__(self, config: QoEmuConfiguration, option: str, default: List[int], section: str = QOEMU_SECTION):
+        super().__init__(config, option, str(default), section)
 
     def get(self) -> List[int]:
-        result_list = []
-        if self.value:
-            for value in self.value.split(VALUE_SEPERATOR):
-                result_list.append(int(value))
-        return result_list
+        return ast.literal_eval(self.value)
 
     def set(self, value: List[int]):
-        self.value = VALUE_SEPERATOR.join([str(i) for i in value])
+        self.value = str(value)
         self.config.configparser.set(self.section, self.option, self.value)
 
 
@@ -215,6 +211,19 @@ class ListOption(Option):
     def set(self, value: List[str]):
         self.value = VALUE_SEPERATOR.join([i for i in value])
         self.config.configparser.set(self.section, self.option, self.value)
+
+
+class ListDictOption(Option):
+    def __init__(self, config: QoEmuConfiguration, option: str, default: List[Dict], section: str = QOEMU_SECTION):
+        super().__init__(config, option, str(default), section)
+
+    def get(self) -> List[Dict]:
+        return ast.literal_eval(self.value)
+
+    def set(self, value: List[Dict]):
+        self.value = str(value)
+        self.config.configparser.set(self.section, self.option, self.value)
+
 
 parser = configparser.ConfigParser()
 # To keep comments:
