@@ -2,7 +2,7 @@
 ;;;;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";Codec;;;;Video;Link;Assessment
 VS-A-1;Basic set;720;80;50000;22;22;Reference;Auto;;;;"tagesschau 20:00 Uhr, 14.12.2020
-Excerpt from 14:51 (min:sec) to 15:09 (min:sec).
+Excerpt from 12:55 (min:sec) to 13:16 (min:sec).
 (Alternative excerpt (t.b.d.): from 00:00 to 00:20).
 Resolution: Auto, 720p, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=1dxhytrMmkM;Throughput HD;
 VS-A-2;"Basic set";720;63;20000;22;22;Assessment;Auto;;;;;;
