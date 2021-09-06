@@ -251,15 +251,14 @@ class Coordinator:
                                  [analysis.IN], [analysis.ALL], analysis.BAR)
             plot.save_pdf(f"{self.stats_filepath}_in")
             plot.save_png(f"{self.stats_filepath}_in")
-            # TODO: bugfix histogram plots - currenlty, the visualized data frames are empty
-            # plot = analysis.Plot(self.stats_filepath,0,convert_to_seconds(capture_time),analysis.BYTES,
-            #                      [analysis.OUT],[analysis.ALL],analysis.HIST)
-            # plot.save_pdf(f"{self.stats_filepath}_hist_out")
-            # plot.save_png(f"{self.stats_filepath}_hist_out")
-            # plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time),analysis.BYTES,
-            #                      [analysis.IN],[analysis.ALL],analysis.HIST)
-            # plot.save_pdf(f"{self.stats_filepath}_hist_in")
-            # plot.save_png(f"{self.stats_filepath}_hist_in")
+            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
+                                 [analysis.OUT], [analysis.ALL], analysis.HIST)
+            plot.save_pdf(f"{self.stats_filepath}_hist_out")
+            plot.save_png(f"{self.stats_filepath}_hist_out")
+            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
+                                 [analysis.IN], [analysis.ALL], analysis.HIST)
+            plot.save_pdf(f"{self.stats_filepath}_hist_in")
+            plot.save_png(f"{self.stats_filepath}_hist_in")
 
         self.netem.disable_netem()
 
