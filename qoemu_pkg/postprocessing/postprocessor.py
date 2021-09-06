@@ -13,6 +13,7 @@ FFMPEG = "ffmpeg"
 FFPROBE = "ffprobe"
 MP4BOX = "MP4Box"
 PRESERVE_TEMP_FILES = False  # True: preserve temporary processing files (e.g. for debugging), False: delete them
+PREFIX_VIDEO_ERASE_AUDIO = True  # True: set audio volume of prefix video to 0 (no sound), False: do not modify volume
 TINIT_VIDEO_LS_FILENAME = "youtube_tinit_ls_v1.mp4"  # buffering animation shown in t-init phase (landscape)
 TINIT_VIDEO_PT_FILENAME = "youtube_tinit_pt_v1.mp4"  # buffering animation shown in t-init phase (portrait)
 DELTA_INITBUF_VIDEO_START_MAX = 5  # maximum time difference of end of buffer initialization and video start
@@ -102,7 +103,13 @@ class PostProcessor:
                           f"target volume: {target_volume})")
                 ffmpeg_audio_filter = f"volume={volume}dB,"
 
-        # configure optional muting of audio parts (e.g. to avaid static noise while rebuffering)
+        # configure audio filter for prefix video
+        if PREFIX_VIDEO_ERASE_AUDIO:
+            prefix_video_ffmpeg_audio_filter = f"volume=enable='between(t,0,{initbuf_len})':volume=0,"
+        else:
+            prefix_video_ffmpeg_audio_filter = ""
+
+        # main stimululi: configure optional muting of audio parts (e.g. to avoid static noise while rebuffering)
         if erase_audio and len(erase_audio) > 0:
             if len(erase_audio) % 2 != 0:
                 raise RuntimeError(
@@ -129,7 +136,7 @@ class PostProcessor:
                           f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
                           f"-filter_complex \"" \
                           f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
-                          f"[0:a]atrim=0:{initbuf_len},asetpts=PTS-STARTPTS[a0]; " \
+                          f"[0:a]atrim=0:{initbuf_len},{prefix_video_ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a0]; " \
                           f"[1:v]trim={main_video_start_time}:{main_video_end_time}," \
                           f"{ffmpeg_video_filter}setpts=PTS-STARTPTS[v1]; " \
                           f"[1:a]atrim={main_video_start_time}:{main_video_end_time}," \
@@ -159,7 +166,7 @@ class PostProcessor:
                           f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi  " \
                           f"-crf 4 -filter_complex \"" \
                           f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
-                          f"[0:a]atrim=0:{initbuf_len},asetpts=PTS-STARTPTS[a0]; " \
+                          f"[0:a]atrim=0:{initbuf_len},{prefix_video_ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a0]; " \
                           f"[1:v]trim={main_video_start_time}:{main_video_end_time}," \
                           f"{ffmpeg_video_filter}setpts=PTS-STARTPTS[v1]; " \
                           f"[1:a]atrim={main_video_start_time}:{main_video_end_time}," \
