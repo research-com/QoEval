@@ -77,7 +77,7 @@ class RunFrame(tk.Frame):
 
     def stop_thread(self):
         self.stop_flag = True
-        log.info("Interrupt flag set by user")
+        log.info("Interrupt flag set by user. Interrupting after finishing current stimulus")
 
     def start_thread(self):
 
@@ -112,13 +112,14 @@ class RunFrame(tk.Frame):
         for entry in entries:
             if self.stop_flag:
                 self.stop_flag = False
-                log.info("Coordinator interrupted by user. Interrupting after finishing current entry")
+                log.info("Coordinator interrupted by user")
                 return
             coord.start([entry[0]], [entry[1]], [entry[2]],
                         config.coordinator_generate_stimuli,
                         config.coordinator_postprocessing,
                         config.coordinator_overwrite)
         self.enable_interface_after_coordinator()
+        log.debug("Coordinator shut down")
 
 class ListboxHandler(Handler):
     def __init__(self, box):
