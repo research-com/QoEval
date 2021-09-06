@@ -70,7 +70,7 @@ class PostProcessor:
         check_env(MP4BOX)
 
     def process(self, input_filename: str, output_filename: str, initbuf_len: float, main_video_start_time: float,
-                main_video_duration: float, normalize_audio: bool = False, erase_box = None):
+                main_video_duration: float, normalize_audio: bool = False, erase_audio = None, erase_box = None):
 
         main_video_end_time = main_video_start_time + main_video_duration
 
@@ -101,6 +101,16 @@ class PostProcessor:
                 log.debug(f"audio normalization by {volume}dB (current volume: {current_volume}, "
                           f"target volume: {target_volume})")
                 ffmpeg_audio_filter = f"volume={volume}dB,"
+
+        # configure optional muting of audio parts (e.g. to avaid static noise while rebuffering)
+        if erase_audio and len(erase_audio) > 0:
+            if len(erase_audio) % 2 != 0:
+                raise RuntimeError(
+                    f"Postprocessing error: audio erase list ({erase_audio}) must contain an even number of values.")
+            for i in range(0, len(erase_audio),2):
+                t_start = erase_audio[i]
+                t_end = erase_audio[i+1]
+                ffmpeg_audio_filter = f"{ffmpeg_audio_filter}volume=enable='between(t,{t_start},{t_end})':volume=0,"
 
         # configure optional erasing of a box (e.g. logo)
         if erase_box and len(erase_box) > 0:
