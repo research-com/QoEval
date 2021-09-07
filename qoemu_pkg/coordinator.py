@@ -243,22 +243,16 @@ class Coordinator:
 
         if config.traffic_analysis_plot.get():
             self.analysis.wait_until_completed()
-            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
-                                 [analysis.OUT], [analysis.ALL], analysis.BAR)
-            plot.save_pdf(f"{self.stats_filepath}_out")
-            plot.save_png(f"{self.stats_filepath}_out")
-            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
-                                 [analysis.IN], [analysis.ALL], analysis.BAR)
-            plot.save_pdf(f"{self.stats_filepath}_in")
-            plot.save_png(f"{self.stats_filepath}_in")
-            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
-                                 [analysis.OUT], [analysis.ALL], analysis.HIST)
-            plot.save_pdf(f"{self.stats_filepath}_hist_out")
-            plot.save_png(f"{self.stats_filepath}_hist_out")
-            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
-                                 [analysis.IN], [analysis.ALL], analysis.HIST)
-            plot.save_pdf(f"{self.stats_filepath}_hist_in")
-            plot.save_png(f"{self.stats_filepath}_hist_in")
+            for plot_setting in config.traffic_analysis_plot_settings.get():
+                plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
+                                     plot_setting["directions"], plot_setting["protocols"], plot_setting["kind"])
+                name = f'{self.stats_filepath}_{plot_setting["kind"]}'
+                for direction in plot_setting["directions"]:
+                    name = f'{name}_{direction}'
+                for protocol in plot_setting["protocols"]:
+                    name = f'{name}_{protocol}'
+                plot.save_pdf(name)
+                plot.save_png(name)
 
         self.netem.disable_netem()
 
