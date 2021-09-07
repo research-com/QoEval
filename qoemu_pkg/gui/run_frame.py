@@ -1,27 +1,40 @@
+from __future__ import annotations
+
 import logging
+import subprocess
 import tkinter as tk
 from tkinter import ttk
 from logging import Handler, getLogger
+
+import qoemu_pkg.gui.gui
 from qoemu_pkg.coordinator import Coordinator
 import threading
-from typing import Callable, List
+from typing import Callable, List, Optional
 from subframes import *
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from qoemu_pkg.gui.gui import Gui
 
 
 class RunFrame(tk.Frame):
-    def __init__(self, master, get_checked_entries: Callable[[], List[str]]):
+    def __init__(self, master, gui: Gui, get_checked_entries: Callable[[], List[str]]):
         super().__init__(master, background="#DCDCDC", bd=1, relief="sunken")
         self.master = master
         self.thread = None
-        self.stop_flag = False
         self.get_checked_entries = get_checked_entries
+        self.gui: Gui = gui
+        self.coordinator_process: Union[subprocess.Popen, None] = None
+
+
 
         self.logger = getLogger()
 
         # Options
-        self.checkbox_frame = CheckboxToBooleanFrame(self, config_variables=[config.coordinator_generate_stimuli,
-                                                                             config.coordinator_postprocessing,
-                                                                             config.coordinator_overwrite],
+        self.checkbox_frame = CheckboxToBooleanFrame(self, self.gui,
+                                                     config_variables=[config.coordinator_generate_stimuli,
+                                                                       config.coordinator_postprocessing,
+                                                                       config.coordinator_overwrite],
                                                      name="Options",
                                                      variable_names=["Generate Stimuli", "Post Processing",
                                                                      "Overwrite"])
@@ -45,11 +58,11 @@ class RunFrame(tk.Frame):
         self.dropdown.pack(fill=tk.BOTH, expand=1, side="left")
 
         # Run Coordinator button
-        self.button_run_coordinator = tk.Button(self.button_frame, text="Run Coordinator", command=self.start_thread)
+        self.button_run_coordinator = tk.Button(self.button_frame, text="Run Coordinator", command=self.start_coordinator)
         self.button_run_coordinator.pack(fill=tk.BOTH, side="left", expand=1)
 
         # Stop Coordinator button
-        self.button_stop_coordinator = tk.Button(self.button_frame, text="Stop Coordinator", command=self.stop_thread)
+        self.button_stop_coordinator = tk.Button(self.button_frame, text="Stop Coordinator", command=self.terminate_coordinator)
         self.button_stop_coordinator.pack(fill=tk.BOTH, side="left", expand=1)
         self.button_stop_coordinator["state"] = tk.DISABLED
 
@@ -75,16 +88,34 @@ class RunFrame(tk.Frame):
         if self.loglevel.get() == "INFO":
             self.logger.setLevel(logging.INFO)
 
-    def stop_thread(self):
-        self.stop_flag = True
-        log.info("Interrupt flag set by user. Interrupting after finishing current stimulus")
+    def terminate_coordinator(self):
+        self.coordinator_process.terminate()
+        log.info("Sent SIGTERM to coordinator process. Waiting for it to terminate")
+        self.coordinator_process.wait()
+        self.enable_interface_after_coordinator()
+        log.info("Coordinator process terminated")
 
-    def start_thread(self):
+    def start_coordinator(self):
 
+        log.info("Starting coordinator")
         self.disable_interface_for_coordinator()
-        self.thread = threading.Thread(target=self.run_coord)
-        self.thread.setDaemon(True)
-        self.thread.start()
+        entries = self.get_checked_entries()
+        entry_list = []
+        for entry in entries:
+            dictionary = {"type_id": entry[0], "table_id": entry[1], "entry_id": entry[2]}
+            entry_list.append(dictionary)
+
+        config.coordinator_stimuli.set(entry_list)
+        self.master.save_config()
+
+        path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "run_coordinator.py")
+        self.coordinator_process = subprocess.Popen(f"python3 {path}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        for line in self.coordinator_process.stdout:
+            # self.listbox.insert(tk.END, "COORD: ".encode("UTF-8") + line)
+            self.listbox.insert(tk.END, line)
+            self.listbox.yview(tk.END)
+
+
 
     def disable_interface_for_coordinator(self):
         self.button_run_coordinator["state"] = tk.DISABLED
@@ -106,20 +137,6 @@ class RunFrame(tk.Frame):
         for child in self.checkbox_frame.winfo_children():
             child.configure(state='normal')
 
-    def run_coord(self):
-        coord = Coordinator()
-        entries = self.get_checked_entries()
-        for entry in entries:
-            if self.stop_flag:
-                self.stop_flag = False
-                log.info("Coordinator interrupted by user")
-                return
-            coord.start([entry[0]], [entry[1]], [entry[2]],
-                        config.coordinator_generate_stimuli,
-                        config.coordinator_postprocessing,
-                        config.coordinator_overwrite)
-        self.enable_interface_after_coordinator()
-        log.debug("Coordinator shut down")
 
 class ListboxHandler(Handler):
     def __init__(self, box):
@@ -128,5 +145,5 @@ class ListboxHandler(Handler):
 
     def emit(self, record):
         r = self.format(record) + "\n"
-        self._box.insert("end", r)
+        self._box.insert("end", "GUI: " + r)
         self._box.yview(tk.END)

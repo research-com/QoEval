@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import tkinter as tk
 from ttkwidgets import CheckboxTreeview
@@ -5,15 +7,20 @@ import tkinter.ttk as ttk
 from tkinter.filedialog import askopenfilename
 from qoemu_pkg.configuration import config
 import qoemu_pkg
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from qoemu_pkg.gui.gui import Gui
 
 from qoemu_pkg.parser import parser
 
 
 class ParameterFrame(tk.Frame):
 
-    def __init__(self, master):
+    def __init__(self, master, gui: Gui):
         super().__init__(master, background="#DCDCDC", bd=1, relief="sunken")
         self.master = master
+        self.gui: Gui = gui
+
 
         # buttons
         self.button_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
@@ -23,17 +30,17 @@ class ParameterFrame(tk.Frame):
 
         self.button_open_file.pack(fill=tk.BOTH, side="left", expand=1)
 
-        self.button_create_entry = tk.Button(self.button_frame, text="Create Custom Entry",
-                                             command=self.custom_entry_window)
-        self.button_create_entry.pack(expand=1, fill=tk.BOTH, side="left")
-
-        self.button_save_selected = tk.Button(self.button_frame, text="Save Selected",
-                                              command=self.save_selected_entries)
-        self.button_save_selected.pack(expand=1, fill=tk.BOTH, side="left")
-
-        self.button_delete_selected = tk.Button(self.button_frame, text="Delete Selected",
-                                                command=self.delete_selected_entries)
-        self.button_delete_selected.pack(expand=1, fill=tk.BOTH, side="left")
+        # self.button_create_entry = tk.Button(self.button_frame, text="Create Custom Entry",
+        #                                      command=self.custom_entry_window)
+        # self.button_create_entry.pack(expand=1, fill=tk.BOTH, side="left")
+        #
+        # self.button_save_selected = tk.Button(self.button_frame, text="Save Selected",
+        #                                       command=self.save_selected_entries)
+        # self.button_save_selected.pack(expand=1, fill=tk.BOTH, side="left")
+        #
+        # self.button_delete_selected = tk.Button(self.button_frame, text="Delete Selected",
+        #                                         command=self.delete_selected_entries)
+        # self.button_delete_selected.pack(expand=1, fill=tk.BOTH, side="left")
 
         # treeview in a frame with vertical scrollbar
 
@@ -68,7 +75,6 @@ class ParameterFrame(tk.Frame):
         # make leftclick copy possible in treeview
         self.tree.bind('<ButtonRelease-1>', self._tree_copy_click_handler)
         # end
-
 
         path = os.path.abspath(os.path.normpath(os.path.join("../../", config.parameter_file.get())))
         path = os.path.normpath(path)

@@ -1,7 +1,7 @@
 from qoemu_pkg.configuration import config
 
 config.resolution_override.tooltip = ''
-config.traffic_analysis_plot_sets.tooltip = 'Choose plot configurations'
+config.traffic_analysis_plot_settings.tooltip = 'Choose plot configurations'
 
 config.coordinator_generate_stimuli.tooltip = 'Check to genereate new stimuli videos'
 config.coordinator_postprocessing.tooltip = 'Check to postprocess stimuli videos'
