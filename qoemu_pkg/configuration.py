@@ -91,7 +91,10 @@ class QoEmuConfiguration:
 
     def store_netem_params(self, emulation_parameters):
         for p in emulation_parameters:
-            FloatOption(self, p, 0.0, NETEM_SECTION).set(emulation_parameters[p])
+            if isinstance(emulation_parameters[p], float):
+                FloatOption(self, p, 0.0, NETEM_SECTION).set(emulation_parameters[p])
+            else:
+                Option(self, p, "", NETEM_SECTION).set(emulation_parameters[p])
 
 
 class Option:

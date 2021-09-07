@@ -2,6 +2,7 @@ import com.dtmilano.android.viewclient
 
 import logging as log
 import time
+import re
 from com.dtmilano.android.adb import adbclient
 from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
 
@@ -26,8 +27,19 @@ _ID_SECONDARY = "com.google.android.youtube:id/list_item_text_secondary"
 _SHOW_RESOLUTION_TIMESPAN = 15
 
 # other assumptions
-_ASSUMED_MAX_BUFFER_TIME = 10.0
+_ASSUMED_MAX_BUFFER_TIME = 10.0         # assumed maximum time for which youtube buffers video
+_ASSUMED_POS_OUTSIDE_STIMULI = 0.0      # an arbitrary point in time within the video but outside the stimuli
 
+
+def _get_intent_url(url, start_time):
+    intent_url = f"{url}"
+    if start_time is not None:
+        # append ? or &t=[start time in seconds] to link (note: currently, youtube support only int values)
+        if "?" in url:
+            intent_url = f"{intent_url}&t={int(start_time)}"
+        else:
+            intent_url = f"{intent_url}?t={int(start_time)}"
+    return intent_url
 
 class _Youtube(UseCase):
     def __init__(self, device, serialno, **kwargs):
@@ -40,7 +52,7 @@ class _Youtube(UseCase):
         else:
             self.resolution = None
         # Testing only: manually select resolution
-        # self.resolution = "360p"
+        # self.resolution = "1080p"
         self.show_resolution = True
 
     def _pause_player(self):
@@ -99,7 +111,8 @@ class _Youtube(UseCase):
     def _set_resolution(self):
         log.debug(f"Manually selecting the resolution: {self.resolution}")
         self._pause_player()
-        time.sleep(1)
+        self._unpause_player()
+        # time.sleep(1)
         self._touch_overflow_button()
         # time.sleep(1)
         # self._vc.dump(window=-1, sleep=0)
@@ -107,13 +120,34 @@ class _Youtube(UseCase):
         self._touch_view_by_id(_ID_SECONDARY)
         # self._vc.dump(window=-1, sleep=0)
         # self._vc.traverse()
-        self._touch_view_by_text(self.resolution)
-        time.sleep(1)
+        # self._touch_view_by_text(self.resolution) -- cannot be used since we illegally might select Automatic
+        end_time = time.time() + 3.0
+        while (time.time() < end_time):
+            # find view and touch element with specified text
+            self._vc.dump(window=-1, sleep=0)
+            target_views = self._vc.findViewsWithAttributeThatMatches(self._vc.textProperty,
+                                                                      re.compile(f'{self.resolution}', re.IGNORECASE))
+            if target_views is None:
+                continue
+
+            if len(target_views) > 1:
+                log.error(f"Found multiple views matching {self.resolution}")
+                continue
+
+            if target_views[0]:
+                target_views[0].touch()
+                log.debug(f"Successfully selected resolution {self.resolution}")
+                break
+
+        if not target_views[0]:
+            raise RuntimeError(f'Could not manually select resolution {self.resolution}')
+
         # self._vc.dump(window=-1, sleep=0)
         # self._vc.traverse()
-        # time.sleep(300)
         # un-pause player
-        self._unpause_player()
+        # self._unpause_player()
+        # time.sleep(0.5)
+        # self._pause_player()
 
     def prepare(self):
         """
@@ -133,10 +167,11 @@ class _Youtube(UseCase):
         time.sleep(10)
         if self.resolution:
             # in order to manually select the resolution, we must start with the true url (but no time-offset)
-            prep_url = self.url
-            if self.start_time is None or self.start_time < _ASSUMED_MAX_BUFFER_TIME:
+            prep_url = _get_intent_url(self.url, _ASSUMED_POS_OUTSIDE_STIMULI)
+            if self.start_time is None or \
+                    abs(_ASSUMED_POS_OUTSIDE_STIMULI - self.start_time) < _ASSUMED_MAX_BUFFER_TIME:
                 raise RuntimeError(f'Use case wants to manually select the resolution but start_time {self.start_time} '
-                                   f'is too low.')
+                                   f'is too close to preparation time position.')
         else:
             prep_url = YOUTUBE_URL_PREPARE_DEFAULT
         self.device.shell(f"am start -a android.intent.action.VIEW \"{prep_url}\"")
@@ -179,17 +214,7 @@ class _Youtube(UseCase):
         if not self.url or len(self.url) == 0:
             log.warning("URL is not set")
 
-        # if we have manually selected a resolution during preparation, we need to unpause
-        if self.resolution:
-            self._unpause_player()
-            time.sleep(0.5)
-
-        if self.start_time != None and self.start_time > 0.0:
-            # append ? or &t=[start time in seconds] to link (note: currently, youtube support only int values)
-            if "?" in self.url:
-                intent_url = f"{self.url}&t={int(self.start_time)}"
-            else:
-                intent_url = f"{self.url}?t={int(self.start_time)}"
+        intent_url = _get_intent_url(self.url,self.start_time)
 
         log.info(f"Starting target youtube video: {intent_url}")
 
