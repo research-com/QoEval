@@ -251,15 +251,14 @@ class Coordinator:
                                  [analysis.IN], [analysis.ALL], analysis.BAR)
             plot.save_pdf(f"{self.stats_filepath}_in")
             plot.save_png(f"{self.stats_filepath}_in")
-            # TODO: bugfix histogram plots - currenlty, the visualized data frames are empty
-            # plot = analysis.Plot(self.stats_filepath,0,convert_to_seconds(capture_time),analysis.BYTES,
-            #                      [analysis.OUT],[analysis.ALL],analysis.HIST)
-            # plot.save_pdf(f"{self.stats_filepath}_hist_out")
-            # plot.save_png(f"{self.stats_filepath}_hist_out")
-            # plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time),analysis.BYTES,
-            #                      [analysis.IN],[analysis.ALL],analysis.HIST)
-            # plot.save_pdf(f"{self.stats_filepath}_hist_in")
-            # plot.save_png(f"{self.stats_filepath}_hist_in")
+            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
+                                 [analysis.OUT], [analysis.ALL], analysis.HIST)
+            plot.save_pdf(f"{self.stats_filepath}_hist_out")
+            plot.save_png(f"{self.stats_filepath}_hist_out")
+            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
+                                 [analysis.IN], [analysis.ALL], analysis.HIST)
+            plot.save_pdf(f"{self.stats_filepath}_hist_in")
+            plot.save_png(f"{self.stats_filepath}_hist_in")
 
         self.netem.disable_netem()
 
@@ -407,7 +406,9 @@ class Coordinator:
 
             print("Cutting and merging video stimuli...")
             postprocessor.process(video_id_in, video_id_out, t_init_buf,t_raw_start,d_start_to_end,
-                                  normalize_audio=is_normalizing_audio, erase_box=config.vid_erase_box.get())
+                                  normalize_audio=is_normalizing_audio,
+                                  erase_audio=config.audio_erase_start_stop.get(),
+                                  erase_box=config.vid_erase_box.get())
             print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
         """
@@ -478,7 +479,7 @@ if __name__ == '__main__':
 
     coordinator = Coordinator()
 
-    coordinator.start(['VS'], ['H'], ['2'], generate_stimuli=True, postprocessing=False, overwrite=False)
+    coordinator.start(['VS'], ['C'], ['5'], generate_stimuli=False, postprocessing=True, overwrite=True)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")

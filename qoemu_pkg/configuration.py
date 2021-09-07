@@ -81,6 +81,7 @@ class QoEmuConfiguration:
         self.vid_erase_box = ListIntOption(self, 'VidEraseBox', [])
 
         self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
+        self.audio_erase_start_stop = ListIntOption(self, 'AudioEraseStartStop', None)
 
     def save_to_file(self, file: str = None):
         if file != None:

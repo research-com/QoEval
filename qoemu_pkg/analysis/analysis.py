@@ -28,7 +28,7 @@ packet protocol TCP, saving it as pdf with a resolution of 1600*600 pixels
     plt.save_pdf(1600, 600)
 
 """
-from typing import List
+from typing import List, Tuple
 import io
 import logging as log
 import math
@@ -79,7 +79,7 @@ class DataCollector:
                  duration: int,
                  interval: int = 10,
                  filename: str = None,
-                 bin_sizes: [] = None,
+                 bin_sizes: Tuple[int] = tuple(range(100, 1501, 100)),
                  bpf_filter: str = ""):
         """
         Creates the object and sets all attributes.
