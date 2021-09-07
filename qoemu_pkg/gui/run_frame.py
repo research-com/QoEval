@@ -96,10 +96,14 @@ class RunFrame(tk.Frame):
         log.info("Coordinator process terminated")
 
     def start_coordinator(self):
+        entries = self.get_checked_entries()
+        if len(entries) < 1:
+            log.info("No Parameters are selected")
+            return
 
         log.info("Starting coordinator")
         self.disable_interface_for_coordinator()
-        entries = self.get_checked_entries()
+
         entry_list = []
         for entry in entries:
             dictionary = {"type_id": entry[0], "table_id": entry[1], "entry_id": entry[2]}
@@ -114,7 +118,7 @@ class RunFrame(tk.Frame):
             # self.listbox.insert(tk.END, "COORD: ".encode("UTF-8") + line)
             self.listbox.insert(tk.END, line)
             self.listbox.yview(tk.END)
-
+        log.info("Coordinator exited")
 
 
     def disable_interface_for_coordinator(self):

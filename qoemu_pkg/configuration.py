@@ -212,7 +212,6 @@ class ListFloatOption(Option):
 
     def get(self) -> List[float]:
         self.value = self.config.configparser.get(section=self.section, option=self.option, fallback=self.default)
-        print(self.value)
         result = ast.literal_eval(self.value)
         result = [float(value) for value in result]
         return result
