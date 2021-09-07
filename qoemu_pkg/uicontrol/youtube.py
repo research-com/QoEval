@@ -40,7 +40,7 @@ class _Youtube(UseCase):
         else:
             self.resolution = None
         # Testing only: manually select resolution
-        self.resolution = "360p"
+        # self.resolution = "360p"
         self.show_resolution = True
 
     def _pause_player(self):
