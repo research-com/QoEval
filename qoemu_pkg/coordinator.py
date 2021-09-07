@@ -150,19 +150,15 @@ class Coordinator:
 
         # create and prepare use-case
         if self._get_uc_type() == UseCaseType.YOUTUBE:
-            s = convert_to_seconds(get_start(self._type_id, self._table_id, self._entry_id))
-            s = s - VIDEO_PRE_START
-            if s > 0.0:
-                # append ? or &t=[start time in seconds] to link (note: currently, youtube support only int values)
-                if "?" in url:
-                    url = f"{url}&t={int(s)}"
-                else:
-                    url = f"{url}?t={int(s)}"
-            self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url)
+            start_time = convert_to_seconds(get_start(self._type_id, self._table_id, self._entry_id))
+            start_time = start_time - VIDEO_PRE_START
+            self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url, t=start_time,
+                                         resolution=get_codec(self._type_id, self._table_id, self._entry_id))
+            duration = convert_to_seconds(get_end(self._type_id, self._table_id, self._entry_id))-start_time
         if self._get_uc_type() == UseCaseType.WEB_BROWSING:
             self.ui_control.set_use_case(UseCaseType.WEB_BROWSING, url=url)
-            s = 60  # maximum length of web-browsing use-case
-        self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; url: {url}; len: {s}s ")
+            duration = 60.0  # maximum length of web-browsing use-case
+        self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; url: {url}; len: {duration}s ")
         self.ui_control.prepare_use_case()
         self._gen_log.flush()
         self._is_prepared = True
@@ -479,7 +475,7 @@ if __name__ == '__main__':
 
     coordinator = Coordinator()
 
-    coordinator.start(['VS'], ['C'], ['5'], generate_stimuli=False, postprocessing=True, overwrite=True)
+    coordinator.start(['VS'], ['G'], ['1'], generate_stimuli=True, postprocessing=False, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")

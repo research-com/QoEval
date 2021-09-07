@@ -370,7 +370,7 @@ def get_codec(type_id, table_id, entry_id):
                 i += 1
 
         if line.startswith(f"{type_id}-{table_id}-{entry_id}") and codec_column != 0:
-            return line.split(";")[codec_column]
+            return line.split(";")[codec_column].translate(str.maketrans('', '', '"'))
 
 
 def get_parameters(type_id, table_id, entry_id):

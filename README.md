@@ -177,6 +177,14 @@ that the measured delays are as expected/configured within QoEmu. If the delays 
 than expected or vary to an extremely large extend, update your linux kernel and check that the WLAN
 device driver is working properly and all power-saving features have been disabled.
 
+## Test Evironment
+qoemu reference platform is a Google Pixel 5:
+
+* Android Version 11 (Android Security Update 5. July 2021, Google Play-Systemupdate 1. Febr. 2021)
+* Youtube App Version 15.18.39
+* Build-Nummer RQ3A.210705.001
+* Baseband-Version g7250-00132-210419-B-7294132
+
 # Acknowledgements
 We make use of a bunch of other software tools - and thank all authors of these for
 for making them publicly available. These include, but are not limited to:
