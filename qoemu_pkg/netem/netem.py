@@ -15,6 +15,9 @@ MAX_CONNECTIONS = 1
 
 USED_DEVICES = []
 IFB_IS_INITIALIZED = False
+CMD_MODPROBE = "sudo modprobe"
+CMD_TC = "sudo tc"
+CMD_IP = "sudo ip"
 
 
 @dataclass
@@ -143,9 +146,9 @@ class Connection:
             To emulate dynamic parameters
         """
 
-    __CMD_TC = "sudo tc"
-    __CMD_IP = "sudo ip"
-    __CMD_MODPROBE = "sudo modprobe"
+    __CMD_TC = CMD_TC
+    __CMD_IP = CMD_IP
+    __CMD_MODPROBE = CMD_MODPROBE
 
     def __init__(self, name, device_name, t_init: float = None, rul: float = None, rdl:float = None, dul:float = None,
                  ddl:float = None, android_ip:ipaddress = None, exclude_ports: List[int] = None,
@@ -481,20 +484,6 @@ class Connection:
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} parent 1:2 netem {params}")).check_returncode()
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} root netem {params}")).check_returncode()
 
-    def cleanup(self):
-        """Removes all tc rules and virtual devices for this connection"""
-
-        if self.device is None:
-            log.error(f"Cannot cleanup connection: '{self.name}': No device associated")
-            return
-
-        log.info(f"Cleaning up connection: '{self.name}'")
-        log.debug(f"Removing tc rules for device: {self.device}")
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} root"))
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} ingress"))
-        log.debug(f"Removing virtual device: {self.virtual_device_in}")
-        subprocess.run(shlex.split(f"{self.__CMD_IP} link set dev {self.virtual_device_in} down"))
-        USED_DEVICES.remove(self.device)
 
     def _init_ifb(self, numifbs):
         """
@@ -604,3 +593,13 @@ class Connection:
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} root"), stderr=subprocess.PIPE)
         subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc del dev {self.device} ingress"), stderr=subprocess.PIPE)
         self.cleanup_ifb()
+
+
+def reset_device_and_ifb(net_device: str):
+    log.debug(f"Reset device: {net_device}")
+    subprocess.run(shlex.split(f"{CMD_TC} qdisc del dev {net_device} root"), stderr=subprocess.PIPE)
+    subprocess.run(shlex.split(f"{CMD_TC} qdisc del dev {net_device} ingress"), stderr=subprocess.PIPE)
+    subprocess.run(shlex.split(f"{CMD_MODPROBE} -r ifb"))
+    log.debug("Removed ifb module from kernel")
+    global IFB_IS_INITIALIZED
+    IFB_IS_INITIALIZED = False
