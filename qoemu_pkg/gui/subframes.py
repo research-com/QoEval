@@ -94,6 +94,38 @@ class FolderFrame(tk.Frame):
         self.entry.insert(0, self.config_variable.get())
 
 
+class FileFrame(tk.Frame):
+    def __init__(self, master, gui: Gui, config_variable: Option, name: str = None):
+        super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
+        self.master = master
+        self.config_variable = config_variable
+        if name:
+            self.name = name
+        else:
+            self.name = self.config_variable.option
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
+        self.gui: Gui = gui
+        self.gui.updatable_elements.append(self)
+
+        self.path = tk.StringVar(self)
+        self.path.set(os.path.expanduser(self.config_variable.get()))
+
+        self.button = tk.Button(self, text=f"{self.name}:", command=self.open_folder, anchor="w", width=30)
+        self.button.pack(fill=tk.BOTH, side="left", expand=0)
+
+        self.entry = tk.Entry(self, textvariable=self.path)
+        self.entry.pack(fill=tk.BOTH, side="left", expand=1)
+
+    def open_folder(self):
+        self.path.set(filedialog.askopenfilename())
+        self.config_variable.set(self.path.get().replace(os.path.expanduser('~'), '~', 1))
+        log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
+
+    def update(self):
+        self.entry.delete(0, tk.END)
+        self.entry.insert(0, self.config_variable.get())
+
+
 class BooleanFrame(tk.Frame):
 
     def __init__(self, master, gui: Gui, config_variable: BoolOption, name: str = None):
