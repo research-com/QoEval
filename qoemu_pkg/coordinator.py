@@ -38,6 +38,9 @@ LONG_WAITING = 60  # long waiting time [s]
 
 GEN_LOG_FILE = os.path.join(config.video_capture_path.get(), 'qoemu.log')
 
+FINISH_CAMPAIGN_LOG = "Campaign finished for stimulus: "
+FINISH_POST_LOG = "Finished post-processing: "
+
 
 class Coordinator:
     """
@@ -310,6 +313,7 @@ class Coordinator:
                             raise
                 finally:
                     self._finish()
+                    log.info(f"{FINISH_CAMPAIGN_LOG}{get_video_id(type_id, table_id, entry_id)}")
 
     def _perform_postprocessing(self, type_id, table_id, ids_to_process, overwrite: bool = False):
         trigger_dir = config.trigger_image_path.get()
@@ -399,7 +403,7 @@ class Coordinator:
                                   normalize_audio=is_normalizing_audio,
                                   erase_audio=config.audio_erase_start_stop.get(),
                                   erase_box=config.vid_erase_box.get())
-            print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
+            print(f"{FINISH_POST_LOG}{video_id_in} ==> {video_id_out}")
 
         """
         Start coordinating the emulation run for generating one or more stimuli.

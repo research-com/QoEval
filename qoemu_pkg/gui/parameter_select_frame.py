@@ -88,17 +88,17 @@ class ParameterFrame(tk.Frame):
 
         try:
             parser.load_parameter_file(filename, False)
-        except:
+        except FileNotFoundError:
             return None
 
         try:  # in case the entry already exists we get a tk.TclError
-            self.tree.insert(parent="", index=0, text=filename, iid=filename)
+            self.tree.insert(parent="", index=0, text=filename, iid=filename, open=True)
         except tk.TclError:
             pass
 
         for i, type_id in enumerate(parser.get_type_ids()):
             try:  # in case the entry already exists we get a tk.TclError
-                self.tree.insert(parent=filename, index=i, text=type_id, iid=type_id)
+                self.tree.insert(parent=filename, index=i, text=type_id, iid=type_id, open=True)
             except tk.TclError:
                 pass
             for j, table_id in enumerate(parser.get_table_ids(type_id)):

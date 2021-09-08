@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import logging
+import shlex
+import signal
 import subprocess
 import tkinter as tk
 from tkinter import ttk
 from logging import Handler, getLogger
 
+import psutil
+
+import qoemu_pkg.netem.netem as netem
+
 import qoemu_pkg.gui.gui
-from qoemu_pkg.coordinator import Coordinator
+from qoemu_pkg.coordinator import Coordinator, FINISH_CAMPAIGN_LOG, FINISH_POST_LOG
 import threading
 from typing import Callable, List, Optional
 from subframes import *
@@ -15,6 +21,11 @@ from subframes import *
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from qoemu_pkg.gui.gui import Gui
+
+RUN_COORDINATOR_STR = "Run Coordinator"
+STOP_COORDINATOR_STR = "Stop Coordinator"
+CAMPAIGNS_STR = "Campaigns: "
+POST_STR = "Post: "
 
 
 class RunFrame(tk.Frame):
@@ -25,8 +36,10 @@ class RunFrame(tk.Frame):
         self.get_checked_entries = get_checked_entries
         self.gui: Gui = gui
         self.coordinator_process: Union[subprocess.Popen, None] = None
-
-
+        self.update_thread = None
+        self.total_stimuli = None
+        self.campaigns_finished = None
+        self.post_processing_finished = None
 
         self.logger = getLogger()
 
@@ -55,16 +68,31 @@ class RunFrame(tk.Frame):
         self.label.pack(fill=tk.BOTH, expand=0, side="left")
 
         self.dropdown = tk.OptionMenu(self.button_frame, self.loglevel, *levels)
-        self.dropdown.pack(fill=tk.BOTH, expand=1, side="left")
+        self.dropdown.pack(fill=tk.BOTH, expand=0, side="left")
 
         # Run Coordinator button
-        self.button_run_coordinator = tk.Button(self.button_frame, text="Run Coordinator", command=self.start_coordinator)
-        self.button_run_coordinator.pack(fill=tk.BOTH, side="left", expand=1)
+        self.button_run_coordinator = tk.Button(self.button_frame, text=RUN_COORDINATOR_STR,
+                                                command=self.start_coordinator, width=15)
+        self.button_run_coordinator.pack(fill=tk.BOTH, side="left", expand=0)
 
         # Stop Coordinator button
-        self.button_stop_coordinator = tk.Button(self.button_frame, text="Stop Coordinator", command=self.terminate_coordinator)
-        self.button_stop_coordinator.pack(fill=tk.BOTH, side="left", expand=1)
+        self.button_stop_coordinator = tk.Button(self.button_frame, text=STOP_COORDINATOR_STR,
+                                                 command=self.terminate_coordinator, width=15)
+        self.button_stop_coordinator.pack(fill=tk.BOTH, side="left", expand=0)
         self.button_stop_coordinator["state"] = tk.DISABLED
+
+        # Campaign progress label
+
+        self.campaigns_finished_str = tk.StringVar(None, CAMPAIGNS_STR)
+        self.campaigns_finished_label = tk.Label(master=self.button_frame,
+                                                 textvariable=self.campaigns_finished_str, width=15, anchor="w")
+        self.campaigns_finished_label.pack(fill=tk.BOTH, expand=0, side="left")
+
+        # Post processing progress label
+        self.post_processing_finished_str = tk.StringVar(None, POST_STR)
+        self.post_label = tk.Label(master=self.button_frame,
+                                   textvariable=self.post_processing_finished_str, width=10, anchor="w")
+        self.post_label.pack(fill=tk.BOTH, expand=0, side="left")
 
         # Log Box
         self.listbox = tk.Text(self)
@@ -89,17 +117,32 @@ class RunFrame(tk.Frame):
             self.logger.setLevel(logging.INFO)
 
     def terminate_coordinator(self):
-        self.coordinator_process.terminate()
+        # for proc in self.coordinator_process.chil
+        #self.coordinator_process.terminate()
+
+        process = psutil.Process(self.coordinator_process.pid)
+        for proc in process.children(recursive=True):
+            proc.terminate()
+        process.terminate()
         log.info("Sent SIGTERM to coordinator process. Waiting for it to terminate")
+        for proc in process.children(recursive=True):
+            proc.wait()
+        # os.killpg(os.getpgid(self.coordinator_process.pid), signal.SIGTERM)
         self.coordinator_process.wait()
+        log.info("Coordinator exited")
+        netem.reset_device_and_ifb(config.net_device_name.get())
         self.enable_interface_after_coordinator()
-        log.info("Coordinator process terminated")
 
     def start_coordinator(self):
         entries = self.get_checked_entries()
         if len(entries) < 1:
             log.info("No Parameters are selected")
             return
+        self.total_stimuli = len(entries)
+        self.campaigns_finished = 0
+        self.post_processing_finished = 0
+        self.campaigns_finished_str.set(f"{CAMPAIGNS_STR}{self.campaigns_finished}/{self.total_stimuli}")
+        self.post_processing_finished_str.set(f"{POST_STR}{self.post_processing_finished}/{self.total_stimuli}")
 
         log.info("Starting coordinator")
         self.disable_interface_for_coordinator()
@@ -113,13 +156,24 @@ class RunFrame(tk.Frame):
         self.master.save_config()
 
         path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "run_coordinator.py")
-        self.coordinator_process = subprocess.Popen(f"python3 {path}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self.coordinator_process = subprocess.Popen(f"python3 {path}".split(" "), shell=False, stdout=subprocess.PIPE,
+                                                    stderr=subprocess.STDOUT)
+        self.update_thread = threading.Thread(target=self.display_output, daemon=True)
+        self.update_thread.start()
+
+    def display_output(self):
         for line in self.coordinator_process.stdout:
             # self.listbox.insert(tk.END, "COORD: ".encode("UTF-8") + line)
+            if FINISH_CAMPAIGN_LOG.encode("UTF-8") in line:
+                self.campaigns_finished += 1
+                self.campaigns_finished_str.set(f"{CAMPAIGNS_STR}{self.campaigns_finished}/{self.total_stimuli}")
+            if FINISH_POST_LOG.encode("UTF-8") in line:
+                print("post finished")
+                self.post_processing_finished += 1
+                self.post_processing_finished_str.set(
+                    f"{POST_STR}{self.post_processing_finished}/{self.total_stimuli}")
             self.listbox.insert(tk.END, line)
             self.listbox.yview(tk.END)
-        log.info("Coordinator exited")
-
 
     def disable_interface_for_coordinator(self):
         self.button_run_coordinator["state"] = tk.DISABLED
@@ -131,6 +185,7 @@ class RunFrame(tk.Frame):
         for child in self.checkbox_frame.winfo_children():
             child.configure(state='disable')
 
+
     def enable_interface_after_coordinator(self):
         self.button_run_coordinator["state"] = tk.NORMAL
         self.button_stop_coordinator["state"] = tk.DISABLED
@@ -140,6 +195,8 @@ class RunFrame(tk.Frame):
         self.master.notebook.tab(3, state="normal")
         for child in self.checkbox_frame.winfo_children():
             child.configure(state='normal')
+        self.campaigns_finished_str.set(CAMPAIGNS_STR)
+        self.post_processing_finished_str.set(POST_STR)
 
 
 class ListboxHandler(Handler):

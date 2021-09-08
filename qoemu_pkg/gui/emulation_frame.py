@@ -43,7 +43,7 @@ class EmulationFrame(tk.Frame):
         self.resolution_frame = StringSelectFrame(self, self.gui,
                                                   config_variable=config.resolution_override,
                                                   name="Resolution override",
-                                                  options=["off / file settings", "auto","144p", "240p", "360p", "480p",
+                                                  options=["off", "Auto", "144p", "240p", "360p", "480p",
                                                            "720p", "1080p"])  # TODO refactor this elsewhere
         self.resolution_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
@@ -78,8 +78,8 @@ class EmulationFrame(tk.Frame):
 
 
         # ParameterFile
-        self.parameter_file_path_frame = FolderFrame(self, self.gui,
-                                                     config_variable=config.parameter_file)
+        self.parameter_file_path_frame = FileFrame(self, self.gui,
+                                                   config_variable=config.parameter_file)
         self.parameter_file_path_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
         # DynamicParameterPath
