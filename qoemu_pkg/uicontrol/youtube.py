@@ -157,6 +157,10 @@ class _Youtube(UseCase):
         if self.state != UseCaseState.CREATED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.CREATED')
 
+        # stop youtube app (since it might be running on the device and have cached data)
+        self.device.shell("am force-stop com.google.android.youtube")
+        time.sleep(2)
+
         # reset youtube app
         self.device.shell("pm clear com.google.android.youtube")
 
