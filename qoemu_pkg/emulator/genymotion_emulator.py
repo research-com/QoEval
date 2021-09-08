@@ -4,7 +4,7 @@
 """
 import time
 
-from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME
+from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name
 
 import logging as log
 import os
@@ -129,7 +129,7 @@ class GenymotionEmulator(MobileDevice):
 
     def get_ip_address(self) -> ipaddress:
         output = subprocess.run(shlex.split(
-            f"{ADB_NAME} shell ifconfig wlan0"),
+            f"{adb_name()} shell ifconfig wlan0"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
         # log.debug(output.stdout)

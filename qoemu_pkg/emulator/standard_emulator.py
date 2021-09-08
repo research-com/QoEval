@@ -5,7 +5,7 @@
 import ipaddress
 import time
 
-from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME
+from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name
 from qoemu_pkg.configuration import config
 
 import logging as log
@@ -221,7 +221,7 @@ class StandardEmulator(MobileDevice):
 
     def shutdown(self):
         log.debug("Emulator shutdown.")
-        subprocess.run(shlex.split(f"{ADB_NAME} emu kill"))
+        subprocess.run(shlex.split(f"{adb_name()} emu kill"))
 
 
 if __name__ == '__main__':

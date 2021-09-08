@@ -6,7 +6,7 @@ import ipaddress
 import threading
 import time
 
-from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, ADB_NAME, \
+from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name,\
     MEASUREMENT_DURATION
 
 import logging as log
