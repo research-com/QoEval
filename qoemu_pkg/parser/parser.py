@@ -42,6 +42,7 @@ def load_parameter_file(file_path=CSV_FILENAME, is_relative_path=True):
         file_loaded = True
     except FileNotFoundError:
         log.error(f"Parameter file \"{file_path}\" not found")
+        raise FileNotFoundError
 
 
 def get_type_ids():
