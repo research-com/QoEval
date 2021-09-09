@@ -27,16 +27,18 @@ from typing import List
 DELAY_TOLERANCE_MIN = 10  # minimum delay tolerance for sanity check [ms]
 DELAY_TOLERANCE_REL_NORMAL = 0.05  # relative delay tolerance for sanity check [0..1]
 DELAY_TOLERANCE_REL_LOWBW = 0.25  # relative delay tolerance for sanity check in low-bandwidth conditions [0..1]
-DELAY_MEASUREMENT_BW_THRESH = 100 # threshold data rate for sanity delay measurement [kbit/s]
+DELAY_MEASUREMENT_BW_THRESH = 100  # threshold data rate for sanity delay measurement [kbit/s]
 PROCESSING_BIAS = 3  # additional delay due to processing in emulator [ms]
 VIDEO_PRE_START = 1.0  # start video VIDEO_PRE_START [s] early so that we can guarantee to see the trigger
-                       # Note: Be careful with VIDEO_PRE_START - if set too high, we might miss rebuffering
-VIDEO_T_INIT_TOLERANCE = 0.5 # when detecting end of T_INIT and comparing to start of stimuli, tolerate [s]
+# Note: Be careful with VIDEO_PRE_START - if set too high, we might miss rebuffering
+VIDEO_T_INIT_TOLERANCE = 0.5  # when detecting end of T_INIT and comparing to start of stimuli, tolerate [s]
 MAX_RETRIES = 2  # number of retries when generating a stimuli fails
 SHORT_WAITING = 3  # short waiting time [s]
 LONG_WAITING = 60  # long waiting time [s]
 
 GEN_LOG_FILE = os.path.join(config.video_capture_path.get(), 'qoemu.log')
+
+_AUTO_CODEC = "auto"
 
 
 class Coordinator:
@@ -132,8 +134,10 @@ class Coordinator:
                                     rul=self._params['rul'], rdl=self._params['rdl'],
                                     dul=(self._params['dul'] - delay_bias_ul_dl),
                                     ddl=(self._params['ddl'] - delay_bias_ul_dl),
-                                    android_ip=self.emulator.get_ip_address(), # note: only valid, if not in host-ap mode
-                                    exclude_ports=config.excluded_ports.get(), # exclude ports, e.g. as used for ssh control
+                                    android_ip=self.emulator.get_ip_address(),
+                                    # note: only valid, if not in host-ap mode
+                                    exclude_ports=config.excluded_ports.get(),
+                                    # exclude ports, e.g. as used for ssh control
                                     dynamic_parameters_setup=adaptive_params)  # set of dynamic connection parameters
         else:
             # connection parameters are static, no dynamic_parameters_setup required
@@ -141,7 +145,8 @@ class Coordinator:
                                     rul=self._params['rul'], rdl=self._params['rdl'],
                                     dul=(self._params['dul'] - delay_bias_ul_dl),
                                     ddl=(self._params['ddl'] - delay_bias_ul_dl),
-                                    android_ip=self.emulator.get_ip_address(),  # note: only valid, if not in host-ap mode
+                                    android_ip=self.emulator.get_ip_address(),
+                                    # note: only valid, if not in host-ap mode
                                     exclude_ports=config.excluded_ports.get())  # exclude ports, e.g. as used for ssh control
 
         url = f"{get_link(self._type_id, self._table_id, self._entry_id)}"
@@ -154,7 +159,7 @@ class Coordinator:
             start_time = start_time - VIDEO_PRE_START
             self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url, t=start_time,
                                          resolution=get_codec(self._type_id, self._table_id, self._entry_id))
-            duration = convert_to_seconds(get_end(self._type_id, self._table_id, self._entry_id))-start_time
+            duration = convert_to_seconds(get_end(self._type_id, self._table_id, self._entry_id)) - start_time
         if self._get_uc_type() == UseCaseType.WEB_BROWSING:
             self.ui_control.set_use_case(UseCaseType.WEB_BROWSING, url=url)
             duration = 60.0  # maximum length of web-browsing use-case
@@ -347,14 +352,6 @@ class Coordinator:
             # t_raw_start = str(input(f"Time when relevant section starts in raw stimuli video [hh:mm:ss.xxx]: "))
             # d_start_to_end = int(input(f"Duration from t_start to t_end in seconds [s]: "))
 
-            # only some of the use-case types require a detection of the initialization phase (t-init)
-            if self._get_uc_type() == UseCaseType.YOUTUBE:
-                is_detecting_t_init = True
-                is_normalizing_audio = True
-            else:
-                is_detecting_t_init = False
-                is_normalizing_audio = False
-
             # auto-detect video t_init_buf, t_raw_start, t_raw_end
             unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
 
@@ -369,7 +366,32 @@ class Coordinator:
             t_raw_start = frame_to_time(unprocessed_video_path, start_frame_nr)
             print(f"{t_raw_start} s")
 
-            if is_detecting_t_init:
+            t_init_buf_manual = config.vid_init_buffer_time_manual.get()
+
+            # only some of the use-case types require a detection of the initialization phase (t-init)
+            if self._get_uc_type() == UseCaseType.YOUTUBE:
+                is_normalizing_audio = True
+                if t_init_buf_manual:
+                    is_detecting_t_init = False
+                else:
+                    is_detecting_t_init = True
+            else:
+                is_detecting_t_init = False
+                is_normalizing_audio = False
+
+            # check: if a fixed-codec is used, auto-detection of t_init_buf does not work reliably
+            if is_detecting_t_init and \
+                    get_codec(self._type_id, self._table_id, self._entry_id) and \
+                    get_codec(self._type_id, self._table_id, self._entry_id).lower() != _AUTO_CODEC and \
+                    "" != get_codec(self._type_id, self._table_id, self._entry_id) and \
+                    not t_init_buf_manual:
+                log.warning(f"Stimuli uses a fixed codec but does not specify a manual "
+                            f"buffer initialization time (VidInitBufferTimeManual)! This is NOT RECOMMENDED and "
+                            f"might lead to invalid stimuli since auto-detection does not work reliably in "
+                            f"this situation. Please specify VidInitBufferTimeManual in the configuration file"
+                            f"of this stimuli.")
+
+            if not t_init_buf_manual and is_detecting_t_init:
                 t_detect_start = max(0, t_raw_start - (2.5 * VIDEO_PRE_START))
                 print(f"Detecting start of video playback (search starts at: {t_detect_start} s) ... ", end='')
                 t_init_buf = determine_video_start(unprocessed_video_path, t_detect_start)
@@ -378,7 +400,12 @@ class Coordinator:
                     continue
                 print(f"{t_init_buf} s")
             else:
-                t_init_buf = 0
+                if t_init_buf_manual:
+                    print(f"Auto-detection disabled - manually specified start of buffering-phase "
+                          f"(VidInitBufferTimeManual): {t_init_buf_manual} s")
+                    t_init_buf = t_init_buf_manual
+                else:
+                    t_init_buf = 0.0
 
             if t_init_buf > t_raw_start:
                 if t_init_buf - t_raw_start > VIDEO_T_INIT_TOLERANCE:
@@ -386,7 +413,8 @@ class Coordinator:
                         f"Detected end of buffer initialization (t_init_buf, start of video playback) at {t_init_buf}s "
                         f"is later than start of stimuli at {t_raw_start}s ! Check detection thresholds.")
                 else:
-                    log.warning("Detected end of t_init phase is later than detected stimuli start - but within tolerance.")
+                    log.warning(
+                        "Detected end of t_init phase is later than detected stimuli start - but within tolerance.")
                     t_init_buf = t_raw_start
 
             print("Detecting end of stimuli video section... ", end='')
@@ -401,7 +429,7 @@ class Coordinator:
                     f"at {t_raw_end}s ! Check trigger images and verify that they are part of the recorded stimuli.")
 
             print("Cutting and merging video stimuli...")
-            postprocessor.process(video_id_in, video_id_out, t_init_buf,t_raw_start,d_start_to_end,
+            postprocessor.process(video_id_in, video_id_out, t_init_buf, t_raw_start, d_start_to_end,
                                   normalize_audio=is_normalizing_audio,
                                   erase_audio=config.audio_erase_start_stop.get(),
                                   erase_box=config.vid_erase_box.get())
@@ -475,7 +503,8 @@ if __name__ == '__main__':
 
     coordinator = Coordinator()
 
-    coordinator.start(['VS'], ['G'], ['1'], generate_stimuli=True, postprocessing=False, overwrite=False)
+    coordinator.start(['VS'], ['G'], ['1','2','3','4','5','6','7','8'],
+                      generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")
