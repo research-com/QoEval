@@ -67,6 +67,7 @@ class QoEmuConfiguration:
         self.vid_start_detect_thr_size_high_relevance = IntOption(self, 'VidStartDetectThrSizeHighRelevance', 40000)
         self.vid_start_detect_thr_nr_frames = IntOption(self, 'VidStartDetectThrNrFrames', 3)
         self.vid_erase_box = ListIntOption(self, 'VidEraseBox', None)
+        self.vid_init_buffer_time_manual = FloatOption(self, 'VidInitBufferTimeManual', None)
 
         self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
         self.audio_erase_start_stop = ListIntOption(self, 'AudioEraseStartStop', None)
@@ -98,7 +99,7 @@ class QoEmuConfiguration:
 
 
 class Option:
-    def __init__(self, config: QoEmuConfiguration, option: str, default: str, section: str = QOEMU_SECTION,
+    def __init__(self, config: QoEmuConfiguration, option: str, default, section: str = QOEMU_SECTION,
                  expand_user: bool = False):
         self.config = config
         self.section = section
@@ -135,9 +136,9 @@ class BoolOption(Option):
 
 
 class IntOption(Option):
-    def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
-        super().__init__(config, option, str(default), section)
-        self.value = int(self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
+    def __init__(self, config: QoEmuConfiguration, option: str, default: int, section: str = QOEMU_SECTION):
+        super().__init__(config, option, default, section)
+        self.value = self.config.configparser.getint(section=self.section, option=self.option, fallback=self.default)
 
     def get(self) -> int:
         return self.value
@@ -148,10 +149,9 @@ class IntOption(Option):
 
 
 class FloatOption(Option):
-    def __init__(self, config: QoEmuConfiguration, option: str, default: bool, section: str = QOEMU_SECTION):
-        super().__init__(config, option, str(default), section)
-        self.value = float(
-            self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
+    def __init__(self, config: QoEmuConfiguration, option: str, default: float, section: str = QOEMU_SECTION):
+        super().__init__(config, option, default, section)
+        self.value = self.config.configparser.getfloat(section=self.section, option=self.option, fallback=self.default)
 
     def get(self) -> float:
         return self.value
