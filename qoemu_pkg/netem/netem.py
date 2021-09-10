@@ -462,6 +462,7 @@ class Connection:
             log.warning(f"Dynamic parameters cannot be considered - dynamic parameter setup is not available.")
 
         emulate_dynamically = emulate_t_init or emulate_dynamic_parameters
+
         if emulate_dynamically:
             self._dynamic_emulation_thread = threading.Thread(target=self._emulate_dynamically,
                                                               args=(emulate_t_init, emulate_dynamic_parameters),
@@ -558,9 +559,16 @@ class Connection:
 
     def _emulate_dynamically(self, emulate_t_init: bool = True, emulate_dynamic_parameters: bool = True):
         """Emulate the dynamic conditions of a cellular network"""
+        log.debug(f"netem active    emulate_t_init: {emulate_t_init}  "
+                  f"emulate_dynamic_parameters: {emulate_dynamic_parameters}")
         if emulate_t_init:
             self._emulate_t_init()
         if emulate_dynamic_parameters:
+            if self.dynamic_parameters_setup.verbose:
+                verbose_info = "verbose: showing delay for each change"
+            else:
+                verbose_info = "verbose is false - not showing delay for each update"
+            log.debug(f"netem dynamic parameter updates active ({verbose_info})")
             self._emulate_dynamic_parameters()
 
 
