@@ -75,13 +75,6 @@ class EmulationFrame(tk.Frame):
                                                     min_value=1, max_value=65535)
         self.exclude_ports_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
-
-
-        # ParameterFile
-        self.parameter_file_path_frame = FileFrame(self, self.gui,
-                                                   config_variable=config.parameter_file)
-        self.parameter_file_path_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
-
         # DynamicParameterPath
         self.dynamic_parameter_file_path_frame = FolderFrame(self, self.gui,
                                                              config_variable=config.dynamic_parameter_path)

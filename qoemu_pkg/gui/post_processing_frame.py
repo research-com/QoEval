@@ -47,7 +47,7 @@ class PostProcessingFrame(tk.Frame):
         self.audio_target_volume_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
         # AudioEraseStartStop
-        self.audio_erase_start_stop_frame = ListFloatFrame(self, gui=self.gui,
+        self.audio_erase_start_stop_frame = AudioStartStopFrame(self, gui=self.gui,
                                                            config_variable=config.audio_erase_start_stop,
                                                            min_value=0)
         self.audio_erase_start_stop_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)

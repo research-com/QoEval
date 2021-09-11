@@ -47,6 +47,7 @@ if os.environ.get("QOEMU_CONF"):
 class QoEmuConfiguration:
 
     def __init__(self, configparser: configparser.ConfigParser):
+        self.modified_since_last_save = False
         self.configparser = configparser
         self.vd_path = Option(self, 'AVDPath', _default_avd_path, expand_user=True)
         self.video_capture_path = Option(self, 'VideoCapturePath', _default_video_capture_path, expand_user=True)
@@ -63,7 +64,9 @@ class QoEmuConfiguration:
         self.coordinator_generate_stimuli = BoolOption(self, "CoordinatorGenerateStimuli", True)
         self.coordinator_postprocessing = BoolOption(self, "CoordinatorPostprocessing", False)
         self.coordinator_overwrite = BoolOption(self, "CoordinatorOverwrite", False)
-        self.coordinator_stimuli = ListDictOption(self, "CoordinatorStimuliToGenerate", [])
+
+        self.gui_coordinator_stimuli = ListDictOption(self, "CoordinatorStimuliToGenerate", [])
+        self.gui_current_config_file = Option(self, "GUIConfigFile", "~/.config/qoemu/qoemu_gui.conf", expand_user=True)
 
         self.adb_device_serial = Option(self, 'AdbDeviceSerial', '')
         self.audio_device_emu = Option(self, 'AudioDeviceEmu', '')
@@ -91,6 +94,7 @@ class QoEmuConfiguration:
 
         with open(file_path, 'w') as configfile:
             self.configparser.write(configfile)
+        self.modified_since_last_save = False
 
     def read_from_file(self, file: str = None):
         if file is not None:
@@ -123,6 +127,7 @@ class Option:
         return self.value
 
     def set(self, value: str):
+        self.config.modified_since_last_save = True
         if self.expand_user:
             self.value = value.replace(os.path.expanduser('~'), '~', 1)
         else:
@@ -142,6 +147,7 @@ class BoolOption(Option):
         return self.value
 
     def set(self, value: bool):
+        self.config.modified_since_last_save = True
         self.value = str(value)
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
@@ -157,6 +163,7 @@ class IntOption(Option):
         return self.value
 
     def set(self, value: int):
+        self.config.modified_since_last_save = True
         self.value = value
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
@@ -173,6 +180,7 @@ class FloatOption(Option):
         return self.value
 
     def set(self, value: float):
+        self.config.modified_since_last_save = True
         self.value = value
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
@@ -186,6 +194,7 @@ class MobileDeviceTypeOption(Option):
         return MobileDeviceType[self.value]
 
     def set(self, value: Union[MobileDeviceType, str]):
+        self.config.modified_since_last_save = True
         if type(value) == MobileDeviceType:
             self.value = value.name
         else:
@@ -202,6 +211,7 @@ class ListIntOption(Option):
         return ast.literal_eval(self.value)
 
     def set(self, value: List[int]):
+        self.config.modified_since_last_save = True
         self.value = str(value)
         self.config.configparser.set(self.section, self.option, self.value)
 
@@ -217,6 +227,7 @@ class ListFloatOption(Option):
         return result
 
     def set(self, value: List[float]):
+        self.config.modified_since_last_save = True
         self.value = str(value)
         self.config.configparser.set(self.section, self.option, self.value)
 
@@ -231,6 +242,7 @@ class ListOption(Option):
         return ast.literal_eval(self.value)
 
     def set(self, value: List[str]):
+        self.config.modified_since_last_save = True
         self.value = str(value)
         self.config.configparser.set(self.section, self.option, self.value)
 
@@ -244,6 +256,7 @@ class ListDictOption(Option):
         return ast.literal_eval(self.value)
 
     def set(self, value: List[Dict]):
+        self.config.modified_since_last_save = True
         self.value = str(value)
         self.config.configparser.set(self.section, self.option, self.value)
 

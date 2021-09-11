@@ -4,7 +4,7 @@ import tkinter as tk
 
 import qoemu_pkg.analysis.analysis
 from config import *
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from qoemu_pkg.configuration import *
 import logging as log
 from tooltip import Tooltip
@@ -83,11 +83,23 @@ class FolderFrame(tk.Frame):
 
         self.entry = tk.Entry(self, textvariable=self.path)
         self.entry.pack(fill=tk.BOTH, side="left", expand=1)
+        self.entry.bind('<FocusOut>', self._update_config)
 
     def open_folder(self):
-        self.path.set(filedialog.askdirectory())
-        self.config_variable.set(self.path.get().replace(os.path.expanduser('~'), '~', 1))
-        log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
+        path = filedialog.askdirectory()
+        if len(path) > 0:
+            self.path.set(path)
+            self._update_config()
+
+    def _update_config(self, *args):
+        if self.path.get() == self.config_variable.get():
+            return
+        if os.path.isdir(self.path.get()):
+            self.config_variable.set(self.path.get().replace(os.path.expanduser('~'), '~', 1))
+            log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
+        else:
+            messagebox.showerror("Error", "Directory doesn't exist")
+            self.path.set(self.config_variable.get())
 
     def update(self):
         self.entry.delete(0, tk.END)
@@ -110,16 +122,18 @@ class FileFrame(tk.Frame):
         self.path = tk.StringVar(self)
         self.path.set(os.path.expanduser(self.config_variable.get()))
 
-        self.button = tk.Button(self, text=f"{self.name}:", command=self.open_folder, anchor="w", width=30)
+        self.button = tk.Button(self, text=f"{self.name}:", command=self.open_file, anchor="w", width=30)
         self.button.pack(fill=tk.BOTH, side="left", expand=0)
 
         self.entry = tk.Entry(self, textvariable=self.path)
         self.entry.pack(fill=tk.BOTH, side="left", expand=1)
 
-    def open_folder(self):
-        self.path.set(filedialog.askopenfilename())
-        self.config_variable.set(self.path.get().replace(os.path.expanduser('~'), '~', 1))
-        log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
+    def open_file(self):
+        path = filedialog.askopenfilename()
+        if len(path) > 0:
+            self.path.set(path)
+            self.config_variable.set(self.path.get().replace(os.path.expanduser('~'), '~', 1))
+            log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update(self):
         self.entry.delete(0, tk.END)
@@ -181,32 +195,30 @@ class StringFrame(tk.Frame):
         self.gui: Gui = gui
         self.gui.updatable_elements.append(self)
 
-        self.value = tk.StringVar(self)
-        self.value.set(self.config_variable.get())
-
         self.label = tk.Label(master=self, text=f"{self.name}:  ", width=30, anchor="w")
         self.label.pack(fill=tk.BOTH, expand=0, side="left")
 
         self.input = tk.Entry(self)
+        self.input.insert(0, self.config_variable.get())
         self.input.pack(fill=tk.BOTH, expand=1, side="left")
-        
-        self.button = tk.Button(self, text="Set", command=self._update_config)
-        self.button.pack(side="left", expand=0, padx=10, pady=1)
-
-        self.label_value = tk.Label(master=self, textvariable=self.value, width=40)
-        self.label_value.pack(fill=tk.BOTH, expand=0, side="left")
+        self.input.bind('<FocusOut>', self._update_config)
 
     def _update_config(self, *args):
-        self.value.set(self.input.get())
-        self.config_variable.set(self.value.get())
+        new_value = self.input.get()
+
+        if new_value == self.config_variable.get():
+            return
+
+        self.config_variable.set(new_value)
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update(self):
-        self.value.set(self.config_variable.get())
+        self.input.delete(0, tk.END)
+        self.input.insert(0, self.config_variable.get())
 
 
 class IntegerFrame(tk.Frame):
-    def __init__(self, master, gui: Gui, config_variable: Option, name: str = None, min_value: int = None,
+    def __init__(self, master, gui: Gui, config_variable: IntOption, name: str = None, min_value: int = None,
                  max_value: int = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
         self.master = master
@@ -221,25 +233,19 @@ class IntegerFrame(tk.Frame):
         self.gui: Gui = gui
         self.gui.updatable_elements.append(self)
 
-        self.value = tk.IntVar(self)
-        self.value.set(self.config_variable.get())
-
         self.label = tk.Label(master=self, text=f"{self.name}:", width=45, anchor="w")
         self.label.pack(fill=tk.BOTH, expand=0, side="left")
 
         self.input = tk.Entry(self, width=10)
+        self.input.insert(0, self.config_variable.get())
         self.input.pack(fill=tk.BOTH, expand=0, side="left")
-
-        self.button = tk.Button(self, text="Set", command=self._update_config)
-        self.button.pack(side="left", expand=0, padx=40, pady=1)
-
-        self.label_value = tk.Label(master=self, textvariable=self.value, width=10)
-        self.label_value.pack(fill=tk.BOTH, expand=0, side="left")
+        self.input.bind('<FocusOut>', self._update_config)
 
     def _update_config(self, *args):
         try:
             new_value = int(self.input.get())
         except ValueError:
+            messagebox.showerror("Error", "Not an Integer")
             self.input.delete(0, tk.END)
             self.input.insert(0, self.config_variable.get())
             return
@@ -249,23 +255,25 @@ class IntegerFrame(tk.Frame):
 
         if self.min_value is not None:
             if new_value < self.min_value:
+                messagebox.showerror("Error", "Value too small")
                 self.input.delete(0, tk.END)
                 self.input.insert(0, self.config_variable.get())
                 return
 
         if self.max_value is not None:
             if new_value > self.max_value:
+                messagebox.showerror("Error", "Value too large")
                 self.input.delete(0, tk.END)
                 self.input.insert(0, self.config_variable.get())
                 return
 
-        self.value.set(new_value)
-        self.config_variable.set(str(self.value.get()))
+        self.config_variable.set(new_value)
         self.update()
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update(self):
-        self.value.set(self.config_variable.get())
+        self.input.delete(0, tk.END)
+        self.input.insert(0, self.config_variable.get())
 
 
 class FloatFrame(tk.Frame):
@@ -284,26 +292,19 @@ class FloatFrame(tk.Frame):
         self.gui: Gui = gui
         self.gui.updatable_elements.append(self)
 
-        self.value = tk.StringVar(self)
-        self.value.set(self.config_variable.get())
-
         self.label = tk.Label(master=self, text=f"{self.name}:", width=45, anchor="w")
         self.label.pack(fill=tk.BOTH, expand=0, side="left")
 
         self.input = tk.Entry(self, width=10)
+        self.input.insert(0, self.config_variable.get())
         self.input.pack(fill=tk.BOTH, expand=0, side="left")
-
-        self.button = tk.Button(self, text="Set", command=self._update_config)
-        self.button.pack(side="left", expand=0, padx=40, pady=1)
-
-        self.label_value = tk.Label(master=self, textvariable=self.value, width=10)
-        self.label_value.pack(fill=tk.BOTH, expand=0, side="left")
-
+        self.input.bind('<FocusOut>', self._update_config)
 
     def _update_config(self, *args):
         try:
             new_value = float(self.input.get())
         except ValueError:
+            messagebox.showerror("Error", "Not a Float")
             self.input.delete(0, tk.END)
             self.input.insert(0, self.config_variable.get())
             return
@@ -313,22 +314,24 @@ class FloatFrame(tk.Frame):
 
         if self.min_value is not None:
             if new_value < self.min_value:
+                messagebox.showerror("Error", "Value too small")
                 self.input.delete(0, tk.END)
                 self.input.insert(0, self.config_variable.get())
                 return
 
         if self.max_value is not None:
             if new_value > self.max_value:
+                messagebox.showerror("Error", "Value too large")
                 self.input.delete(0, tk.END)
                 self.input.insert(0, self.config_variable.get())
                 return
 
-        self.value.set(str(new_value))
         self.config_variable.set(new_value)
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update(self):
-        self.value.set(str(self.config_variable.get()))
+        self.input.delete(0, tk.END)
+        self.input.insert(0, str(self.config_variable.get()))
 
 
 class ListIntegerFrame(tk.Frame):
@@ -390,16 +393,19 @@ class ListIntegerFrame(tk.Frame):
             value = int(self.input.get())
         except ValueError:
             self.input.delete(0, "end")
+            messagebox.showerror("Error", "Not an Integer")
             return
 
-        if self.min_value:
+        if self.min_value is not None:
             if value < self.min_value:
                 self.input.delete(0, "end")
+                messagebox.showerror("Error", "Value too small")
                 return
 
         if self.max_value:
             if value > self.max_value:
                 self.input.delete(0, "end")
+                messagebox.showerror("Error", "Value too large")
                 return
 
         if value not in self.listbox.get(0, "end"):
@@ -490,7 +496,7 @@ class ListFloatFrame(tk.Frame):
             self.input.delete(0, "end")
             return
 
-        if self.min_value:
+        if self.min_value is not None:
             if value < self.min_value:
                 self.input.delete(0, "end")
                 return
@@ -525,6 +531,167 @@ class ListFloatFrame(tk.Frame):
         for value in self.config_variable.get():
             self.listbox.insert(0, float(value))
         self.sort_values()
+
+
+class AudioStartStopFrame(tk.Frame):
+
+    def __init__(self, master, gui: Gui, config_variable: ListFloatOption, name: str = None, value_name: str = "Value Pair",
+                 min_value: int = None, max_value: int = None):
+        super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
+        self.master = master
+        self.config_variable = config_variable
+        if name:
+            self.name = name
+        else:
+            self.name = self.config_variable.option
+        self.value_name = value_name
+        self.min_value = min_value
+        self.max_value = max_value
+        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
+        self.gui: Gui = gui
+        self.gui.updatable_elements.append(self)
+
+        scrollbar = tk.Scrollbar(self, orient="vertical")
+        scrollbar.pack(side="right", fill="y")
+
+        self.label = tk.Label(master=self, text=f"{self.name}: ", font=("", 12))
+        self.label.pack(fill=tk.BOTH, expand=0, side="top")
+
+        self.button_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
+        self.button_frame.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.input_label_frame = tk.Frame(self.button_frame, background="#DCDCDC", bd=1, relief="sunken")
+        self.input_label_frame.pack(fill=tk.BOTH, expand=0, side="top")
+
+        self.label_start = tk.Label(master=self.input_label_frame, text=f"Start: ", width=10)
+        self.label_start.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.label_stop = tk.Label(master=self.input_label_frame, text=f"Stop: ", width=10)
+        self.label_stop.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.input_frame = tk.Frame(self.button_frame, background="#DCDCDC", bd=1, relief="sunken")
+        self.input_frame.pack(fill=tk.BOTH, expand=0, side="top")
+
+        self.input = tk.Entry(self.input_frame, width=10)
+        self.input.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.input2 = tk.Entry(self.input_frame, width=10)
+        self.input2.pack(fill=tk.BOTH, expand=0, side="left")
+
+        self.button_add = tk.Button(self.button_frame, text=f"Add {self.value_name}",
+                                    command=self.add_value)
+        self.button_add.pack(fill=tk.BOTH, side="top", expand=0)
+
+        self.button_delete = tk.Button(self.button_frame, text=f"Delete {self.value_name}",
+                                       command=self.delete_value)
+        self.button_delete.pack(fill=tk.BOTH, side="top", expand=0)
+
+        self.initial_values = tk.StringVar()
+        self.initial_values.set(self.config_variable.get())
+
+        self.listbox = tk.Listbox(self, listvariable=self.initial_values, height=1)
+        self.listbox.pack(fill=tk.BOTH, expand=1, side="left")
+
+        scrollbar.config(command=self.listbox.yview)
+        self.listbox.config(yscrollcommand=scrollbar.set)
+
+    def delete_value(self):
+        try:
+            index = self.listbox.curselection()[0]
+            print(index)
+            self.listbox.delete(index)
+            self.listbox.delete(index - index % 2)
+        except tk.TclError:
+            pass
+
+        self._update_config()
+
+    def add_value(self):
+        try:
+            value = float(self.input.get())
+            value2 = float(self.input2.get())
+        except ValueError:
+            messagebox.showerror("Error", "Not a Float")
+            self.input.delete(0, "end")
+            self.input2.delete(0, "end")
+            return
+
+        if value >= value2:
+            messagebox.showerror("Error", "Start value larger than stop value")
+            self.input.delete(0, "end")
+            self.input2.delete(0, "end")
+            return
+
+        print(value)
+        print(self.min_value)
+        if self.min_value is not None:
+            if value < self.min_value or value2 < self.min_value:
+                messagebox.showerror("Error", "Value too small")
+                self.input.delete(0, "end")
+                self.input2.delete(0, "end")
+                return
+
+        if self.max_value:
+            if value > self.max_value or value2 > self.max_value:
+                messagebox.showerror("Error", "Value too large")
+                self.input.delete(0, "end")
+                self.input2.delete(0, "end")
+                return
+
+        if value in self.listbox.get(0, "end") or value2 in self.listbox.get(0, "end"):
+            messagebox.showerror("Error", "Value exists already")
+            self.input.delete(0, "end")
+            self.input2.delete(0, "end")
+            return
+
+        traversed = 0
+        start = False
+        last_value = -1
+        for current_value in [float(v) for v in self.listbox.get(0, "end")]:
+            if start is True and value2 > last_value:
+                messagebox.showerror("Error", "Value pair overlaps with existing pair")
+                self.input.delete(0, "end")
+                self.input2.delete(0, "end")
+                return
+
+            if last_value < value < current_value:
+                if traversed % 2 == 1:
+                    messagebox.showerror("Error", "Value pair overlaps with existing pair")
+                    self.input.delete(0, "end")
+                    self.input2.delete(0, "end")
+                    return
+                start = True
+            last_value = current_value
+            traversed += 1
+
+
+        self.listbox.insert('end', value)
+        self.listbox.insert('end', value2)
+        self.sort_values()
+        self._update_config()
+        self.input.delete(0, "end")
+        self.input2.delete(0, "end")
+
+    def sort_values(self):
+        values = []
+        for entry in self.listbox.get(0, "end"):
+            values.append(float(entry))
+            self.listbox.delete(0)
+        values.sort()
+        for entry in values:
+            self.listbox.insert("end", entry)
+
+    def _update_config(self):
+        self.config_variable.set([float(element) for element in self.listbox.get(0, tk.END)])
+        log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
+
+    def update(self):
+        self.listbox.delete(0, tk.END)
+        for value in self.config_variable.get():
+            self.listbox.insert(0, float(value))
+        self.sort_values()
+
+
 
 
 class CheckboxToListFrame(tk.Frame):
@@ -666,6 +833,8 @@ class PlotsFrame(tk.Frame):
             checkbox = tk.Checkbutton(self.directions_frame, text=direction, variable=variable, width=10, anchor="w")
             self.direction_tuples.append((checkbox, variable))
             checkbox.pack(fill=tk.BOTH, expand=0, side="left")
+            if direction == qoemu_pkg.analysis.analysis.IN:
+                checkbox.select()
 
         self.protocols_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
         self.protocols_frame.pack(fill=tk.BOTH, expand=0, side="top")
@@ -677,6 +846,8 @@ class PlotsFrame(tk.Frame):
             checkbox = tk.Checkbutton(self.protocols_frame, text=protocol, variable=variable, width=10, anchor="w")
             self.protocol_tuples.append((checkbox, variable))
             checkbox.pack(fill=tk.BOTH, expand=0, side="left")
+            if protocol == qoemu_pkg.analysis.analysis.ALL:
+                checkbox.select()
 
         self.kinds_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
         self.kinds_frame.pack(fill=tk.BOTH, expand=0, side="top")
@@ -684,7 +855,8 @@ class PlotsFrame(tk.Frame):
         label.pack(fill=tk.BOTH, expand=0, side="left")
         self.kinds_variable = tk.StringVar()
         for i, kind in enumerate(qoemu_pkg.analysis.analysis.KINDS):
-            checkbox = tk.Radiobutton(self.kinds_frame, text=kind, variable=self.kinds_variable, value=kind, width=9, anchor="w")
+            checkbox = tk.Radiobutton(self.kinds_frame, text=kind, variable=self.kinds_variable, value=kind, width=9,
+                                      anchor="w")
             checkbox.pack(fill=tk.BOTH, expand=0, side="left")
             if i == 0:
                 checkbox.select()
@@ -698,7 +870,7 @@ class PlotsFrame(tk.Frame):
         self._update_config()
 
     def add_value(self):
-        result = {"directions": [],"protocols": [], "kind": []}
+        result = {"directions": [], "protocols": [], "kind": []}
         for checkbox, var in self.direction_tuples:
             if var.get() == 1:
                 result["directions"].append(checkbox["text"])
@@ -707,15 +879,21 @@ class PlotsFrame(tk.Frame):
                 result["protocols"].append(checkbox["text"])
         result["kind"].append(self.kinds_variable.get())
 
-        if all([len(entry) > 0 for entry in result.values()]) and str(result) not in self.listbox.get(0, "end"):
+        if all([len(entry) > 0 for entry in result.values()]):
             self.listbox.insert('end', result)
+        else:
+            messagebox.showinfo("Information", "Must select at least one direction and protocol")
+            return
+        if str(result) in self.listbox.get(0, "end"):
+            messagebox.showinfo("Information", "Selection already in list")
+            return
 
         self._update_config()
 
     def _update_config(self):
 
         self.config_variable.set([element for element in self.listbox.get(0, tk.END)])
-        log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
+        log.debug(f"Config: '{self.name}' modified")
 
     def update(self):
         self.listbox.delete(0, tk.END)

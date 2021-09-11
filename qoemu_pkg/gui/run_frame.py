@@ -40,6 +40,7 @@ class RunFrame(tk.Frame):
         self.total_stimuli = None
         self.campaigns_finished = None
         self.post_processing_finished = None
+        self.coordinator_is_running = False
 
         self.logger = getLogger()
 
@@ -58,17 +59,17 @@ class RunFrame(tk.Frame):
         self.button_frame.pack(fill=tk.BOTH, expand=0, side="top")
 
         # Log level
-        self.loglevel = tk.StringVar(self)
-        self.loglevel.trace("w", self.change_log_level)
-        self.loglevel.set("DEBUG")
-
-        levels = ["INFO", "DEBUG"]
-
-        self.label = tk.Label(master=self.button_frame, text="Log Level: ")
-        self.label.pack(fill=tk.BOTH, expand=0, side="left")
-
-        self.dropdown = tk.OptionMenu(self.button_frame, self.loglevel, *levels)
-        self.dropdown.pack(fill=tk.BOTH, expand=0, side="left")
+        # self.loglevel = tk.StringVar(self)
+        # self.loglevel.trace("w", self.change_log_level)
+        # self.loglevel.set("DEBUG")
+        #
+        # levels = ["INFO", "DEBUG"]
+        #
+        # self.label = tk.Label(master=self.button_frame, text="Log Level: ")
+        # self.label.pack(fill=tk.BOTH, expand=0, side="left")
+        #
+        # self.dropdown = tk.OptionMenu(self.button_frame, self.loglevel, *levels)
+        # self.dropdown.pack(fill=tk.BOTH, expand=0, side="left")
 
         # Run Coordinator button
         self.button_run_coordinator = tk.Button(self.button_frame, text=RUN_COORDINATOR_STR,
@@ -105,7 +106,6 @@ class RunFrame(tk.Frame):
 
         # Logger
         # self.logger = getLogger()
-        # add handler to the root logger here
         # should be done in the config...
         self.logger.addHandler(ListboxHandler(self.listbox))
         self.logger.setLevel(logging.DEBUG)
@@ -117,24 +117,24 @@ class RunFrame(tk.Frame):
             self.logger.setLevel(logging.INFO)
 
     def terminate_coordinator(self):
-        # for proc in self.coordinator_process.chil
-        #self.coordinator_process.terminate()
+        if self.coordinator_is_running:
 
-        process = psutil.Process(self.coordinator_process.pid)
-        for proc in process.children(recursive=True):
-            proc.terminate()
-        process.terminate()
-        log.info("Sent SIGTERM to coordinator process. Waiting for it to terminate")
-        for proc in process.children(recursive=True):
-            proc.wait()
-        # os.killpg(os.getpgid(self.coordinator_process.pid), signal.SIGTERM)
-        self.coordinator_process.wait()
-        log.info("Coordinator exited")
-        netem.reset_device_and_ifb(config.net_device_name.get())
-        self.enable_interface_after_coordinator()
+            process = psutil.Process(self.coordinator_process.pid)
+            for proc in process.children(recursive=True):
+                proc.terminate()
+            process.terminate()
+            log.info("Sent SIGTERM to coordinator process. Waiting for it to terminate")
+            for proc in process.children(recursive=True):
+                proc.wait()
+            # os.killpg(os.getpgid(self.coordinator_process.pid), signal.SIGTERM)
+            self.coordinator_process.wait()
+            log.info("Coordinator exited")
+            netem.reset_device_and_ifb(config.net_device_name.get())
+            self.enable_interface_after_coordinator()
+            self.coordinator_is_running = False
 
     def start_coordinator(self):
-        entries = self.get_checked_entries()
+        entries = config.gui_coordinator_stimuli.get()
         if len(entries) < 1:
             log.info("No Parameters are selected")
             return
@@ -147,21 +147,16 @@ class RunFrame(tk.Frame):
         log.info("Starting coordinator")
         self.disable_interface_for_coordinator()
 
-        entry_list = []
-        for entry in entries:
-            dictionary = {"type_id": entry[0], "table_id": entry[1], "entry_id": entry[2]}
-            entry_list.append(dictionary)
-
-        config.coordinator_stimuli.set(entry_list)
         self.master.save_config()
 
         path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "run_coordinator.py")
         self.coordinator_process = subprocess.Popen(f"python3 {path}".split(" "), shell=False, stdout=subprocess.PIPE,
                                                     stderr=subprocess.STDOUT)
-        self.update_thread = threading.Thread(target=self.display_output, daemon=True)
+        self.coordinator_is_running = True
+        self.update_thread = threading.Thread(target=self.monitor_coordinator, daemon=True)
         self.update_thread.start()
 
-    def display_output(self):
+    def monitor_coordinator(self):
         for line in self.coordinator_process.stdout:
             # self.listbox.insert(tk.END, "COORD: ".encode("UTF-8") + line)
             if FINISH_CAMPAIGN_LOG.encode("UTF-8") in line:
@@ -174,6 +169,8 @@ class RunFrame(tk.Frame):
                     f"{POST_STR}{self.post_processing_finished}/{self.total_stimuli}")
             self.listbox.insert(tk.END, line)
             self.listbox.yview(tk.END)
+        self.enable_interface_after_coordinator()
+        self.coordinator_is_running = False
 
     def disable_interface_for_coordinator(self):
         self.button_run_coordinator["state"] = tk.DISABLED

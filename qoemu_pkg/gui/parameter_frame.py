@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import tkinter as tk
+from tkinter import messagebox
 from ttkwidgets import CheckboxTreeview
 import tkinter.ttk as ttk
 from tkinter.filedialog import askopenfilename
@@ -13,6 +14,8 @@ if TYPE_CHECKING:
 
 from qoemu_pkg.parser import parser
 
+OPEN_FILE_TEXT = "Open Parameter File"
+PARAMETER_FILE_DESC = "Parameter File:"
 
 class ParameterFrame(tk.Frame):
 
@@ -21,14 +24,21 @@ class ParameterFrame(tk.Frame):
         self.master = master
         self.gui: Gui = gui
 
+        self.gui.updatable_elements.append(self)
 
         # buttons
         self.button_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
         self.button_frame.pack(fill=tk.BOTH, expand=False)
 
-        self.button_open_file = tk.Button(self.button_frame, text="Open File", command=self.open_file_with_asking)
+        self.button_open_file = tk.Button(self.button_frame, text=OPEN_FILE_TEXT, command=self.open_file_with_asking,
+                                          width=15)
 
-        self.button_open_file.pack(fill=tk.BOTH, side="left", expand=1)
+        self.button_open_file.pack(fill=tk.BOTH, side="left", expand=0)
+
+        self.parameter_file = tk.StringVar(value=config.parameter_file.get())
+        self.parameter_file_label = tk.Label(master=self.button_frame, textvariable=self.parameter_file,
+                                             anchor="c")
+        self.parameter_file_label.pack(fill=tk.BOTH, expand=1, side="left")
 
         # self.button_create_entry = tk.Button(self.button_frame, text="Create Custom Entry",
         #                                      command=self.custom_entry_window)
@@ -63,42 +73,66 @@ class ParameterFrame(tk.Frame):
 
         # treeview column config
 
-        self.tree['columns'] = ('t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'link', 'start', 'end')
-        self.tree.column("#0", width=30, stretch=True, minwidth=150)
+        self.tree['columns'] = (
+            't_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'link', 'start', 'end')
+        self.tree.column("#0", stretch=False, minwidth=80, width=120)
         for column in self.tree['columns']:
             self.tree.heading(column, text=column)
             if column == "link":
-                self.tree.column(column, width=190, stretch=True, minwidth=250)
+                self.tree.column(column, stretch=False, minwidth=120, width=400)
+            elif column in ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'codec']:
+                self.tree.column(column, stretch=False, minwidth=60, width=60)
             else:
-                self.tree.column(column, width=30, stretch=True, minwidth=80)
+                self.tree.column(column, stretch=False, minwidth=60, width=100)
 
         # make leftclick copy possible in treeview
         self.tree.bind('<ButtonRelease-1>', self._tree_copy_click_handler)
         # end
 
-        path = os.path.abspath(os.path.normpath(os.path.join("../../", config.parameter_file.get())))
-        path = os.path.normpath(path)
+        # update config
+        self.tree.bind('<<TreeviewSelect>>', self._update_config)
+
+        if config.parameter_file.get().startswith("./"):
+            path = os.path.abspath(os.path.normpath(os.path.join("../../", config.parameter_file.get())))
+            path = os.path.normpath(path)
+        else:
+            path = config.parameter_file.get()
         self.open_file(path)
 
+    def _update_config(self, *args):
+        entries = self.get_checked_entries()
+        entry_list = []
+        for entry in entries:
+            dictionary = {"type_id": entry[0], "table_id": entry[1], "entry_id": entry[2]}
+            entry_list.append(dictionary)
+
+        config.gui_coordinator_stimuli.set(entry_list)
+
     def open_file_with_asking(self):
-        self.open_file(askopenfilename())
+        path = askopenfilename()
+        if len(path) > 0:
+            config.gui_coordinator_stimuli.set([])
+            self.open_file(path)
 
     def open_file(self, filename):
-
 
         try:
             parser.load_parameter_file(filename, False)
         except FileNotFoundError:
-            return None
+            config.parameter_file.set(self.parameter_file.get())
+            messagebox.showerror    ("Error", "Parameter file not found")
+            return
 
-        try:  # in case the entry already exists we get a tk.TclError
-            self.tree.insert(parent="", index=0, text=filename, iid=filename, open=True)
-        except tk.TclError:
-            pass
+        if filename != config.parameter_file.get():
+            config.parameter_file.set(filename)
+            self.parameter_file.set(filename)
+
+        for i in self.tree.get_children():
+            self.tree.delete(i)
 
         for i, type_id in enumerate(parser.get_type_ids()):
             try:  # in case the entry already exists we get a tk.TclError
-                self.tree.insert(parent=filename, index=i, text=type_id, iid=type_id, open=True)
+                self.tree.insert(parent="", index=i, text=type_id, iid=type_id)
             except tk.TclError:
                 pass
             for j, table_id in enumerate(parser.get_table_ids(type_id)):
@@ -115,8 +149,30 @@ class ParameterFrame(tk.Frame):
                         self.tree.insert(parent=f"{type_id}:{table_id}", text=k, index=k,
                                          iid=f"{type_id}:{table_id}:{k}",
                                          values=data)
+                        if dict(type_id=type_id, table_id=table_id, entry_id=k) in config.gui_coordinator_stimuli.get():
+                            self.tree.item(f"{type_id}:{table_id}:{k}", tags=['checked'])
                     except tk.TclError:
                         pass
+
+                checked_list = ['checked' in self.tree.item(child)['tags'] for child in
+                                self.tree.get_children(f"{type_id}:{table_id}")]
+                if all(checked_list):
+                    self.tree.item(f"{type_id}:{table_id}", tags=['checked'])
+                elif any(checked_list):
+                    self.tree.item(f"{type_id}:{table_id}", tags=['tristate'], open=True)
+
+            checked_list = ['checked' in self.tree.item(child)['tags'] for child in
+                            self.tree.get_children(f"{type_id}")]
+            checked_tristate_list = [
+                ('tristate' in self.tree.item(child)['tags'] or 'checked' in self.tree.item(child)['tags']) for child in
+                self.tree.get_children(f"{type_id}")]
+            if all(checked_list):
+                self.tree.item(f"{type_id}", tags=['checked'])
+            if any(checked_tristate_list):
+                self.tree.item(f"{type_id}", tags=['tristate'], open=True)
+
+        self.parameter_file.set(config.parameter_file.get())
+        return
 
     def _tree_copy_click_handler(self, event):
         """
@@ -143,6 +199,15 @@ class ParameterFrame(tk.Frame):
 
     def save_selected_entries(self):
         pass
+
+    def save_to_config(self):
+        pass
+
+    def update(self):
+
+        self.open_file(config.parameter_file.get())
+
+
 
     def delete_selected_entries(self):
         for i in range(0, 5):
