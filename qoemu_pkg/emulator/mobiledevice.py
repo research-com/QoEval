@@ -23,8 +23,9 @@ def adb_name():
         return "adb"
 
 
-MEASUREMENT_TEST_HOST = "www.youtube.de" # target host for RTT tests
+MEASUREMENT_TEST_HOST = "www.youtube.de"  # target host for RTT tests
 MEASUREMENT_DURATION = 3                 # duration of RTT measurement [s]
+
 
 def check_ext(name):
     log.debug(f"locating {name}")
@@ -35,6 +36,7 @@ def check_ext(name):
         raise RuntimeError('External component not found.')
     else:
         log.debug(f"using {output.stdout}")
+
 
 class MobileDevice:
 
@@ -129,7 +131,7 @@ class MobileDevice:
 
         Parameters
         ----------
-        playstore : bool
+        is_enabled : bool
           Indicates if the playstore API should be enabled (can only be enable if it was installed during creation)
         """
         pass
@@ -149,7 +151,8 @@ class MobileDevice:
     def set_orientation(self, orientation: MobileDeviceOrientation):
         pass
 
-    def input_keyevent(self, keyevent: int):
+    @staticmethod
+    def input_keyevent(keyevent: int):
         subprocess.run(shlex.split(f"{adb_name()} shell input keyevent {keyevent}")).check_returncode()
 
     def unlock_device(self):
@@ -185,7 +188,8 @@ class MobileDevice:
             f"{adb_name()} shell ping -c {MEASUREMENT_DURATION/0.2} -i 0.2 {MEASUREMENT_TEST_HOST}"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
-        pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})\sms"
+        pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,4}.\d{1,4})/" \
+                  r"(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})\sms"
         matcher = re.compile(pattern)
         match = (matcher.search(output.stdout))
         if match:
@@ -196,7 +200,7 @@ class MobileDevice:
             raise RuntimeError("Measuring RTT failed.")
         return float(avg_delay)
 
-    def generate_udp_traffic(self, packet_size: int = 128, packet_rate = 10, duration: float = 10, port: int = 4711):
+    def generate_udp_traffic(self, packet_size: int = 128, packet_rate=10, duration: float = 10, port: int = 4711):
         """
         Send random UDP packet to this mobile device, i.e. to avoid going into power-saving mode.
 
@@ -212,7 +216,7 @@ class MobileDevice:
         inter_tx_interval = 1.0 / packet_rate
         end_time = time.time() + duration
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        while(time.time() < end_time):
+        while time.time() < end_time:
             sock.sendto(data, (str(self.ip_address), port))
             time.sleep(inter_tx_interval)
 

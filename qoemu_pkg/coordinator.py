@@ -75,7 +75,7 @@ class Coordinator:
         if self.netem.android_ip:
             filter_rule = f"host {self.netem.android_ip}"
         for p in self.netem.exclude_ports:
-            if (len(filter_rule) > 0):
+            if len(filter_rule) > 0:
                 filter_rule = f"{filter_rule} && "
             filter_rule = f"{filter_rule} !(tcp port {p}) && !(udp port {p})"
         log.debug(f"_get_bpf_rule filter rule: {filter_rule}")
@@ -109,7 +109,8 @@ class Coordinator:
         self.output_filename = get_video_id(self._type_id, self._table_id, self._entry_id)
         time_string = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
         self._gen_log.write(f"{time_string} {self.output_filename} {self._params} ")
-        # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided if use-case requires play services
+        # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided
+        # if use-case requires play services
         self.emulator.launch(orientation=self._get_uc_orientation())
         try:
             delay_bias_ul_dl = \
@@ -121,7 +122,8 @@ class Coordinator:
         if delay_bias_ul_dl > self._params['dul'] or delay_bias_ul_dl > self._params['ddl']:
             self._gen_log.write(f" delay bias of {delay_bias_ul_dl}ms too high - canceled. ")
             raise RuntimeError(
-                f"Delay bias of {delay_bias_ul_dl}ms exceeds delay parameter of {self._params['ddl']}ms! Cannot emulate.")
+                f"Delay bias of {delay_bias_ul_dl}ms exceeds delay parameter of {self._params['ddl']}ms! "
+                f"Cannot emulate.")
 
         if self._params['dynamic'] and len(self._params['dynamic']) > 0:
             dynamic_parameter_variant = self._params['dynamic']
@@ -147,7 +149,7 @@ class Coordinator:
                                     ddl=(self._params['ddl'] - delay_bias_ul_dl),
                                     android_ip=self.emulator.get_ip_address(),
                                     # note: only valid, if not in host-ap mode
-                                    exclude_ports=config.excluded_ports.get())  # exclude ports, e.g. as used for ssh control
+                                    exclude_ports=config.excluded_ports.get())  # exclude ports, e.g. as used for ssh
 
         url = f"{get_link(self._type_id, self._table_id, self._entry_id)}"
         if len(url) < 7:
@@ -160,9 +162,11 @@ class Coordinator:
             self.ui_control.set_use_case(UseCaseType.YOUTUBE, url=url, t=start_time,
                                          resolution=get_codec(self._type_id, self._table_id, self._entry_id))
             duration = convert_to_seconds(get_end(self._type_id, self._table_id, self._entry_id)) - start_time
-        if self._get_uc_type() == UseCaseType.WEB_BROWSING:
+        elif self._get_uc_type() == UseCaseType.WEB_BROWSING:
             self.ui_control.set_use_case(UseCaseType.WEB_BROWSING, url=url)
             duration = 60.0  # maximum length of web-browsing use-case
+        else:
+            raise RuntimeError("Not a valid use case")
         self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; url: {url}; len: {duration}s ")
         self.ui_control.prepare_use_case()
         self._gen_log.flush()
@@ -200,9 +204,9 @@ class Coordinator:
             self.netem.enable_netem(consider_t_init=False)
             log.debug("network emulation sanity check - measuring delay while emulation is active...")
             measured_rtt_during_emulation = self.emulator.measure_rtt()
-            max_allowed_rtt_during_emulation = self._params['dul'] + self._params['ddl'] + \
-                                               max(DELAY_TOLERANCE_MIN,
-                                                   delay_tol_rel * (self._params['dul'] + self._params['ddl']))
+            max_allowed_rtt_during_emulation = (self._params['dul'] + self._params['ddl'] +
+                                                max(DELAY_TOLERANCE_MIN,
+                                                delay_tol_rel * (self._params['dul'] + self._params['ddl'])))
             self._gen_log.write(
                 f" emu rtt: {measured_rtt_during_emulation}ms max rtt: {max_allowed_rtt_during_emulation}ms ")
             if measured_rtt_during_emulation > max_allowed_rtt_during_emulation:
@@ -229,13 +233,14 @@ class Coordinator:
         if config.traffic_analysis_live.get() or config.traffic_analysis_plot.get():
             self.analysis.start()
 
+        live_plot = None
         if config.traffic_analysis_live.get():
             live_plot = analysis.LivePlot(self.analysis, analysis.PACKETS, analysis.ALL)
 
         ui_control_thread.start()
         capture_thread.start()
 
-        if config.traffic_analysis_live.get():
+        if live_plot:
             log.debug("Showing live plot - close window to continue processing when use-case has finished.")
             live_plot.show()
 
@@ -295,8 +300,8 @@ class Coordinator:
                 try:
                     self._prepare(type_id, table_id, entry_id)
                     wait_countdown(SHORT_WAITING)
-                    excerpt_duration = convert_to_seconds(get_end(type_id, table_id, entry_id)) - \
-                                       convert_to_seconds(get_start(type_id, table_id, entry_id))
+                    excerpt_duration = (convert_to_seconds(get_end(type_id, table_id, entry_id)) -
+                                        convert_to_seconds(get_start(type_id, table_id, entry_id)))
                     # estimate timespan to be recorded - to be careful we double the duration and add four
                     # minutes (assumed maximum time for youtube to adapt playback to rate) and add some
                     # extra time during which e.g. the overflow can be shown
@@ -456,7 +461,7 @@ class Coordinator:
             Specify if postprocessing should be applied
         """
 
-    def start(self, type_ids: List[str], table_ids: List[str], entry_ids: List[str] = [],
+    def start(self, type_ids: List[str], table_ids: List[str], entry_ids: List[str] = None,
               generate_stimuli: bool = True, postprocessing: bool = True, overwrite: bool = False):
 
         load_parameter_file(config.parameter_file.get())
@@ -464,7 +469,7 @@ class Coordinator:
         type_id = type_ids[0]  # TODO: extend to process all elements
         table_id = table_ids[0]
 
-        if len(entry_ids) == 0:
+        if entry_ids is None:
             ids_to_evaluate = get_entry_ids(type_id, table_id)
         else:
             ids_available = get_entry_ids(type_id, table_id)
@@ -477,7 +482,7 @@ class Coordinator:
 
         # ids_to_evaluate =  ['1'] #,'5','4','3','2','1']
 
-        if ids_to_evaluate == None:
+        if ids_to_evaluate is None:
             raise RuntimeError(f"No Stimuli-IDs to evaluate - check parameter file \"{config.parameter_file.get()}\"")
 
         try:
@@ -490,11 +495,11 @@ class Coordinator:
         except RuntimeError as err:
             traceback.print_exc()
             print(
-                "******************************************************************************************************")
+                "*****************************************************************************************************")
             print(f"RuntimeError occured: {err}")
             print(f"Coordinated QoEmu run canceled.")
             print(
-                "******************************************************************************************************")
+                "*****************************************************************************************************")
 
 
 if __name__ == '__main__':
@@ -503,7 +508,7 @@ if __name__ == '__main__':
 
     coordinator = Coordinator()
 
-    coordinator.start(['VS'], ['G'], ['1','2','3','4','5','6','7','8'],
+    coordinator.start(['VS'], ['G'], ['1', '2', '3', '4', '5', '6', '7', '8'],
                       generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 

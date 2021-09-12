@@ -9,6 +9,7 @@ from qoemu_pkg.uicontrol.uitracing import _UiTracing
 
 __all__ = ['_Youtube', '_WebBrowsing', '_AppLaunch', '_UiTracing']
 
+
 class UseCaseFactory:
     def __init__(self, device, serialno):
         self._device = device

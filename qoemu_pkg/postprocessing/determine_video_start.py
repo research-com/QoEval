@@ -5,6 +5,7 @@ import re
 import logging as log
 from qoemu_pkg.configuration import config
 
+
 def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> float:
     """
 
@@ -80,7 +81,7 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
 
     proc.terminate()
 
-    if prediction == None:
+    if prediction is None:
         raise RuntimeError(f"Failed to detect video start time - check threshold parameters for {video_path}")
 
     if abs(minimum_start_time-prediction) < TIME_ACCURACY:

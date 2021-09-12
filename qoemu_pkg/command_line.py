@@ -2,6 +2,7 @@ from qoemu_pkg.coordinator import Coordinator
 
 import argparse
 
+
 def main():
     print("QoE Command Line Coordinator")
 
@@ -19,7 +20,7 @@ def main():
     stimuli_table = args.table
     stimuli_entry = args.entry
 
-    print (f"Starting to process type:{stimuli_type}; table: {stimuli_table}; entry:{stimuli_entry}")
+    print(f"Starting to process type:{stimuli_type}; table: {stimuli_table}; entry:{stimuli_entry}")
 
     if stimuli_entry == "ALL":
         stimuli_entry_list = []
@@ -28,6 +29,6 @@ def main():
 
     coordinator = Coordinator()
     coordinator.start([stimuli_type], [stimuli_table], stimuli_entry_list, generate_stimuli=not args.skipgenerate,
-                      postprocessing= not args.skippostprocessing, overwrite=args.overwrite)
+                      postprocessing=not args.skippostprocessing, overwrite=args.overwrite)
 
     print("Done.")

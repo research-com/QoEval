@@ -29,6 +29,7 @@ def _get_video_dimensions(input_filename: str):
     video_height = int(output.stdout.partition('\n')[2])
     return video_width, video_height
 
+
 def _get_max_volume(input_filename: str):
     command = f"{FFMPEG} -i {input_filename} -af \"volumedetect\" -vn -sn -dn -f null /dev/null "
     output = subprocess.run(shlex.split(command), stderr=subprocess.PIPE,
@@ -45,6 +46,7 @@ def _get_max_volume(input_filename: str):
         raise RuntimeError('Video volume detection failed.')
 
     return max_vol
+
 
 def _is_video_landscape(input_filename: str):
     (w, h) = _get_video_dimensions(input_filename)
@@ -71,7 +73,7 @@ class PostProcessor:
         check_env(MP4BOX)
 
     def process(self, input_filename: str, output_filename: str, initbuf_len: float, main_video_start_time: float,
-                main_video_duration: float, normalize_audio: bool = False, erase_audio = None, erase_box = None):
+                main_video_duration: float, normalize_audio: bool = False, erase_audio=None, erase_box=None):
 
         main_video_end_time = main_video_start_time + main_video_duration
 
@@ -114,9 +116,9 @@ class PostProcessor:
             if len(erase_audio) % 2 != 0:
                 raise RuntimeError(
                     f"Postprocessing error: audio erase list ({erase_audio}) must contain an even number of values.")
-            for i in range(0, len(erase_audio),2):
+            for i in range(0, len(erase_audio), 2):
                 t_start = erase_audio[i]
-                t_end = erase_audio[i+1]
+                t_end = erase_audio[i + 1]
                 ffmpeg_audio_filter = f"{ffmpeg_audio_filter}volume=enable='between(t,{t_start},{t_end})':volume=0,"
 
         # configure optional erasing of a box (e.g. logo)
@@ -124,7 +126,7 @@ class PostProcessor:
             ffmpeg_video_filter = f"drawbox=x={erase_box[0]}:y={erase_box[1]}:" \
                                   f"w={erase_box[2]}:h={erase_box[3]}:color=black:t=fill,"
         else:
-            ffmpeg_video_filter = "" # default is no video filtering/erasing
+            ffmpeg_video_filter = ""  # default is no video filtering/erasing
 
         # perform postprocessing
         with importlib_resources.as_file(self._prefix_video) as prefix_video_path:

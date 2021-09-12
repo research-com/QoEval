@@ -2,7 +2,6 @@
 """
     Emulator control for the emulator which is part of the standard Android SDK
 """
-import ipaddress
 import time
 
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name
@@ -13,7 +12,6 @@ import configparser
 import os
 import subprocess
 import shlex
-import re
 
 # Define constants
 TARGET_NAME = "android-30"

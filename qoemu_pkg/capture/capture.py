@@ -14,7 +14,6 @@ from collections import namedtuple
 from qoemu_pkg.utils import convert_to_seconds
 from qoemu_pkg.configuration import config
 
-
 # Define constants
 FFMPEG = "ffmpeg"
 FFMPEG_FORMAT = "x11grab"
@@ -38,6 +37,7 @@ def check_env():
         log.debug(f"output directory \"{config.video_capture_path.get()}\" does not exist - trying to create it")
         os.makedirs(config.video_capture_path.get())
 
+
 def check_ext(name):
     log.debug(f"locating {name}")
     output = subprocess.run(['which', name], stdout=subprocess.PIPE,
@@ -57,24 +57,27 @@ def check_ffmpeg_features():
         log.error(f"ffmpeg does not support format {FFMPEG_FORMAT}")
         raise RuntimeError('Installed ffmpeg does not support a required format.')
 
+
 class Capture:
     def __init__(self):
         log.basicConfig(level=log.DEBUG)
         check_env()
 
-    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
-        raise RuntimeError(f"Method not implemented.");
+    def start_recording(self, output_filename: str, duration: str = CAPTURE_DEFAULT_REC_TIME, audio: bool = True):
+        raise RuntimeError(f"Method not implemented.")
+
 
 SCREENCOPY_NAME = "scrcpy"
 SCREENCOPY_OPTIONS_WITH_MIRROR = "--stay-awake -N --record"  # note: must end with option for file recording
 SCREENCOPY_OPTIONS_NO_MIRROR = "--no-display --stay-awake -N --record"
+
 
 class CaptureRealDevice(Capture):
     def __init__(self):
         super().__init__()
         check_ext(SCREENCOPY_NAME)
 
-    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
+    def start_recording(self, output_filename: str, duration: str = CAPTURE_DEFAULT_REC_TIME, audio: bool = True):
         # start video recording from real device
         duration_in_secs = convert_to_seconds(duration)
 
@@ -84,8 +87,9 @@ class CaptureRealDevice(Capture):
             scrcpy_opts = SCREENCOPY_OPTIONS_WITH_MIRROR
         else:
             scrcpy_opts = SCREENCOPY_OPTIONS_NO_MIRROR
-        scrcpy_output = subprocess.Popen(shlex.split(f"{SCREENCOPY_NAME} {scrcpy_opts} {dest_tmp}.mp4"), stdout=subprocess.PIPE,
-                       universal_newlines=True)
+        scrcpy_output = subprocess.Popen(shlex.split(f"{SCREENCOPY_NAME} {scrcpy_opts} {dest_tmp}.mp4"),
+                                         stdout=subprocess.PIPE,
+                                         universal_newlines=True)
 
         if audio and config.audio_device_real.get() == '':
             log.error("Cannot capture audio - audio device not specified - check AudioDeviceReal parameter in config")
@@ -100,9 +104,9 @@ class CaptureRealDevice(Capture):
         else:
             # poll regularly if the process has terminated - until we have reached desired duration
             runtime_capture = 0.0
-            while scrcpy_output.poll()==None and runtime_capture < duration_in_secs:
+            while scrcpy_output.poll() is None and runtime_capture < duration_in_secs:
                 time.sleep(1)
-                runtime_capture+=1
+                runtime_capture += 1
 
         scrcpy_output.terminate()
 
@@ -111,7 +115,8 @@ class CaptureRealDevice(Capture):
                   f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 -shortest -y {dest}.avi"
         log.debug(f"re-encoding cmd: {command}")
         subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                                universal_newlines=True).check_returncode()
+                       universal_newlines=True).check_returncode()
+
 
 class CaptureEmulator(Capture):
     def __init__(self):
@@ -186,7 +191,7 @@ class CaptureEmulator(Capture):
         window.configure(stack_mode=Xlib.X.Above)
         self._display.sync()
 
-    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
+    def start_recording(self, output_filename: str, duration: str = CAPTURE_DEFAULT_REC_TIME, audio: bool = True):
         if audio and config.audio_device_emu.get() == '':
             log.error("Cannot capture audio - audio device not specified - check AudioDeviceEmu parameter in config")
             audio = False
@@ -214,31 +219,34 @@ class CaptureEmulator(Capture):
         log.info(f'Found emulator window at {window_pos.x},{window_pos.y} dim {window_pos.width},{window_pos.height}')
         dest = os.path.join(config.video_capture_path.get(), output_filename)
         dest_tmp = os.path.join(config.video_capture_path.get(), 'captured_raw')
-        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
+        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s " \
+        #           f"{window_pos.width}x{window_pos.height} " + \
         #           f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -c:v libxvid " \
         #           f"-preset ultrafast -y {dest}.avi"
         # lossless 1: -c:v libx264 -qp 0 -pix_fmt yuv444p -preset ultrafast
-        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
+        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s " \
+        #           f"{window_pos.width}x{window_pos.height} " + \
         #           f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} "+ \
         #           f"-c:v libx264 -qp 0 -pix_fmt yuv444p -preset ultrafast -y {dest}.avi"
 
         # lossless 2: -qscale 0 -vcodec huffyuv
         command = f"{FFMPEG} -thread_queue_size 1024 {audio_param} -thread_queue_size 1024 " + \
-                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {CAPTURE_FPS} -s {window_pos.width - right_border}x{window_pos.height} " + \
+                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {CAPTURE_FPS} -s {window_pos.width - right_border}x" \
+                  f"{window_pos.height} " + \
                   f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {duration} " + \
                   f"-acodec pcm_s16le -ar 44100 " + \
                   f"-qscale 0 -vcodec huffyuv -y {dest_tmp}.avi"
 
         log.debug(f"cmd: {command}")
         subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                                universal_newlines=True).check_returncode()
+                       universal_newlines=True).check_returncode()
 
         # re-encoding to compressed format (we do not delete the raw dest_tmp on purpose, so it can be compared later)
         command = f"{FFMPEG} -i {dest_tmp}.avi -c:v mpeg4 -vtag xvid -filter:v fps=60 -qscale:v 1 " \
                   f"-c:a libmp3lame -qscale:a 1 -y {dest}.avi"
         log.debug(f"re-encoding cmd: {command}")
         subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                                universal_newlines=True).check_returncode()
+                       universal_newlines=True).check_returncode()
 
 
 if __name__ == '__main__':

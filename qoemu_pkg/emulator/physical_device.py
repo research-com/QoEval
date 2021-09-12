@@ -2,11 +2,10 @@
 """
     Device control for a physical Android device
 """
-import ipaddress
 import threading
 import time
 
-from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name,\
+from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, \
     MEASUREMENT_DURATION
 
 import logging as log
@@ -15,12 +14,12 @@ import shlex
 import re
 
 SCREENCOPY_NAME = "scrcpy"
-SCREENCOPY_OPTIONS ="--stay-awake"
+SCREENCOPY_OPTIONS = "--stay-awake"
 ADB_NAME = "adb"
 
 
 class PhysicalDevice(MobileDevice):
-    def __init__(self, mirror: bool=True):
+    def __init__(self, mirror: bool = True):
         super().__init__()
         self.__scrcpy_output = None
         self.__mirror = mirror
@@ -57,7 +56,8 @@ class PhysicalDevice(MobileDevice):
         # varying delays in times without data traffic. In order to avoid this effect,
         # we send random data to the phone during the RTT measurement procedure
         # so it (hopefully) will not be able to switch to a power saving mode
-        traffic_gen_thread = threading.Thread(target=self.generate_udp_traffic, args=(128, 100, MEASUREMENT_DURATION+3))
+        traffic_gen_thread = threading.Thread(target=self.generate_udp_traffic,
+                                              args=(128, 100, MEASUREMENT_DURATION + 3))
         traffic_gen_thread.start()
         time.sleep(0.5)
         measured_rtt = super().measure_rtt()
@@ -126,7 +126,7 @@ class PhysicalDevice(MobileDevice):
                 stdout=subprocess.PIPE,
                 universal_newlines=True)
             for i in range(0, 5):
-                if self.__scrcpy_output.poll() != None and self.__scrcpy_output.poll() != 0:
+                if self.__scrcpy_output.poll() is not None and self.__scrcpy_output.poll() != 0:
                     raise RuntimeError(f"Error while launching mobile device screen copy.")
                 time.sleep(1)
                 log.debug("Waiting for mobile device mirror connection...")

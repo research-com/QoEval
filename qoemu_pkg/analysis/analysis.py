@@ -8,7 +8,8 @@ and plot it.
 Example usage:
 
 Counting packets/bytes on "ifb0" (outgoing) and "ifb1" (incoming) for 10s with a resolution interval of 20ms,
-additionally sorting packets into bins for future histogram plots, with a BPF to filter packets from/to the ip address 8.8.8.8
+additionally sorting packets into bins for future histogram plots, with a BPF to filter packets from/to the ip
+address 8.8.8.8
 
     coll = analysis.DataCollector("ifb0", "ifb1", 10, 20, bin_sizes: [60, 120, 200, 500], bpf_filter="host 8.8.8.8")
     coll.start_threads()
@@ -124,7 +125,8 @@ class DataCollector:
                             f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}<={size}{SEP}"] = np.zeros(
                             self.data_array_size)
                     self.data[
-                        f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"] = np.zeros(
+                        f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>"
+                        f"{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"] = np.zeros(
                         self.data_array_size)
 
     def _listen_on_interfaces(self):
@@ -175,7 +177,8 @@ class DataCollector:
                         packet_time_frame] += 1
                     return
             self.data[
-                f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"][
+                f"{SEP}{PACKETS}{SEP}{direction}{SEP}{protocol}{SEP}{BIN}{SEP}>"
+                f"{self.bin_sizes[len(self.bin_sizes) - 1]}{SEP}"][
                 packet_time_frame] += 1
             return
 
@@ -262,13 +265,14 @@ class Plot:
     """Offers methods to create a plots based on existing .csv data files, created by the DataCollector object
         For now, one should create a new Plot object for every plot.
         """
+
     def __init__(self,
                  filename: str,
                  start: int,
                  end: int,
                  packets_bytes: str,
-                 directions: List[str] = [INOUT],
-                 protocols: List[str] = [ALL],
+                 directions: List[str] = None,
+                 protocols: List[str] = None,
                  kind: str = BAR,
                  grid: str = None,
                  stacked=False,
@@ -303,11 +307,11 @@ class Plot:
         self.grid = grid
         self.stacked = stacked
         self.packets_bytes = packets_bytes
-        self.directions = directions
+        self.directions = [INOUT] if directions is None else directions
         if label_interval > 0:
             self.label_interval = label_interval
         else:
-            self.label_interval = round((end-start)/10+0.5)*1000
+            self.label_interval = round((end - start) / 10 + 0.5) * 1000
         if tick_interval > 0:
             self.tick_interval = tick_interval
         else:
@@ -315,7 +319,7 @@ class Plot:
         self.resolution_mult = resolution_mult
         self.x_size = x_size
         self.y_size = y_size
-        self.protocols = protocols
+        self.protocols = [ALL] if protocols is None else protocols
         self.dataframe = None
 
         # rudimentary check of all parameters
@@ -323,9 +327,9 @@ class Plot:
             raise RuntimeError(f"Illegal directions: {self.directions}")
         if not all(p in PROTOCOLS for p in self.protocols):
             raise RuntimeError(f"Illegal protocols: {self.protocols}")
-        if not self.packets_bytes in [PACKETS, BYTES]:
+        if self.packets_bytes not in [PACKETS, BYTES]:
             raise RuntimeError(f"Illegal packet/byte selection: {self.packets_bytes}")
-        if not self.kind in KINDS:
+        if self.kind not in KINDS:
             raise RuntimeError(f"Illegal plot type: {self.kind}")
 
         self.fig = plt.figure()
@@ -340,8 +344,6 @@ class Plot:
 
         self._set_size(self.x_size, self.y_size)
         self._label_axes(self.kind)
-
-
 
     def _parse_data(self):
         """
@@ -398,17 +400,19 @@ class Plot:
             log.error("Data frame is empty - cannot plot!")
             return
 
-        if(self.packets_bytes == BYTES):
+        if self.packets_bytes == BYTES:
             df = self._rescale_to_bits_per_second(df)
-        if(self.packets_bytes == PACKETS):
-            df = self._rescale_to_packets_per_second()
+        if self.packets_bytes == PACKETS:
+            df = self._rescale_to_packets_per_second(df)
 
         # plot with index set to time
         df.set_index(TIME).plot(kind="line", ax=figure.gca())
 
         # set major and minor tick position
-        self.fig.gca().xaxis.set_minor_locator(plt.FixedLocator(df[TIME][::round(self.tick_interval/self.interval/self.resolution_mult)]))
-        self.fig.gca().xaxis.set_major_locator(plt.FixedLocator(df[TIME][::round(self.label_interval/self.interval/self.resolution_mult)]))
+        self.fig.gca().xaxis.set_minor_locator(
+            plt.FixedLocator(df[TIME][::round(self.tick_interval / self.interval / self.resolution_mult)]))
+        self.fig.gca().xaxis.set_major_locator(
+            plt.FixedLocator(df[TIME][::round(self.label_interval / self.interval / self.resolution_mult)]))
 
         # format the ticks
         self.fig.gca().tick_params(which='major', length=5, labelrotation=0)
@@ -419,7 +423,8 @@ class Plot:
             plt.grid(True, which=self.grid)
 
         # create labels for  major ticks
-        major_tick_labels = ["{:.2f}".format(item) for item in self.dataframe[TIME][::round(self.label_interval/self.interval/self.resolution_mult)]]
+        major_tick_labels = ["{:.2f}".format(item) for item in
+                             self.dataframe[TIME][::round(self.label_interval / self.interval / self.resolution_mult)]]
 
         # assign labels to major ticks
         self.fig.gca().xaxis.set_major_formatter(ticker.FixedFormatter(major_tick_labels))
@@ -443,9 +448,9 @@ class Plot:
             log.error("Data frame is empty - cannot plot!")
             return
 
-        if(self.packets_bytes == BYTES):
+        if self.packets_bytes == BYTES:
             df = self._rescale_to_bits_per_second(df)
-        if(self.packets_bytes == PACKETS):
+        if self.packets_bytes == PACKETS:
             df = self._rescale_to_packets_per_second(df)
 
         # plot using pandas
@@ -456,15 +461,18 @@ class Plot:
             plt.grid(True, which=self.grid)
 
         # set major and minor tick position
-        self.fig.gca().xaxis.set_minor_locator(plt.FixedLocator(range(0, len(self.dataframe), round(self.tick_interval/self.interval/self.resolution_mult))))
-        self.fig.gca().xaxis.set_major_locator(plt.FixedLocator(range(0, len(self.dataframe), round(self.label_interval/self.interval/self.resolution_mult))))
+        self.fig.gca().xaxis.set_minor_locator(plt.FixedLocator(
+            range(0, len(self.dataframe), round(self.tick_interval / self.interval / self.resolution_mult))))
+        self.fig.gca().xaxis.set_major_locator(plt.FixedLocator(
+            range(0, len(self.dataframe), round(self.label_interval / self.interval / self.resolution_mult))))
 
         # format the ticks
         self.fig.gca().tick_params(which='major', length=5, labelrotation=0)
         self.fig.gca().tick_params(which='minor', length=2)
 
         # create labels for  major ticks
-        major_tick_labels = ["{:.2f}".format(item) for item in self.dataframe[TIME][::round(self.label_interval/self.interval / self.resolution_mult)]]
+        major_tick_labels = ["{:.2f}".format(item) for item in
+                             self.dataframe[TIME][::round(self.label_interval / self.interval / self.resolution_mult)]]
 
         # assign labels to major ticks
         self.fig.gca().xaxis.set_major_formatter(ticker.FixedFormatter(major_tick_labels))
@@ -474,7 +482,7 @@ class Plot:
         data = {BIN: []}
 
         # regex for parsing bin sizes
-        p = f"(?<={SEP}{PACKETS}{SEP}{IN}{SEP}{ALL}{SEP}{BIN}{SEP})\S+(?={SEP})"
+        p = fr"(?<={SEP}{PACKETS}{SEP}{IN}{SEP}{ALL}{SEP}{BIN}{SEP})\S+(?={SEP})"
         for col in self.dataframe.columns:
             # parse bins:
             if f"{SEP}{IN}{SEP}{ALL}{SEP}{BIN}{SEP}" in col:
@@ -520,17 +528,19 @@ class Plot:
         dpi = self.fig.get_dpi()
         self.fig.set_size_inches(x / float(dpi), y / float(dpi))
 
-    def _rescale_to_bits_per_second(self, df):
+    @staticmethod
+    def _rescale_to_bits_per_second(df):
         """Rescales the respective data values to [bits/s]"""
         delta_t = df.index[1] - df.index[0]
-        df = df * (1.0/delta_t) * 8.0
+        df = df * (1.0 / delta_t) * 8.0
         df.rename(columns={"byte": "bits/s"}, inplace=True)
         return df
 
-    def _rescale_to_packets_per_second(self, df):
+    @staticmethod
+    def _rescale_to_packets_per_second(df):
         """Rescales the respective data values to [packets/s]"""
         delta_t = df.index[1] - df.index[0]
-        df = df * (1.0/delta_t)
+        df = df * (1.0 / delta_t)
         df.rename(columns={"packets": "packets/s"}, inplace=True)
         return df
 
@@ -625,7 +635,7 @@ class LivePlot:
                 value = self.data_collector.data[f"{SEP}{self.value}{SEP}{IN}{SEP}{ALL}{SEP}"][index] \
                         + self.data_collector.data[f"{SEP}{self.value}{SEP}{OUT}{SEP}{ALL}{SEP}"][index]
 
-            if self.bar_collection == None or index > len(self.bar_collection) - 1:
+            if self.bar_collection is None or index > len(self.bar_collection) - 1:
                 break
 
             self.bar_collection[index].set_height(value)
@@ -668,4 +678,3 @@ class LivePlot:
         g.set_size_inches(x_size / float(dpi), y_size / float(dpi))
 
         plt.show()
-
