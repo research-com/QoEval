@@ -12,8 +12,7 @@ import Xlib
 import Xlib.display
 from collections import namedtuple
 from qoemu_pkg.utils import convert_to_seconds
-from qoemu_pkg.configuration import config
-
+from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
 
 # Define constants
 FFMPEG = "ffmpeg"
@@ -29,14 +28,15 @@ GENYMOTION_EMULATOR_WINDOW_TITLE = "- Genymotion"
 WinGeo = namedtuple('WinGeo', 'x y height width')
 
 
-def check_env():
+def check_env(qoemu_config: QoEmuConfiguration):
     log.info("checking availability of ffpeg...")
     check_ext(FFMPEG)
     check_ffmpeg_features()
 
-    if not os.path.exists(config.video_capture_path.get()):
-        log.debug(f"output directory \"{config.video_capture_path.get()}\" does not exist - trying to create it")
-        os.makedirs(config.video_capture_path.get())
+    if not os.path.exists(qoemu_config.video_capture_path.get()):
+        log.debug(f"output directory \"{qoemu_config.video_capture_path.get()}\" does not exist - trying to create it")
+        os.makedirs(qoemu_config.video_capture_path.get())
+
 
 def check_ext(name):
     log.debug(f"locating {name}")
@@ -57,52 +57,57 @@ def check_ffmpeg_features():
         log.error(f"ffmpeg does not support format {FFMPEG_FORMAT}")
         raise RuntimeError('Installed ffmpeg does not support a required format.')
 
-class Capture:
-    def __init__(self):
-        log.basicConfig(level=log.DEBUG)
-        check_env()
 
-    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
-        raise RuntimeError(f"Method not implemented.");
+class Capture:
+    def __init__(self, qoemu_config: QoEmuConfiguration):
+        log.basicConfig(level=log.DEBUG)
+        self.qoemu_config = qoemu_config
+        check_env(self.qoemu_config)
+
+    def start_recording(self, output_filename: str, duration: str = CAPTURE_DEFAULT_REC_TIME, audio: bool = True):
+        raise RuntimeError(f"Method not implemented.")
+
 
 SCREENCOPY_NAME = "scrcpy"
 SCREENCOPY_OPTIONS_WITH_MIRROR = "--stay-awake -N --record"  # note: must end with option for file recording
 SCREENCOPY_OPTIONS_NO_MIRROR = "--no-display --stay-awake -N --record"
 
+
 class CaptureRealDevice(Capture):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, qoemu_config: QoEmuConfiguration):
+        super().__init__(qoemu_config)
         check_ext(SCREENCOPY_NAME)
 
-    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
+    def start_recording(self, output_filename: str, duration: str = CAPTURE_DEFAULT_REC_TIME, audio: bool = True):
         # start video recording from real device
         duration_in_secs = convert_to_seconds(duration)
 
-        dest_tmp = os.path.join(config.video_capture_path.get(), 'captured_realdev')
-        dest = os.path.join(config.video_capture_path.get(), output_filename)
-        if config.show_device_screen_mirror.get():
+        dest_tmp = os.path.join(self.qoemu_config.video_capture_path.get(), 'captured_realdev')
+        dest = os.path.join(self.qoemu_config.video_capture_path.get(), output_filename)
+        if self.qoemu_config.show_device_screen_mirror.get():
             scrcpy_opts = SCREENCOPY_OPTIONS_WITH_MIRROR
         else:
             scrcpy_opts = SCREENCOPY_OPTIONS_NO_MIRROR
-        scrcpy_output = subprocess.Popen(shlex.split(f"{SCREENCOPY_NAME} {scrcpy_opts} {dest_tmp}.mp4"), stdout=subprocess.PIPE,
-                       universal_newlines=True)
+        scrcpy_output = subprocess.Popen(shlex.split(f"{SCREENCOPY_NAME} {scrcpy_opts} {dest_tmp}.mp4"),
+                                         stdout=subprocess.PIPE,
+                                         universal_newlines=True)
 
-        if audio and config.audio_device_real.get() == '':
+        if audio and self.qoemu_config.audio_device_real.get() == '':
             log.error("Cannot capture audio - audio device not specified - check AudioDeviceReal parameter in config")
             audio = False
 
         if audio:
             # start audio recording - will use ffmpeg for timing the recording
-            command = f"{FFMPEG} -f alsa -i {config.audio_device_real.get()} -t {duration} -y {dest_tmp}.wav"
+            command = f"{FFMPEG} -f alsa -i {self.qoemu_config.audio_device_real.get()} -t {duration} -y {dest_tmp}.wav"
             log.debug(f"start audio recording cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                            universal_newlines=True).check_returncode()
         else:
             # poll regularly if the process has terminated - until we have reached desired duration
             runtime_capture = 0.0
-            while scrcpy_output.poll()==None and runtime_capture < duration_in_secs:
+            while scrcpy_output.poll() is None and runtime_capture < duration_in_secs:
                 time.sleep(1)
-                runtime_capture+=1
+                runtime_capture += 1
 
         scrcpy_output.terminate()
 
@@ -111,11 +116,12 @@ class CaptureRealDevice(Capture):
                   f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 -shortest -y {dest}.avi"
         log.debug(f"re-encoding cmd: {command}")
         subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                                universal_newlines=True).check_returncode()
+                       universal_newlines=True).check_returncode()
+
 
 class CaptureEmulator(Capture):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, qoemu_config: QoEmuConfiguration):
+        super().__init__(qoemu_config)
         self._display = Xlib.display.Display()
         self._root = self._display.screen().root
 
@@ -186,14 +192,14 @@ class CaptureEmulator(Capture):
         window.configure(stack_mode=Xlib.X.Above)
         self._display.sync()
 
-    def start_recording(self, output_filename: str, duration: str=CAPTURE_DEFAULT_REC_TIME, audio: bool=True):
-        if audio and config.audio_device_emu.get() == '':
+    def start_recording(self, output_filename: str, duration: str = CAPTURE_DEFAULT_REC_TIME, audio: bool = True):
+        if audio and self.qoemu_config.audio_device_emu.get() == '':
             log.error("Cannot capture audio - audio device not specified - check AudioDeviceEmu parameter in config")
             audio = False
 
         if audio:
             # pulse:
-            audio_param = f"-f pulse -thread_queue_size 4096 -i {config.audio_device_emu.get()} -ac 2"
+            audio_param = f"-f pulse -thread_queue_size 4096 -i {self.qoemu_config.audio_device_emu.get()} -ac 2"
             # alsa
             # audio_param = f"-f alsa -i hw:0 -ac 2"
         else:
@@ -212,38 +218,46 @@ class CaptureEmulator(Capture):
         self.bring_window_to_foreground(window)
         window_pos = self.get_window_position(window)
         log.info(f'Found emulator window at {window_pos.x},{window_pos.y} dim {window_pos.width},{window_pos.height}')
-        dest = os.path.join(config.video_capture_path.get(), output_filename)
-        dest_tmp = os.path.join(config.video_capture_path.get(), 'captured_raw')
-        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
+        dest = os.path.join(self.qoemu_config.video_capture_path.get(), output_filename)
+        dest_tmp = os.path.join(self.qoemu_config.video_capture_path.get(), 'captured_raw')
+        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s " \
+        #           f"{window_pos.width}x{window_pos.height} " + \
         #           f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} -c:v libxvid " \
         #           f"-preset ultrafast -y {dest}.avi"
         # lossless 1: -c:v libx264 -qp 0 -pix_fmt yuv444p -preset ultrafast
-        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s {window_pos.width}x{window_pos.height} " + \
+        # command = f"{FFMPEG} {audio_param} -f {FFMPEG_FORMAT} -draw_mouse 0 -r {FFMPEG_RATE} -s " \
+        #           f"{window_pos.width}x{window_pos.height} " + \
         #           f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {FFMPEG_REC_TIME} "+ \
         #           f"-c:v libx264 -qp 0 -pix_fmt yuv444p -preset ultrafast -y {dest}.avi"
 
         # lossless 2: -qscale 0 -vcodec huffyuv
         command = f"{FFMPEG} -thread_queue_size 1024 {audio_param} -thread_queue_size 1024 " + \
-                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {CAPTURE_FPS} -s {window_pos.width - right_border}x{window_pos.height} " + \
+                  f"-f {FFMPEG_FORMAT} -draw_mouse 0 -r {CAPTURE_FPS} -s {window_pos.width - right_border}x" \
+                  f"{window_pos.height} " + \
                   f"-i :{DISPLAY}+{window_pos.x},{window_pos.y} -t {duration} " + \
                   f"-acodec pcm_s16le -ar 44100 " + \
                   f"-qscale 0 -vcodec huffyuv -y {dest_tmp}.avi"
 
         log.debug(f"cmd: {command}")
         subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                                universal_newlines=True).check_returncode()
+                       universal_newlines=True).check_returncode()
 
         # re-encoding to compressed format (we do not delete the raw dest_tmp on purpose, so it can be compared later)
         command = f"{FFMPEG} -i {dest_tmp}.avi -c:v mpeg4 -vtag xvid -filter:v fps=60 -qscale:v 1 " \
                   f"-c:a libmp3lame -qscale:a 1 -y {dest}.avi"
         log.debug(f"re-encoding cmd: {command}")
         subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
-                                universal_newlines=True).check_returncode()
+                       universal_newlines=True).check_returncode()
+
+
+def main():
+    print("QoE screen capturing")
+    # cap = CaptureEmulator(get_default_qoemu_config())
+    cap = CaptureRealDevice(get_default_qoemu_config())
+    cap.start_recording("output")
 
 
 if __name__ == '__main__':
     # executed directly as a script
-    print("QoE screen capturing")
-    # cap = CaptureEmulator()
-    cap = CaptureRealDevice()
-    cap.start_recording("output")
+    main()
+

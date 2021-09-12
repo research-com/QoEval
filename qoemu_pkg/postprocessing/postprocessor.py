@@ -6,7 +6,7 @@ import subprocess
 
 import importlib_resources
 
-from qoemu_pkg.configuration import config
+from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
 from qoemu_pkg.videos import t_init
 
 FFMPEG = "ffmpeg"
@@ -29,6 +29,7 @@ def _get_video_dimensions(input_filename: str):
     video_height = int(output.stdout.partition('\n')[2])
     return video_width, video_height
 
+
 def _get_max_volume(input_filename: str):
     command = f"{FFMPEG} -i {input_filename} -af \"volumedetect\" -vn -sn -dn -f null /dev/null "
     output = subprocess.run(shlex.split(command), stderr=subprocess.PIPE,
@@ -45,6 +46,7 @@ def _get_max_volume(input_filename: str):
         raise RuntimeError('Video volume detection failed.')
 
     return max_vol
+
 
 def _is_video_landscape(input_filename: str):
     (w, h) = _get_video_dimensions(input_filename)
@@ -64,18 +66,19 @@ def check_env(name: str):
 
 
 class PostProcessor:
-    def __init__(self):
+    def __init__(self, qoemu_config: QoEmuConfiguration):
+        self.qoemu_config = qoemu_config
         self._prefix_video = None
         check_env(FFMPEG)
         check_env(FFPROBE)
         check_env(MP4BOX)
 
     def process(self, input_filename: str, output_filename: str, initbuf_len: float, main_video_start_time: float,
-                main_video_duration: float, normalize_audio: bool = False, erase_audio = None, erase_box = None):
+                main_video_duration: float, normalize_audio: bool = False, erase_audio=None, erase_box=None):
 
         main_video_end_time = main_video_start_time + main_video_duration
 
-        if _is_video_landscape(f"{os.path.join(config.video_capture_path.get(), input_filename)}.avi"):
+        if _is_video_landscape(f"{os.path.join(self.qoemu_config.video_capture_path.get(), input_filename)}.avi"):
             self._prefix_video = importlib_resources.files(t_init) / TINIT_VIDEO_LS_FILENAME
         else:
             self._prefix_video = importlib_resources.files(t_init) / TINIT_VIDEO_PT_FILENAME
@@ -95,8 +98,8 @@ class PostProcessor:
         # configure audio post-processing
         ffmpeg_audio_filter = ""  # default is no audio filtering
         if normalize_audio:
-            target_volume = config.audio_target_volume.get()
-            current_volume = _get_max_volume(f"{os.path.join(config.video_capture_path.get(), input_filename)}.avi")
+            target_volume = self.qoemu_config.audio_target_volume.get()
+            current_volume = _get_max_volume(f"{os.path.join(self.qoemu_config.video_capture_path.get(), input_filename)}.avi")
             if current_volume != target_volume:
                 volume = target_volume - current_volume
                 log.debug(f"audio normalization by {volume}dB (current volume: {current_volume}, "
@@ -114,9 +117,9 @@ class PostProcessor:
             if len(erase_audio) % 2 != 0:
                 raise RuntimeError(
                     f"Postprocessing error: audio erase list ({erase_audio}) must contain an even number of values.")
-            for i in range(0, len(erase_audio),2):
+            for i in range(0, len(erase_audio), 2):
                 t_start = erase_audio[i]
-                t_end = erase_audio[i+1]
+                t_end = erase_audio[i + 1]
                 ffmpeg_audio_filter = f"{ffmpeg_audio_filter}volume=enable='between(t,{t_start},{t_end})':volume=0,"
 
         # configure optional erasing of a box (e.g. logo)
@@ -124,7 +127,7 @@ class PostProcessor:
             ffmpeg_video_filter = f"drawbox=x={erase_box[0]}:y={erase_box[1]}:" \
                                   f"w={erase_box[2]}:h={erase_box[3]}:color=black:t=fill,"
         else:
-            ffmpeg_video_filter = "" # default is no video filtering/erasing
+            ffmpeg_video_filter = ""  # default is no video filtering/erasing
 
         # perform postprocessing
         with importlib_resources.as_file(self._prefix_video) as prefix_video_path:
@@ -132,7 +135,7 @@ class PostProcessor:
             if initbuf_len > 0:
                 log.debug(f"Using prefix video {self._prefix_video} for post-processing.")
                 command = f"{FFMPEG} -i {prefix_video_path} " \
-                          f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
+                          f"-i {os.path.join(self.qoemu_config.video_capture_path.get(), input_filename)}.avi " \
                           f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
                           f"-filter_complex \"" \
                           f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
@@ -143,10 +146,10 @@ class PostProcessor:
                           f"{ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a1]; " \
                           f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]\" " \
                           f"-map \"[outv]\" -map \"[outa]\" " \
-                          f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.avi"
+                          f" -y {os.path.join(self.qoemu_config.video_capture_path.get(), output_filename)}.avi"
             else:
                 command = f"{FFMPEG} " \
-                          f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
+                          f"-i {os.path.join(self.qoemu_config.video_capture_path.get(), input_filename)}.avi " \
                           f"-c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
                           f"-filter_complex \"" \
                           f"[0:v]trim={main_video_start_time}:{main_video_end_time}," \
@@ -155,7 +158,7 @@ class PostProcessor:
                           f"{ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a0] " \
                           f"\" " \
                           f"-map \"[v0]\" -map \"[a0]\" " \
-                          f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.avi"
+                          f" -y {os.path.join(self.qoemu_config.video_capture_path.get(), output_filename)}.avi"
             log.debug(f"postproc mp4 reencoded cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                            universal_newlines=True).check_returncode()
@@ -163,7 +166,7 @@ class PostProcessor:
             # Additionally create a H.264 encoded .mp4 output file
             if initbuf_len > 0:
                 command = f"{FFMPEG} -i {prefix_video_path} " \
-                          f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi  " \
+                          f"-i {os.path.join(self.qoemu_config.video_capture_path.get(), input_filename)}.avi  " \
                           f"-crf 4 -filter_complex \"" \
                           f"[0:v]trim=0:{initbuf_len},setpts=PTS-STARTPTS[v0]; " \
                           f"[0:a]atrim=0:{initbuf_len},{prefix_video_ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a0]; " \
@@ -173,10 +176,10 @@ class PostProcessor:
                           f"{ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a1]; " \
                           f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]\" " \
                           f"-map \"[outv]\" -map \"[outa]\" " \
-                          f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.mp4"
+                          f" -y {os.path.join(self.qoemu_config.video_capture_path.get(), output_filename)}.mp4"
             else:
                 command = f"{FFMPEG} " \
-                          f"-i {os.path.join(config.video_capture_path.get(), input_filename)}.avi " \
+                          f"-i {os.path.join(self.qoemu_config.video_capture_path.get(), input_filename)}.avi " \
                           f"-crf 4 " \
                           f"-filter_complex \"" \
                           f"[0:v]trim={main_video_start_time}:{main_video_end_time}," \
@@ -185,14 +188,18 @@ class PostProcessor:
                           f"{ffmpeg_audio_filter}asetpts=PTS-STARTPTS[a0] " \
                           f"\" " \
                           f"-map \"[v0]\" -map \"[a0]\" " \
-                          f" -y {os.path.join(config.video_capture_path.get(), output_filename)}.mp4"
+                          f" -y {os.path.join(self.qoemu_config.video_capture_path.get(), output_filename)}.mp4"
             log.debug(f"postproc mp4 reencoded cmd: {command}")
             subprocess.run(shlex.split(command), stdout=subprocess.PIPE,
                            universal_newlines=True).check_returncode()
 
 
-if __name__ == '__main__':
-    p = PostProcessor()
+def main():
+    p = PostProcessor(get_default_qoemu_config())
     p.process("VS-C-1_E1-R-0.1_P0", "test", 2, 5, 10, normalize_audio=True, erase_box=[2180, 930, 130, 130])
 
     print("Done.")
+
+
+if __name__ == '__main__':
+    main()

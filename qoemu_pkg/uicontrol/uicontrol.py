@@ -3,7 +3,6 @@
 """
     UI control
 """
-import time
 import logging as log
 import com.dtmilano.android.viewclient
 from qoemu_pkg.uicontrol.usecase import UseCaseType, UseCaseState
@@ -21,7 +20,7 @@ class UiControl:
 
     def connect_device(self):
         self._device, self._serialno = \
-            com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit(serialno=self._serialno,verbose=True)
+            com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit(serialno=self._serialno, verbose=True)
 
         if self._device.checkConnected():
             log.info(f"ADB connected to device with serial: {self._serialno}")
@@ -104,6 +103,6 @@ if __name__ == '__main__':
     #                                  "com.google.android.youtube:id/player_control_play_pause_replay_button",
     #                                  "com.google.android.youtube:id/player_overflow_button",
     #                                  "com.google.android.youtube:id/list_item_text_secondary"])
-    #ui_control.prepare_use_case()
-    #ui_control.execute_use_case(600)
-    #ui_control.shutdown_use_case()
+    # ui_control.prepare_use_case()
+    # ui_control.execute_use_case(600)
+    # ui_control.shutdown_use_case()

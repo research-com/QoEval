@@ -10,7 +10,7 @@ class UseCaseType(Enum):
     YOUTUBE = "_Youtube"
     WEB_BROWSING = "_WebBrowsing"
     APP_LAUNCH = "_AppLaunch"
-    UI_TRACING = "_UiTracing"    # a special use-case for tracing user-interface elements
+    UI_TRACING = "_UiTracing"  # a special use-case for tracing user-interface elements
 
 
 class UseCaseState(Enum):
@@ -27,15 +27,15 @@ class UseCase:
         log.basicConfig(level=log.DEBUG)
         self.device = device_to_use
         self.serialno = serialno
-        if self.serialno == None:
+        if self.serialno is None:
             raise RuntimeError("no serial")
         self.time_end = None
         self._vc = None
         self.state = UseCaseState.CREATED
 
-    def _touch_view_by_id(self, id: str, max_waiting_time: float = 0.5, text_input = None):
+    def _touch_view_by_id(self, id: str, max_waiting_time: float = 0.5, text_input=None):
         end_time = time.time() + max_waiting_time
-        while (time.time() < end_time):
+        while time.time() < end_time:
             # find view and touch element with specified id
             self._vc.dump(window=-1, sleep=0)
             target_view = self._vc.findViewById(id)
@@ -50,9 +50,9 @@ class UseCase:
         log.error(f"View {id} NOT found!")
         raise RuntimeError(f"View {id} NOT found!")
 
-    def _touch_view_by_text(self, text: str, max_waiting_time: float = 0.5, text_input = None):
+    def _touch_view_by_text(self, text: str, max_waiting_time: float = 0.5, text_input=None):
         end_time = time.time() + max_waiting_time
-        while (time.time() < end_time):
+        while time.time() < end_time:
             # find view and touch element with specified text
             self._vc.dump(window=-1, sleep=0)
             target_view = self._vc.findViewWithText(text)
@@ -70,7 +70,7 @@ class UseCase:
     def prepare(self):
         pass
 
-    def execute(self,duration: float):
+    def execute(self, duration: float):
         self.time_end = time.time() + duration
 
     def shutdown(self):

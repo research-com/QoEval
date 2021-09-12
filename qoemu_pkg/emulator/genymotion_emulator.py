@@ -5,9 +5,8 @@
 import time
 
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name
-
+from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
 import logging as log
-import os
 import subprocess
 import shlex
 import ipaddress
@@ -15,18 +14,20 @@ import re
 
 VD_MANAGER_NAME = "gmtool"
 GM_SHELL = "genymotion-shell"
-TEMPLATE_UUID = "c259202b-6605-44eb-978c-040b2edbc364" # "Google Pixel 3 - 10.0 - API 29 - 1080x2160"
+TEMPLATE_UUID = "c259202b-6605-44eb-978c-040b2edbc364"  # "Google Pixel 3 - 10.0 - API 29 - 1080x2160"
 DEVICE_NAME = "pixel"
 VD_NAME = "qoemu_" + DEVICE_NAME + "_" + "_Genymotion" + "_x86"
-STANDARD_OPTIONS="--virtualkeyboard=on --nbcpu=6 --ram=4096 --network-mode=nat"
+STANDARD_OPTIONS = "--virtualkeyboard=on --nbcpu=6 --ram=4096 --network-mode=nat"
+
 
 class GenymotionEmulator(MobileDevice):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, qoemu_config: QoEmuConfiguration):
+        super().__init__(qoemu_config)
         self.vd_name = VD_NAME
         self.__orientation = MobileDeviceOrientation.PORTRAIT
 
-    def __print_available_templates(self):
+    @staticmethod
+    def __print_available_templates():
         output = subprocess.run(shlex.split(
             f"{VD_MANAGER_NAME} admin templates --full -f"),
             stdout=subprocess.PIPE,
@@ -96,9 +97,10 @@ class GenymotionEmulator(MobileDevice):
         log.debug(f"setting orientation for {self.vd_name} ")
         if orientation == MobileDeviceOrientation.PORTRAIT:
             rotation_angle = 0
+        elif orientation == MobileDeviceOrientation.LANDSCAPE:
+            rotation_angle = 90
         else:
-            if orientation == MobileDeviceOrientation.LANDSCAPE:
-                rotation_angle = 90
+            raise RuntimeError("Not a valid MobileDeviceOrientation")
         output = subprocess.run(shlex.split(
             f"{GM_SHELL} -c \"rotation setangle {rotation_angle}\""),
             stdout=subprocess.PIPE,
@@ -175,9 +177,9 @@ class GenymotionEmulator(MobileDevice):
 if __name__ == '__main__':
     # executed directly as a script
     print("Emulator control")
-    emu = GenymotionEmulator()
+    emu = GenymotionEmulator(get_default_qoemu_config())
     # emu.delete_vd()
     emu.launch(orientation=MobileDeviceOrientation.LANDSCAPE, playstore=False)
-    print (f"Started emulator with IP address: {emu.get_ip_address()}")
+    print(f"Started emulator with IP address: {emu.get_ip_address()}")
     time.sleep(20)
     emu.shutdown()

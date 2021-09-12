@@ -264,16 +264,17 @@ class ListDictOption(Option):
         self.config.configparser.set(self.section, self.option, self.value)
 
 
-parser = configparser.ConfigParser()
-parser.optionxform = str  # to preserve camel case of option names when saving
-# To keep comments:
-# parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value = True)
-# Alternative to consider
-# parser = configupdater.ConfigUpdater()
+def get_default_qoemu_config() -> QoEmuConfiguration:
+    parser = configparser.ConfigParser()
+    parser.optionxform = str
 
-parser.read(_default_config_file_locations)  # note: last file will take precedence in case of overlap
+    # To keep comments:
+    # parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value = True)
+    # Alternative to consider
+    # parser = configupdater.ConfigUpdater()
 
-if QOEMU_SECTION not in parser:
-    raise RuntimeError('No configuration file found - not even the default configuration. Check your installation.')
-
-config = QoEmuConfiguration(parser)
+    parser.read(_default_config_file_locations)  # note: last file will take precedence in case of overlap
+    if QOEMU_SECTION not in parser:
+        raise RuntimeError('No configuration file found - not even the default configuration. Check your installation.')
+    config = QoEmuConfiguration(parser)
+    return config

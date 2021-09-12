@@ -65,36 +65,36 @@ class DynamicParametersSetup:
 
     @staticmethod
     def from_nested_lists(parameter_sets: List[List[int]], verbose: bool = False):
-        '''Creates a DynamicParamterSetup from nested lists, each list representing a ParameterSet'''
+        """Creates a DynamicParamterSetup from nested lists, each list representing a ParameterSet"""
         result = DynamicParametersSetup(verbose=verbose)
-        result._append_parameter_sets_from_nested_lists(parameter_sets)
+        result.append_parameter_sets_from_nested_lists(parameter_sets)
         return result
 
     @staticmethod
     def from_csv(filename: str, verbose: bool = False):
-        '''Loads a DynamicParamterSetup from a .csv file'''
+        """Loads a DynamicParamterSetup from a .csv file"""
         result = DynamicParametersSetup(verbose=verbose)
-        result._append_from_csv(filename)
+        result.append_from_csv(filename)
         return result
 
-    def _append_parameter_set(self, parameter_set: ParameterSet):
+    def append_parameter_set(self, parameter_set: ParameterSet):
         self.parameter_sets.append(parameter_set)
 
-    def _append_parameter_sets(self, parameter_sets: List[ParameterSet]):
+    def append_parameter_sets(self, parameter_sets: List[ParameterSet]):
         for parameter in parameter_sets:
             self.parameter_sets.append(parameter)
 
-    def _append_parameter_set_from_list(self, *args):
+    def append_parameter_set_from_list(self, *args):
         self.parameter_sets.append(ParameterSet(*args))
 
-    def _append_parameter_sets_from_nested_lists(self, parameter_sets: List[List[int]]):
+    def append_parameter_sets_from_nested_lists(self, parameter_sets: List[List[int]]):
         for parameter_set in parameter_sets:
             if len(parameter_set) == 0:
                 continue
             self.parameter_sets.append(ParameterSet(*parameter_set))
 
     def save_to_csv(self, filename: str):
-        ''' Saves the ParameterSetup as .csv file'''
+        """ Saves the ParameterSetup as .csv file"""
         with open(filename, 'w') as file:
             data = [dataclasses.astuple(parameter_set) for parameter_set in self.parameter_sets]
 
@@ -102,14 +102,13 @@ class DynamicParametersSetup:
             writer.writerow(data_field.name for data_field in dataclasses.fields(ParameterSet))
             writer.writerows(data)
 
-    def _append_from_csv(self, filename: str):
-        ''' Append ParamterSets to the list of ParamtersSets from a .csv file'''
+    def append_from_csv(self, filename: str):
+        """ Append ParamterSets to the list of ParamtersSets from a .csv file"""
         with open(filename, newline='') as file:
             reader = csv.reader(file)
             raw_data = list(reader)
             data = [list(map(int, parameter_set)) for parameter_set in raw_data[1:]]
-            self._append_parameter_sets_from_nested_lists(data)
-
+            self.append_parameter_sets_from_nested_lists(data)
 
 
 class Connection:
@@ -150,8 +149,8 @@ class Connection:
     __CMD_IP = CMD_IP
     __CMD_MODPROBE = CMD_MODPROBE
 
-    def __init__(self, name, device_name, t_init: float = None, rul: float = None, rdl:float = None, dul:float = None,
-                 ddl:float = None, android_ip:ipaddress = None, exclude_ports: List[int] = None,
+    def __init__(self, name, device_name, t_init: float = None, rul: float = None, rdl: float = None, dul: float = None,
+                 ddl: float = None, android_ip: ipaddress = None, exclude_ports: List[int] = None,
                  dynamic_parameters_setup: DynamicParametersSetup = None):
         global USED_DEVICES
         self.device = device_name
@@ -172,11 +171,13 @@ class Connection:
         self._dynamic_emulation_thread = None
         self.emulation_is_active = False
 
-        if(android_ip):
+        if android_ip:
             log.debug(f"network emulation is applied only for IP address: {self.android_ip}")
         else:
-            if self.exclude_ports and len(self.exclude_ports)>0:
-                log.debug(f"network emulation is applied to all traffic except for traffic to/from ports: {self.exclude_ports}")
+            if self.exclude_ports and len(self.exclude_ports) > 0:
+                log.debug(
+                    f"network emulation is applied to all traffic except for traffic to/from ports: "
+                    f"{self.exclude_ports}")
             else:
                 log.debug(f"no android_ip specified, network emulation is applied to all traffic on {self.device}")
 
@@ -184,7 +185,9 @@ class Connection:
         output = subprocess.run(shlex.split(self.__CMD_TC), stderr=subprocess.PIPE,
                                 universal_newlines=True)
         if output.returncode != 0:
-            log.error(f"Cannot initialize connection: tc not found - please check if install.sh has modified sudoers correctly.")
+            log.error(
+                f"Cannot initialize connection: tc not found - please check if install.sh has modified sudoers "
+                f"correctly.")
             raise RuntimeError('External component not found.')
 
         log.debug(f"locating netem")
@@ -205,7 +208,7 @@ class Connection:
         #     self.device = None
         #     raise RuntimeError('Cannot setup network emulation - missing privileges.')
 
-        self.reset_device()    # should not be necessary when implementation is completed
+        self.reset_device()  # should not be necessary when implementation is completed
 
         output = subprocess.run(['ifconfig'], stdout=subprocess.PIPE,
                                 universal_newlines=True)
@@ -281,7 +284,8 @@ class Connection:
         output.check_returncode()
 
     def _redirect_outgoing(self):
-        """Sets up the tc rules to redirect outgoing traffic to the virtual_device_out and after that the netem qdiscs"""
+        """Sets up the tc rules to redirect outgoing traffic to the virtual_device_out and after that the netem
+        qdiscs"""
         log.debug(f"Initializing outgoing tc redirection rules for connection: '{self.name}'")
         # for each excluded port, we add a high(er) prio action to handle traffic in 1:1 (no netem)
         remaining_prio = 1
@@ -301,12 +305,12 @@ class Connection:
 
         if self.android_ip:
             # only traffic originating from emulator ip is handled by netem
-             log.debug(f"Emulation enabled specifically for IP: {self.android_ip}")
-             output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} protocol ip "
-                                                 f"priority {remaining_prio} parent 1: u32 "
-                                                 f"match ip src {self.android_ip}/32 flowid 1:2 action mirred egress "
-                                                 f" redirect dev {self.virtual_device_out}"))
-             output.check_returncode()
+            log.debug(f"Emulation enabled specifically for IP: {self.android_ip}")
+            output = subprocess.run(shlex.split(f"{self.__CMD_TC} filter add dev {self.device} protocol ip "
+                                                f"priority {remaining_prio} parent 1: u32 "
+                                                f"match ip src {self.android_ip}/32 flowid 1:2 action mirred egress "
+                                                f" redirect dev {self.virtual_device_out}"))
+            output.check_returncode()
         else:
             # all other traffic is handled in 1:2 by netem
             output = subprocess.run(shlex.split(
@@ -323,11 +327,16 @@ class Connection:
         # subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc replace dev {self.device} root pfifo")).check_returncode()
 
         # setup a simple priority queue - all traffic from emulator will be handled by 1:2 which has netem
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} root handle 1: prio bands 2 priomap 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0")).check_returncode()
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} parent 1:1 handle 10: prio")).check_returncode()
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} parent 1:2 handle 20: netem")).check_returncode()
+        subprocess.run(shlex.split(
+            f"{self.__CMD_TC} qdisc add dev {self.device} root handle 1: prio bands 2 priomap "
+            f"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0")).check_returncode()
+        subprocess.run(
+            shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} parent 1:1 handle 10: prio")).check_returncode()
+        subprocess.run(
+            shlex.split(f"{self.__CMD_TC} qdisc add dev {self.device} parent 1:2 handle 20: netem")).check_returncode()
 
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc add dev {self.virtual_device_in} root netem")).check_returncode()
+        subprocess.run(
+            shlex.split(f"{self.__CMD_TC} qdisc add dev {self.virtual_device_in} root netem")).check_returncode()
 
     def _init(self):
         """Initiates the connection, so that it can be used"""
@@ -349,16 +358,18 @@ class Connection:
         if not self._t_init_active:
             subprocess.run(
                 shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
-                            f"{parent_id} netem limit {Connection.calculate_netem_limit(self.dul, self.rul)} rate {self.rul}kbit delay {self.dul}ms loss 0%")).check_returncode()
+                            f"{parent_id} netem limit {Connection.calculate_netem_limit(self.dul, self.rul)} rate "
+                            f"{self.rul}kbit delay {self.dul}ms loss 0%")).check_returncode()
         else:
             # Variant 1: emulate T_init by packet loss during T_init
             # subprocess.run(
             #    shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
             #                f"{parent_id} netem loss 100%")).check_returncode()
-            # Variant 2: emulate T_init by delaying packets (should be more realistic since T_init emulates connection setup)
+            # Variant 2: emulate T_init by delaying packets
+            # (should be more realistic since T_init emulates connection setup)
             subprocess.run(
-               shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
-                           f"{parent_id} netem rate {self.rul}kbit delay {self.t_init}ms loss 0%")).check_returncode()
+                shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} "
+                            f"{parent_id} netem rate {self.rul}kbit delay {self.t_init}ms loss 0%")).check_returncode()
 
         end = timer()
 
@@ -374,13 +385,15 @@ class Connection:
         if not self._t_init_active:
             subprocess.run(shlex.split(
                 f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} "
-                f"root netem limit {Connection.calculate_netem_limit(self.ddl, self.rdl)} rate {self.rdl}kbit delay {self.ddl}ms loss 0%")).check_returncode()
+                f"root netem limit {Connection.calculate_netem_limit(self.ddl, self.rdl)} rate "
+                f"{self.rdl}kbit delay {self.ddl}ms loss 0%")).check_returncode()
         else:
             # Variant 1: emulate T_init by packet loss during T_init
             # subprocess.run(shlex.split(
             #     f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} "
             #     f"root netem loss 100%")).check_returncode()
-            # Variant 2: emulate T_init by delaying packets (should be more realistic since T_init emulates connection setup)
+            # Variant 2: emulate T_init by delaying packets
+            # (should be more realistic since T_init emulates connection setup)
             subprocess.run(shlex.split(
                 f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} "
                 f"root netem rate {self.rdl}kbit delay {self.t_init}ms loss 0%")).check_returncode()
@@ -391,7 +404,8 @@ class Connection:
             delay = (end - start) * 1000.0
             log.debug(f"Changed egress netem qdisc for connection: '{self.name}'. It took {delay:.2f} ms.")
 
-    def change_parameters(self, t_init:float=None, rul:float=None, rdl:float=None, dul:float=None, ddl:float=None):
+    def change_parameters(self, t_init: float = None, rul: float = None, rdl: float = None, dul: float = None,
+                          ddl: float = None):
         """
                 Sets the parameters for this connection and updates the netem qdiscs.
 
@@ -438,8 +452,7 @@ class Connection:
         if delay == 0:
             delay = 1
         # Note: assumed average packet size (use a rather small size since a large limit does not hurt much)
-        return math.ceil(((delay*rate)/128)*1.5)
-
+        return math.ceil(((delay * rate) / 128) * 1.5)
 
     def enable_netem(self, consider_t_init: bool = True, consider_dynamic_parameters: bool = True):
         """(Re)enables the netem qdiscs for this connection"""
@@ -455,13 +468,14 @@ class Connection:
         log.debug(f"Enabling netem for connection: '{self.name}'")
         self.emulation_is_active = True
         emulate_t_init = self.t_init > 0 and consider_t_init
-        emulate_dynamic_parameters = consider_dynamic_parameters \
-                                     and self.dynamic_parameters_setup is not None \
-                                     and len(self.dynamic_parameters_setup.parameter_sets) > 0
+        emulate_dynamic_parameters = (consider_dynamic_parameters
+                                      and self.dynamic_parameters_setup is not None
+                                      and len(self.dynamic_parameters_setup.parameter_sets) > 0)
         if consider_dynamic_parameters and not emulate_dynamic_parameters:
             log.warning(f"Dynamic parameters cannot be considered - dynamic parameter setup is not available.")
 
         emulate_dynamically = emulate_t_init or emulate_dynamic_parameters
+
         if emulate_dynamically:
             self._dynamic_emulation_thread = threading.Thread(target=self._emulate_dynamically,
                                                               args=(emulate_t_init, emulate_dynamic_parameters),
@@ -481,9 +495,10 @@ class Connection:
         log.debug(f"Disabling netem for connection: '{self.name}'")
         self.emulation_is_active = False
         params = "rate 1000Gbit loss 0.0% delay 0ms duplicate 0% reorder 0% 0%"
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} parent 1:2 netem {params}")).check_returncode()
-        subprocess.run(shlex.split(f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} root netem {params}")).check_returncode()
-
+        subprocess.run(
+            shlex.split(f"{self.__CMD_TC} qdisc change dev {self.device} parent 1:2 netem {params}")).check_returncode()
+        subprocess.run(shlex.split(
+            f"{self.__CMD_TC} qdisc change dev {self.virtual_device_in} root netem {params}")).check_returncode()
 
     def _init_ifb(self, numifbs):
         """
@@ -523,7 +538,7 @@ class Connection:
         log.debug("T_init active")
         self._update_incoming()
         self._update_outgoing()
-        time.sleep(self.t_init/1000.0)
+        time.sleep(self.t_init / 1000.0)
         self._t_init_active = False
         self._update_incoming()
         self._update_outgoing()
@@ -548,21 +563,29 @@ class Connection:
                     self._update_outgoing(self.dynamic_parameters_setup.verbose)
 
                     if parameter_set.timeframe >= 0:
-                        timeframe_in_seconds = parameter_set.timeframe/1000.0
+                        timeframe_in_seconds = parameter_set.timeframe / 1000.0
                         next_change += timeframe_in_seconds
                         if self.dynamic_parameters_setup.verbose:
-                            log.debug(f"[{timer()}] Updated all dynamic connection parameters - next change will occur at {next_change} in {int((next_change-timer())*1000)} ms")
-                        time.sleep(next_change-timer())
+                            log.debug(
+                                f"[{timer()}] Updated all dynamic connection parameters - next change will occur at "
+                                f"{next_change} in {int((next_change - timer()) * 1000)} ms")
+                        time.sleep(next_change - timer())
                     else:
                         return
 
     def _emulate_dynamically(self, emulate_t_init: bool = True, emulate_dynamic_parameters: bool = True):
         """Emulate the dynamic conditions of a cellular network"""
+        log.debug(f"netem active    emulate_t_init: {emulate_t_init}  "
+                  f"emulate_dynamic_parameters: {emulate_dynamic_parameters}")
         if emulate_t_init:
             self._emulate_t_init()
         if emulate_dynamic_parameters:
+            if self.dynamic_parameters_setup.verbose:
+                verbose_info = "verbose: showing delay for each change"
+            else:
+                verbose_info = "verbose is false - not showing delay for each update"
+            log.debug(f"netem dynamic parameter updates active ({verbose_info})")
             self._emulate_dynamic_parameters()
-
 
     def cleanup_ifb(self):
         """Removes the ifb module from kernel"""
