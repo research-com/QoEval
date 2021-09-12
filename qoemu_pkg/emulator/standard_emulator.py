@@ -5,7 +5,7 @@
 import time
 
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name
-from qoemu_pkg.configuration import config
+from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
 
 import logging as log
 import configparser
@@ -21,19 +21,22 @@ VD_NAME = "qoemu_" + DEVICE_NAME + "_" + TARGET_NAME.replace("-", "_") + "_x86"
 EMU_NAME = "emulator"
 VD_MANAGER_NAME = "avdmanager"
 SDK_MANAGER_NAME = "sdkmanager"
-AVD_INI_FILE = f"{config.vd_path.get()}/config.ini"
 
 
-def is_avd_config_readable() -> bool:
-    if os.access(f"{AVD_INI_FILE}", os.R_OK):
+def avd_ini_file(qoemu_config: QoEmuConfiguration):
+    return f"{qoemu_config.vd_path.get()}/config.ini"
+
+
+def is_avd_config_readable(qoemu_config: QoEmuConfiguration) -> bool:
+    if os.access(f"{avd_ini_file(qoemu_config)}", os.R_OK):
         return True
     else:
         return False
 
 
 class StandardEmulator(MobileDevice):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, qoemu_config: QoEmuConfiguration):
+        super().__init__(qoemu_config)
         self.vd_name = VD_NAME
 
     def __write_avd_config(self):
@@ -43,14 +46,14 @@ class StandardEmulator(MobileDevice):
         new_config['config.ini'] = self.config
         # write new config - but remove section header
         config_without_section = '\n'.join(['='.join(item) for item in new_config.items('config.ini')])
-        with open(f"{AVD_INI_FILE}", 'w') as f:
+        with open(f"{avd_ini_file(self.qoemu_config)}", 'w') as f:
             f.write(config_without_section)
 
     def __read_avd_config(self):
         # note: in order to be able to read the avds config.ini file with configparser
         # we must insert a dummy section
         log.debug("Parsing AVD config file")
-        with open(f"{AVD_INI_FILE}", 'r') as f:
+        with open(f"{avd_ini_file(self.qoemu_config)}", 'r') as f:
             config_string = '[config.ini]\n' + f.read()
         self.config = configparser.ConfigParser()
         self.config.optionxform = str  # default would be to change all options to lowercase
@@ -115,7 +118,7 @@ class StandardEmulator(MobileDevice):
             package = f'system-images;{TARGET_NAME};google_apis;x86'
 
         output = subprocess.run(shlex.split(
-            f"{VD_MANAGER_NAME} create avd --package {package} --path {config.vd_path.get()} " +
+            f"{VD_MANAGER_NAME} create avd --package {package} --path {self.qoemu_config.vd_path.get()} " +
             f"--device \"{DEVICE_NAME}\" --name {self.vd_name}"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
@@ -174,7 +177,7 @@ class StandardEmulator(MobileDevice):
         self.config['hw.initialOrientation'] = orientation.value
         self.config['skin.dynamic'] = 'yes'
         # show_device_frame = False
-        if config.show_device_frame.get():
+        if self.qoemu_config.show_device_frame.get():
             self.config['showDeviceFrame'] = 'yes'
             self.config['skin.name'] = 'pixel_silver'
             self.config['skin.path'] = '/home/qoe-user/Android/Sdk/skins/pixel_silver'  # FIXME: abs path
@@ -191,11 +194,11 @@ class StandardEmulator(MobileDevice):
         # delete_avd(self.avd_name)  # enable this line to reset upon each start
         if not self.is_device_available(self.vd_name):
             self.create_device(playstore=playstore)
-        if not is_avd_config_readable():
+        if not is_avd_config_readable(self.qoemu_config):
             log.warning("AVD configuration is not readable - trying to reset AVD")
             self.delete_device()
             self.create_device(playstore=playstore)
-            if not is_avd_config_readable():
+            if not is_avd_config_readable(self.qoemu_config):
                 raise RuntimeError('AVD configuration unreadable and reset failed.')
         if self.get_orientation() != orientation:
             log.debug(f"Modifying emulator orientation...")
@@ -219,16 +222,20 @@ class StandardEmulator(MobileDevice):
 
     def shutdown(self):
         log.debug("Emulator shutdown.")
-        subprocess.run(shlex.split(f"{adb_name()} emu kill"))
+        subprocess.run(shlex.split(f"{adb_name(self.qoemu_config)} emu kill"))
 
 
-if __name__ == '__main__':
-    # executed directly as a script
+def main():
     print("Emulator control")
-    emu = StandardEmulator()
+    emu = StandardEmulator(get_default_qoemu_config())
     # emu.delete_vd()
     emu.launch(orientation=MobileDeviceOrientation.LANDSCAPE, playstore=False)
     ipaddr = emu.get_ip_address()
     print(f"Emulator IP address: {ipaddr}")
     time.sleep(20)
     emu.shutdown()
+
+
+if __name__ == '__main__':
+    # executed directly as a script
+    main()

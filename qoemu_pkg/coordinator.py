@@ -7,7 +7,7 @@ from qoemu_pkg.capture.capture import CaptureEmulator, CaptureRealDevice
 from qoemu_pkg.postprocessing.postprocessor import PostProcessor
 from qoemu_pkg.postprocessing.determine_video_start import determine_video_start
 from qoemu_pkg.postprocessing.determine_image_timestamp import determine_frame, frame_to_time
-from qoemu_pkg.configuration import MobileDeviceType, MobileDeviceOrientation, config
+from qoemu_pkg.configuration import MobileDeviceOrientation, QoEmuConfiguration, get_default_qoemu_config
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
 from qoemu_pkg.emulator.standard_emulator import StandardEmulator
 from qoemu_pkg.emulator.physical_device import PhysicalDevice
@@ -36,7 +36,10 @@ MAX_RETRIES = 2  # number of retries when generating a stimuli fails
 SHORT_WAITING = 3  # short waiting time [s]
 LONG_WAITING = 60  # long waiting time [s]
 
-GEN_LOG_FILE = os.path.join(config.video_capture_path.get(), 'qoemu.log')
+
+def gen_log_file(qoemu_config: QoEmuConfiguration):
+    return os.path.join(qoemu_config.video_capture_path.get(), 'qoemu.log')
+
 
 _AUTO_CODEC = "auto"
 
@@ -46,18 +49,19 @@ class Coordinator:
             Coordinate the emulation run for generating one or more stimuli.
     """
 
-    def __init__(self):
+    def __init__(self, qoemu_config: QoEmuConfiguration):
         log.basicConfig(level=log.DEBUG)
-        self.ui_control = UiControl(config.adb_device_serial.get())
-        if config.emulator_type.get() == MobileDeviceType.GENYMOTION:
-            self.emulator = GenymotionEmulator()
-            self.capture = CaptureEmulator()
-        if config.emulator_type.get() == MobileDeviceType.SDK_EMULATOR:
-            self.emulator = StandardEmulator()
-            self.capture = CaptureEmulator()
-        if config.emulator_type.get() == MobileDeviceType.REAL_DEVICE:
-            self.emulator = PhysicalDevice(config.show_device_screen_mirror.get())
-            self.capture = CaptureRealDevice()
+        self.qoemu_config = qoemu_config
+        self.ui_control = UiControl(self.qoemu_config.adb_device_serial.get())
+        if self.qoemu_config.emulator_type.get() == MobileDeviceType.GENYMOTION:
+            self.emulator = GenymotionEmulator(self.qoemu_config)
+            self.capture = CaptureEmulator(self.qoemu_config)
+        if self.qoemu_config.emulator_type.get() == MobileDeviceType.SDK_EMULATOR:
+            self.emulator = StandardEmulator(self.qoemu_config)
+            self.capture = CaptureEmulator(self.qoemu_config)
+        if self.qoemu_config.emulator_type.get() == MobileDeviceType.REAL_DEVICE:
+            self.emulator = PhysicalDevice(self.qoemu_config, self.qoemu_config.show_device_screen_mirror.get())
+            self.capture = CaptureRealDevice(self.qoemu_config)
 
         if not self.emulator:
             raise RuntimeError('No emulation device configured - check you \"qoemu.conf\" .')
@@ -99,14 +103,14 @@ class Coordinator:
             raise RuntimeError(
                 f"Coordinator is already prepared - cannot prepare again before finish has been called.")
 
-        self._gen_log = open(GEN_LOG_FILE, "a+")
+        self._gen_log = open(gen_log_file(self.qoemu_config), "a+")
 
         self._type_id = type_id
         self._table_id = table_id
         self._entry_id = entry_id
         self._params = get_parameters(self._type_id, self._table_id, self._entry_id)
         log.debug(f"Preparing {type_id}-{table_id}-{entry_id} with parameters: {self._params}")
-        self.output_filename = get_video_id(self._type_id, self._table_id, self._entry_id)
+        self.output_filename = get_video_id(self.qoemu_config, self._type_id, self._table_id, self._entry_id)
         time_string = time.strftime("%d.%m.%y %H:%M:%S", time.localtime())
         self._gen_log.write(f"{time_string} {self.output_filename} {self._params} ")
         # self.emulator.delete_vd()  # delete/reset virtual device - should be avoided
@@ -127,29 +131,29 @@ class Coordinator:
 
         if self._params['dynamic'] and len(self._params['dynamic']) > 0:
             dynamic_parameter_variant = self._params['dynamic']
-            dynamic_parameter_file = os.path.join(config.dynamic_parameter_path.get(),
+            dynamic_parameter_file = os.path.join(self.qoemu_config.dynamic_parameter_path.get(),
                                                   f"{dynamic_parameter_variant}_{int(self._params['rdl'])}.csv")
             log.debug(f"Dynamic connection parameters are active, using parameter file:{dynamic_parameter_file}")
             adaptive_params = DynamicParametersSetup.from_csv(dynamic_parameter_file, verbose=False)
 
-            self.netem = Connection("coord1", config.net_device_name.get(), t_init=self._params['t_init'],
+            self.netem = Connection("coord1", self.qoemu_config.net_device_name.get(), t_init=self._params['t_init'],
                                     rul=self._params['rul'], rdl=self._params['rdl'],
                                     dul=(self._params['dul'] - delay_bias_ul_dl),
                                     ddl=(self._params['ddl'] - delay_bias_ul_dl),
                                     android_ip=self.emulator.get_ip_address(),
                                     # note: only valid, if not in host-ap mode
-                                    exclude_ports=config.excluded_ports.get(),
+                                    exclude_ports=self.qoemu_config.excluded_ports.get(),
                                     # exclude ports, e.g. as used for ssh control
                                     dynamic_parameters_setup=adaptive_params)  # set of dynamic connection parameters
         else:
             # connection parameters are static, no dynamic_parameters_setup required
-            self.netem = Connection("coord1", config.net_device_name.get(), t_init=self._params['t_init'],
+            self.netem = Connection("coord1", self.qoemu_config.net_device_name.get(), t_init=self._params['t_init'],
                                     rul=self._params['rul'], rdl=self._params['rdl'],
                                     dul=(self._params['dul'] - delay_bias_ul_dl),
                                     ddl=(self._params['ddl'] - delay_bias_ul_dl),
                                     android_ip=self.emulator.get_ip_address(),
                                     # note: only valid, if not in host-ap mode
-                                    exclude_ports=config.excluded_ports.get())  # exclude ports, e.g. as used for ssh
+                                    exclude_ports=self.qoemu_config.excluded_ports.get())  # exclude ports, e.g. as used for ssh
 
         url = f"{get_link(self._type_id, self._table_id, self._entry_id)}"
         if len(url) < 7:
@@ -181,13 +185,14 @@ class Coordinator:
         uc_duration = convert_to_seconds(capture_time) + 2  # add 2s safety margin
 
         # store a copy of the qoemu configuration used to generate the stimuli (to be reproducible)
-        cfg_log = os.path.join(config.video_capture_path.get(), f"{self.output_filename}.cfg")
-        config.store_netem_params(self._params)
-        config.save_to_file(cfg_log)
+        cfg_log = os.path.join(self.qoemu_config.video_capture_path.get(), f"{self.output_filename}.cfg")
+        self.qoemu_config.store_netem_params(self._params)
+        self.qoemu_config.save_to_file(cfg_log)
 
         # initialize traffic analysis - if enabled
-        if config.traffic_analysis_live.get() or config.traffic_analysis_plot.get():
-            self.stats_filepath = os.path.join(config.video_capture_path.get(), f"{self.output_filename}_stats")
+        if self.qoemu_config.traffic_analysis_live.get() or self.qoemu_config.traffic_analysis_plot.get():
+            self.stats_filepath = os.path.join(self.qoemu_config.video_capture_path.get(),
+                                               f"{self.output_filename}_stats")
             self.analysis = analysis.DataCollector(virtual_interface_out=self.netem.virtual_device_out,
                                                    virtual_interface_in=self.netem.virtual_device_in,
                                                    duration=uc_duration, interval=100, filename=self.stats_filepath,
@@ -195,7 +200,7 @@ class Coordinator:
             self.analysis.start_threads()
 
         # optional sanity check (can be disbled in configuration file)
-        if config.net_em_sanity_check.get():
+        if self.qoemu_config.net_em_sanity_check.get():
             if self._params['rul'] < DELAY_MEASUREMENT_BW_THRESH or self._params['rdl']:
                 log.warning("delay measurement in low-bandwidth situation - using higher relative tolerance")
                 delay_tol_rel = DELAY_TOLERANCE_REL_LOWBW
@@ -230,11 +235,11 @@ class Coordinator:
         self.netem.enable_netem(consider_t_init=True, consider_dynamic_parameters=is_using_dynamic_params)
         # input("netem active - check conditions on mobile device and press enter to continue...")
 
-        if config.traffic_analysis_live.get() or config.traffic_analysis_plot.get():
+        if self.qoemu_config.traffic_analysis_live.get() or self.qoemu_config.traffic_analysis_plot.get():
             self.analysis.start()
 
         live_plot = None
-        if config.traffic_analysis_live.get():
+        if self.qoemu_config.traffic_analysis_live.get():
             live_plot = analysis.LivePlot(self.analysis, analysis.PACKETS, analysis.ALL)
 
         ui_control_thread.start()
@@ -247,7 +252,7 @@ class Coordinator:
         capture_thread.join()
         ui_control_thread.join()
 
-        if config.traffic_analysis_plot.get():
+        if self.qoemu_config.traffic_analysis_plot.get():
             self.analysis.wait_until_completed()
             plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
                                  [analysis.OUT], [analysis.ALL], analysis.BAR)
@@ -290,8 +295,9 @@ class Coordinator:
 
     def _generate_stimuli(self, type_id, table_id, ids_to_generate, overwrite: bool = False):
         for entry_id in ids_to_generate:
-            if not overwrite and is_stimuli_available(type_id, table_id, entry_id, "0"):
-                print(f" Stimuli {get_video_id(type_id, table_id, entry_id)} already available - skipped. ")
+            if not overwrite and is_stimuli_available(self.qoemu_config, type_id, table_id, entry_id, "0"):
+                print(f"Stimuli {get_video_id(self.qoemu_config, type_id, table_id, entry_id)} "
+                      f"already available - skipped. ")
                 continue
 
             retry_counter = 0
@@ -328,24 +334,25 @@ class Coordinator:
                     self._finish()
 
     def _perform_postprocessing(self, type_id, table_id, ids_to_process, overwrite: bool = False):
-        trigger_dir = config.trigger_image_path.get()
+        trigger_dir = self.qoemu_config.trigger_image_path.get()
         self._type_id = type_id
         self._table_id = table_id
         for entry_id in ids_to_process:
             self._entry_id = entry_id
-            video_id_in = get_video_id(type_id, table_id, entry_id, "0")
-            video_id_out = get_video_id(type_id, table_id, entry_id, "1")
-            if not overwrite and is_stimuli_available(type_id, table_id, entry_id, "1"):
-                print(f" Stimuli {get_video_id(type_id, table_id, entry_id)} post-processed file exists - skipped. ")
+            video_id_in = get_video_id(self.qoemu_config, type_id, table_id, entry_id, "0")
+            video_id_out = get_video_id(self.qoemu_config, type_id, table_id, entry_id, "1")
+            if not overwrite and is_stimuli_available(self.qoemu_config, type_id, table_id, entry_id, "1"):
+                print(f"Stimuli {get_video_id(self.qoemu_config, type_id, table_id, entry_id)} "
+                      f"post-processed file exists - skipped. ")
                 continue
 
-            cfg_log = os.path.join(config.video_capture_path.get(), f"{video_id_out}.cfg")
+            cfg_log = os.path.join(self.qoemu_config.video_capture_path.get(), f"{video_id_out}.cfg")
             if os.path.isfile(cfg_log):
                 log.debug(f"Found an existing configuration - loading {cfg_log}")
-                config.read_from_file(cfg_log)
+                self.qoemu_config.read_from_file(cfg_log)
             else:
                 # store a copy of the qoemu configuration used for post-processing (to be reproducible)
-                config.save_to_file(cfg_log)
+                self.qoemu_config.save_to_file(cfg_log)
 
             postprocessor = PostProcessor()
             print(f"Processing: {video_id_in}")
@@ -358,7 +365,7 @@ class Coordinator:
             # d_start_to_end = int(input(f"Duration from t_start to t_end in seconds [s]: "))
 
             # auto-detect video t_init_buf, t_raw_start, t_raw_end
-            unprocessed_video_path = f"{os.path.join(config.video_capture_path.get(), video_id_in)}.avi"
+            unprocessed_video_path = f"{os.path.join(self.qoemu_config.video_capture_path.get(), video_id_in)}.avi"
 
             if not os.path.isfile(unprocessed_video_path):
                 log.error(f"Cannot open unprocessed video file {unprocessed_video_path}")
@@ -371,7 +378,7 @@ class Coordinator:
             t_raw_start = frame_to_time(unprocessed_video_path, start_frame_nr)
             print(f"{t_raw_start} s")
 
-            t_init_buf_manual = config.vid_init_buffer_time_manual.get()
+            t_init_buf_manual = self.qoemu_config.vid_init_buffer_time_manual.get()
 
             # only some of the use-case types require a detection of the initialization phase (t-init)
             if self._get_uc_type() == UseCaseType.YOUTUBE:
@@ -399,7 +406,7 @@ class Coordinator:
             if not t_init_buf_manual and is_detecting_t_init:
                 t_detect_start = max(0, t_raw_start - (2.5 * VIDEO_PRE_START))
                 print(f"Detecting start of video playback (search starts at: {t_detect_start} s) ... ", end='')
-                t_init_buf = determine_video_start(unprocessed_video_path, t_detect_start)
+                t_init_buf = determine_video_start(self.qoemu_config, unprocessed_video_path, t_detect_start)
                 if not t_init_buf:
                     print(f"failed. (Is the input video \"{unprocessed_video_path}\" correct?)")
                     continue
@@ -436,8 +443,8 @@ class Coordinator:
             print("Cutting and merging video stimuli...")
             postprocessor.process(video_id_in, video_id_out, t_init_buf, t_raw_start, d_start_to_end,
                                   normalize_audio=is_normalizing_audio,
-                                  erase_audio=config.audio_erase_start_stop.get(),
-                                  erase_box=config.vid_erase_box.get())
+                                  erase_audio=self.qoemu_config.audio_erase_start_stop.get(),
+                                  erase_box=self.qoemu_config.vid_erase_box.get())
             print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
         """
@@ -464,7 +471,7 @@ class Coordinator:
     def start(self, type_ids: List[str], table_ids: List[str], entry_ids: List[str] = None,
               generate_stimuli: bool = True, postprocessing: bool = True, overwrite: bool = False):
 
-        load_parameter_file(config.parameter_file.get())
+        load_parameter_file(self.qoemu_config.parameter_file.get())
 
         type_id = type_ids[0]  # TODO: extend to process all elements
         table_id = table_ids[0]
@@ -477,13 +484,14 @@ class Coordinator:
             ids_ok = any(entry_ids == ids_available[i:len_ei + i] for i in range(len(ids_available) - len_ei + 1))
             if not ids_ok:
                 raise RuntimeError(
-                    f"Not all stimuli ids {entry_ids} are available in \"{config.parameter_file.get()}\"")
+                    f"Not all stimuli ids {entry_ids} are available in \"{self.qoemu_config.parameter_file.get()}\"")
             ids_to_evaluate = entry_ids
 
         # ids_to_evaluate =  ['1'] #,'5','4','3','2','1']
 
         if ids_to_evaluate is None:
-            raise RuntimeError(f"No Stimuli-IDs to evaluate - check parameter file \"{config.parameter_file.get()}\"")
+            raise RuntimeError(f"No Stimuli-IDs to evaluate - "
+                               f"check parameter file \"{self.qoemu_config.parameter_file.get()}\"")
 
         try:
             if generate_stimuli:
@@ -502,14 +510,19 @@ class Coordinator:
                 "*****************************************************************************************************")
 
 
-if __name__ == '__main__':
-    # executed directly as a script
+def main():
     print("Coordinator main started")
 
-    coordinator = Coordinator()
+    qoemu_config = get_default_qoemu_config()
+    coordinator = Coordinator(qoemu_config)
 
     coordinator.start(['VS'], ['G'], ['1', '2', '3', '4', '5', '6', '7', '8'],
                       generate_stimuli=True, postprocessing=True, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")
+
+
+if __name__ == '__main__':
+    # executed directly as a script
+    main()

@@ -3,12 +3,13 @@ import multiprocessing
 import subprocess
 import re
 import logging as log
-from qoemu_pkg.configuration import config
+from qoemu_pkg.configuration import QoEmuConfiguration
 
 
-def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> float:
+def determine_video_start(qoemu_config: QoEmuConfiguration, video_path: str, minimum_start_time: float = 0.0) -> float:
     """
 
+    :param qoemu_config:  The QoEmuConfiguration providing threshold values
     :param video_path: the absolute path to the video
     :param minimum_start_time: minimum value (to avoid misdetection before known minimum start time)
     :return: the determined playback start of the video as float, None if the algorithm fails to determine it
@@ -26,11 +27,11 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
 
     # config parameters (must be read upon each call since they can change over time)
     #   size [B] of differential frame that triggers start of video (normal relevance)
-    DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = config.vid_start_detect_thr_size_normal_relevance.get()
+    DIFF_THRESHOLD_SIZE_NORMAL_RELEVANCE = qoemu_config.vid_start_detect_thr_size_normal_relevance.get()
     #   size [B] of differential frame that triggers start of video (high relevance, strong indicator)
-    DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE = config.vid_start_detect_thr_size_high_relevance.get()
+    DIFF_THRESHOLD_SIZE_HIGH_RELEVANCE = qoemu_config.vid_start_detect_thr_size_high_relevance.get()
     #   number of frames needed above the threshold to avoid false positives
-    DIFF_THRESHOLD_NR_FRAMES = config.vid_start_detect_thr_nr_frames.get()
+    DIFF_THRESHOLD_NR_FRAMES = qoemu_config.vid_start_detect_thr_nr_frames.get()
 
     # allow the frame size to dip below the threshold this many times to avoid false negatives
     DIFF_THRESHOLD_LOWER_FRAMES_ALLOWED = 7
@@ -90,10 +91,3 @@ def determine_video_start(video_path: str, minimum_start_time: float = 0.0) -> f
                            f"for start detection in {video_path} are not set correctly.")
 
     return prediction
-
-
-if __name__ == '__main__':
-
-    video_path = '/home/jk/PycharmProjects/qoemu/qoemu_pkg/gui/210418_VS-B/test3.avi'
-
-    print(determine_video_start(video_path))

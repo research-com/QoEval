@@ -5,9 +5,8 @@
 import time
 
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name
-
+from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
 import logging as log
-import os
 import subprocess
 import shlex
 import ipaddress
@@ -22,8 +21,8 @@ STANDARD_OPTIONS = "--virtualkeyboard=on --nbcpu=6 --ram=4096 --network-mode=nat
 
 
 class GenymotionEmulator(MobileDevice):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, qoemu_config: QoEmuConfiguration):
+        super().__init__(qoemu_config)
         self.vd_name = VD_NAME
         self.__orientation = MobileDeviceOrientation.PORTRAIT
 
@@ -178,7 +177,7 @@ class GenymotionEmulator(MobileDevice):
 if __name__ == '__main__':
     # executed directly as a script
     print("Emulator control")
-    emu = GenymotionEmulator()
+    emu = GenymotionEmulator(get_default_qoemu_config())
     # emu.delete_vd()
     emu.launch(orientation=MobileDeviceOrientation.LANDSCAPE, playstore=False)
     print(f"Started emulator with IP address: {emu.get_ip_address()}")

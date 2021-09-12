@@ -8,6 +8,7 @@ import time
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, \
     MEASUREMENT_DURATION
 
+from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
 import logging as log
 import subprocess
 import shlex
@@ -19,8 +20,8 @@ ADB_NAME = "adb"
 
 
 class PhysicalDevice(MobileDevice):
-    def __init__(self, mirror: bool = True):
-        super().__init__()
+    def __init__(self, qoemu_config: QoEmuConfiguration, mirror: bool = True):
+        super().__init__(qoemu_config)
         self.__scrcpy_output = None
         self.__mirror = mirror
 
@@ -141,13 +142,17 @@ class PhysicalDevice(MobileDevice):
             self.__scrcpy_output.terminate()
 
 
-if __name__ == '__main__':
-    # executed directly as a script
+def main():
     print("physical device control")
-    pd = PhysicalDevice()
+    pd = PhysicalDevice(get_default_qoemu_config())
     pd.launch(orientation=MobileDeviceOrientation.LANDSCAPE, playstore=False)
     ipaddr = pd.get_ip_address()
     rtt = pd.measure_rtt()
     print(f"Physical device IP address: {ipaddr}    RTT bias: {rtt}")
     time.sleep(20)
     pd.shutdown()
+
+
+if __name__ == '__main__':
+    # executed directly as a script
+    main()
