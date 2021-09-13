@@ -46,9 +46,10 @@ class RunFrame(tk.Frame):
 
         # Options
         self.checkbox_frame = CheckboxToBooleanFrame(self, self.gui,
-                                                     config_variables=[config.coordinator_generate_stimuli,
-                                                                       config.coordinator_postprocessing,
-                                                                       config.coordinator_overwrite],
+                                                     config_variables=
+                                                     [self.gui.qoemu_config.coordinator_generate_stimuli,
+                                                      self.gui.qoemu_config.coordinator_postprocessing,
+                                                      self.gui.qoemu_config.coordinator_overwrite],
                                                      name="Options",
                                                      variable_names=["Generate Stimuli", "Post Processing",
                                                                      "Overwrite"])
@@ -129,12 +130,12 @@ class RunFrame(tk.Frame):
             # os.killpg(os.getpgid(self.coordinator_process.pid), signal.SIGTERM)
             self.coordinator_process.wait()
             log.info("Coordinator exited")
-            netem.reset_device_and_ifb(config.net_device_name.get())
+            netem.reset_device_and_ifb(self.gui.qoemu_config.net_device_name.get())
             self.enable_interface_after_coordinator()
             self.coordinator_is_running = False
 
     def start_coordinator(self):
-        entries = config.gui_coordinator_stimuli.get()
+        entries = self.gui.qoemu_config.gui_coordinator_stimuli.get()
         if len(entries) < 1:
             log.info("No Parameters are selected")
             return
@@ -147,7 +148,7 @@ class RunFrame(tk.Frame):
         log.info("Starting coordinator")
         self.disable_interface_for_coordinator()
 
-        self.master.save_config()
+        self.gui.save_config()
 
         path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "run_coordinator.py")
         self.coordinator_process = subprocess.Popen(f"python3 {path}".split(" "), shell=False, stdout=subprocess.PIPE,

@@ -1,31 +1,28 @@
 from qoemu_pkg.configuration import *
 from qoemu_pkg.coordinator import Coordinator
-import qoemu_pkg.configuration
 
 
-CONFIG_FILE = "qoemu_gui.conf"
+def main():
+    qoemu_config = get_default_qoemu_config()
 
-config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), CONFIG_FILE)
-print(config_path)
+    qoemu_config.read_from_file(qoemu_config.gui_current_config_file.get())
 
-parser = configparser.ConfigParser()
-parser.read(config_path)
-config.configparser = parser
+    coord = Coordinator(qoemu_config)
+
+    if qoemu_config.coordinator_generate_stimuli.get():
+        for entry in qoemu_config.gui_coordinator_stimuli.get():
+            coord.start([entry["type_id"]], [entry["table_id"]], [entry["entry_id"]],
+                        qoemu_config.coordinator_generate_stimuli,
+                        False,
+                        qoemu_config.coordinator_overwrite)
+
+    if qoemu_config.coordinator_postprocessing.get():
+        for entry in qoemu_config.gui_coordinator_stimuli.get():
+            coord.start([entry["type_id"]], [entry["table_id"]], [entry["entry_id"]],
+                        False,
+                        qoemu_config.coordinator_postprocessing,
+                        qoemu_config.coordinator_overwrite)
 
 
-coord = Coordinator()
-
-if config.coordinator_generate_stimuli.get():
-    for entry in config.gui_coordinator_stimuli.get():
-        coord.start([entry["type_id"]], [entry["table_id"]], [entry["entry_id"]],
-                    config.coordinator_generate_stimuli,
-                    False,
-                    config.coordinator_overwrite)
-
-if config.coordinator_postprocessing.get():
-    for entry in config.gui_coordinator_stimuli.get():
-        coord.start([entry["type_id"]], [entry["table_id"]], [entry["entry_id"]],
-                    False,
-                    config.coordinator_postprocessing,
-                    config.coordinator_overwrite)
-
+if __name__ == '__main__':
+    main()

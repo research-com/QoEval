@@ -42,9 +42,11 @@ class Gui(tk.Tk):
         style = ttk.Style()
         style.theme_settings("default", {"TNotebook.Tab": {"configure": {"padding": [10, 2]}}})
 
+        self.qoemu_config = get_default_qoemu_config()
+
         self.current_config_path = tk.StringVar()
-        self.current_config_path.set(config.gui_current_config_file.get())
-        config.read_from_file(self.current_config_path.get())
+        self.current_config_path.set(self.qoemu_config.gui_current_config_file.get())
+        self.qoemu_config.read_from_file(self.current_config_path.get())
 
         self.updatable_elements = []
 
@@ -89,9 +91,8 @@ class Gui(tk.Tk):
         self.notebook.add(self.analysis_frame, text=f'{ANALYSIS_TAB_NAME: ^{TAB_WIDTH}s}')
         self.notebook.add(self.run_frame, text=f'{RUN_TAB_NAME: ^{TAB_WIDTH}s}')
 
-    @staticmethod
-    def save_config():
-        path = os.path.dirname(config.gui_current_config_file.get())
+    def save_config(self):
+        path = os.path.dirname(self.qoemu_config.gui_current_config_file.get())
         if not os.path.exists(path):
             try:
                 os.makedirs(path)
@@ -99,17 +100,17 @@ class Gui(tk.Tk):
                 print("Creation of the directory %s failed" % path)
             else:
                 print("Successfully created the directory %s " % path)
-        config.save_to_file(config.gui_current_config_file.get())
+        self.qoemu_config.save_to_file(self.qoemu_config.gui_current_config_file.get())
 
     def load_default_config(self):
-        config.read_from_file()
+        self.qoemu_config.read_from_file()
         for element in self.updatable_elements:
             element.update()
-        self.current_config_path.set(config.gui_current_config_file.get())
+        self.current_config_path.set(self.qoemu_config.gui_current_config_file.get())
         self.update_title()
 
     def on_exit(self):
-        if config.modified_since_last_save:
+        if self.qoemu_config.modified_since_last_save:
             answer = messagebox.askyesnocancel("Question", "Do you want to save the changes to the current "
                                                            "configuration before closing?")
             if answer is None:
@@ -127,7 +128,7 @@ class Gui(tk.Tk):
         self.destroy()
 
     def update_title(self):
-        self.title(GUI_TITLE + " - " + os.path.split(config.gui_current_config_file.get())[1])
+        self.title(GUI_TITLE + " - " + os.path.split(self.qoemu_config.gui_current_config_file.get())[1])
 
 
 def main():

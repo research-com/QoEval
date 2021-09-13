@@ -10,6 +10,7 @@ import pathlib
 import configparser
 from enum import Enum
 from typing import List, Union, Dict
+from qoemu_pkg.gui.tooltip_strings import add_tooltips
 
 # default file name of configuration file and mandatory section name
 import qoemu_pkg.analysis.analysis
@@ -86,6 +87,8 @@ class QoEmuConfiguration:
 
         self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
         self.audio_erase_start_stop = ListFloatOption(self, 'AudioEraseStartStop', [])
+
+        add_tooltips(self)
 
     def save_to_file(self, file: str = None):
         if file is not None:

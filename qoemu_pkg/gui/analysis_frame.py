@@ -17,17 +17,17 @@ class AnalysisFrame(tk.Frame):
 
         # TrafficAnalysisPlot
         self.plot_frame = BooleanFrame(self, self.gui,
-                                       config_variable=config.traffic_analysis_plot,)
+                                       config_variable=self.gui.qoemu_config.traffic_analysis_plot,)
         self.plot_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
         # TrafficAnalysisLiveVisualization
         self.live_visualization_frame = BooleanFrame(self, self.gui,
-                                                     config_variable=config.traffic_analysis_live)
+                                                     config_variable=self.gui.qoemu_config.traffic_analysis_live)
         self.live_visualization_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
         # Histogram Bin Size Frame
         self.bin_size_frame = ListIntegerFrame(self, self.gui,
-                                               config_variable=config.traffic_analysis_bin_sizes,
+                                               config_variable=self.gui.qoemu_config.traffic_analysis_bin_sizes,
                                                name="Histogram Bin Sizes",
                                                value_name="Bin",
                                                min_value=2)
@@ -36,7 +36,7 @@ class AnalysisFrame(tk.Frame):
         # Plots Frame
 
         self.bin_size_frame = PlotsFrame(self, self.gui,
-                                         config_variable=config.traffic_analysis_plot_settings,
+                                         config_variable=self.gui.qoemu_config.traffic_analysis_plot_settings,
                                          name="Plots to generate",
                                          value_name="Plot")
         self.bin_size_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)

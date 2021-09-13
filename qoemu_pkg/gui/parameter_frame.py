@@ -6,7 +6,7 @@ from tkinter import messagebox
 from ttkwidgets import CheckboxTreeview
 import tkinter.ttk as ttk
 from tkinter.filedialog import askopenfilename
-from qoemu_pkg.configuration import config
+from qoemu_pkg.configuration import QoEmuConfiguration
 import qoemu_pkg
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ class ParameterFrame(tk.Frame):
 
         self.button_open_file.pack(fill=tk.BOTH, side="left", expand=0)
 
-        self.parameter_file = tk.StringVar(value=config.parameter_file.get())
+        self.parameter_file = tk.StringVar(value=self.gui.qoemu_config.parameter_file.get())
         self.parameter_file_label = tk.Label(master=self.button_frame, textvariable=self.parameter_file,
                                              anchor="c")
         self.parameter_file_label.pack(fill=tk.BOTH, expand=1, side="left")
@@ -92,11 +92,11 @@ class ParameterFrame(tk.Frame):
         # update config
         self.tree.bind('<<TreeviewSelect>>', self._update_config)
 
-        if config.parameter_file.get().startswith("./"):
-            path = os.path.abspath(os.path.normpath(os.path.join("../../", config.parameter_file.get())))
+        if self.gui.qoemu_config.parameter_file.get().startswith("./"):
+            path = os.path.abspath(os.path.normpath(os.path.join("../../", self.gui.qoemu_config.parameter_file.get())))
             path = os.path.normpath(path)
         else:
-            path = config.parameter_file.get()
+            path = self.gui.qoemu_config.parameter_file.get()
         self.open_file(path)
 
     def _update_config(self, *args):
@@ -106,12 +106,12 @@ class ParameterFrame(tk.Frame):
             dictionary = {"type_id": entry[0], "table_id": entry[1], "entry_id": entry[2]}
             entry_list.append(dictionary)
 
-        config.gui_coordinator_stimuli.set(entry_list)
+        self.gui.qoemu_config.gui_coordinator_stimuli.set(entry_list)
 
     def open_file_with_asking(self):
         path = askopenfilename()
         if len(path) > 0:
-            config.gui_coordinator_stimuli.set([])
+            self.gui.qoemu_config.gui_coordinator_stimuli.set([])
             self.open_file(path)
 
     def open_file(self, filename):
@@ -119,12 +119,12 @@ class ParameterFrame(tk.Frame):
         try:
             parser.load_parameter_file(filename, False)
         except FileNotFoundError:
-            config.parameter_file.set(self.parameter_file.get())
+            self.gui.qoemu_config.parameter_file.set(self.parameter_file.get())
             messagebox.showerror    ("Error", "Parameter file not found")
             return
 
-        if filename != config.parameter_file.get():
-            config.parameter_file.set(filename)
+        if filename != self.gui.qoemu_config.parameter_file.get():
+            self.gui.qoemu_config.parameter_file.set(filename)
             self.parameter_file.set(filename)
 
         for i in self.tree.get_children():
@@ -149,7 +149,8 @@ class ParameterFrame(tk.Frame):
                         self.tree.insert(parent=f"{type_id}:{table_id}", text=k, index=k,
                                          iid=f"{type_id}:{table_id}:{k}",
                                          values=data)
-                        if dict(type_id=type_id, table_id=table_id, entry_id=k) in config.gui_coordinator_stimuli.get():
+                        if dict(type_id=type_id, table_id=table_id, entry_id=k) in \
+                                self.gui.qoemu_config.gui_coordinator_stimuli.get():
                             self.tree.item(f"{type_id}:{table_id}:{k}", tags=['checked'])
                     except tk.TclError:
                         pass
@@ -171,7 +172,7 @@ class ParameterFrame(tk.Frame):
             if any(checked_tristate_list):
                 self.tree.item(f"{type_id}", tags=['tristate'], open=True)
 
-        self.parameter_file.set(config.parameter_file.get())
+        self.parameter_file.set(self.gui.qoemu_config.parameter_file.get())
         return
 
     def _tree_copy_click_handler(self, event):
@@ -205,7 +206,7 @@ class ParameterFrame(tk.Frame):
 
     def update(self):
 
-        self.open_file(config.parameter_file.get())
+        self.open_file(self.gui.qoemu_config.parameter_file.get())
 
 
 
