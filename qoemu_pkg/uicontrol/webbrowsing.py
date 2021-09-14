@@ -14,6 +14,9 @@ from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState, UseCaseInteractio
 
 _RESET_APP_PACKAGE = False
 
+_TIME_TO_SET_HOUR = "14"
+_TIME_TO_SET_MINUTE = "00"
+
 _CHROME_PACKAGE = 'com.android.chrome'
 _CHROME_ACTIVITY = 'com.google.android.apps.chrome.Main'
 _CHROME_COMPONENT = _CHROME_PACKAGE + "/" + _CHROME_ACTIVITY
@@ -101,6 +104,8 @@ class _WebBrowsing(UseCase):
         """
 
         super().prepare()
+        self.set_autotime(False)
+        self.set_time(_TIME_TO_SET_HOUR, _TIME_TO_SET_MINUTE)
 
         log.debug(f"Preparing web url: \"{_PREPARATION_URL}\"")
 
@@ -142,6 +147,7 @@ class _WebBrowsing(UseCase):
 
     def shutdown(self):
         log.debug("Shutdown of use-case...")
+        self.set_autotime(True)
         # return to home screen
         self.device.press('KEYCODE_HOME', 'DOWN_AND_UP')
         self.state = UseCaseState.SHUTDOWN

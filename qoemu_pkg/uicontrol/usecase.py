@@ -100,6 +100,27 @@ class UseCase:
             if interaction.key:
                 self.device.press(interaction.key)
 
+    def set_time(self, time_to_set_hour: str, time_to_set_minute: str):
+        self.device.shell(f"am start -n com.android.settings/.Settings\$DateTimeSettingsActivity")
+        self._touch_view_by_text("Uhrzeit", 5)
+        self._touch_view_by_id("android:id/toggle_mode")
+        self._touch_view_by_id("android:id/input_hour", 1.0, time_to_set_hour)
+        self._touch_view_by_id("android:id/input_minute", 1.0, time_to_set_minute)
+        self._touch_view_by_text("OK")
+        time.sleep(1)
+        self.device.press('KEYCODE_HOME', 'DOWN_AND_UP')
+        # while True:
+        #     time.sleep(5)
+        #     self._vc.dump(window=-1, sleep=0)
+        #     self._vc.traverse()
+
+    def set_autotime(self, state_auto: bool = True):
+        if state_auto:
+            s = "1"
+        else:
+            s = "0"
+        self.device.shell(f"settings put global auto_time {s}")
+
     def prepare(self):
         if self.state != UseCaseState.CREATED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.CREATED')

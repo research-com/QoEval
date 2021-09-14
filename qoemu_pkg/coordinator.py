@@ -544,7 +544,7 @@ def main():
     qoemu_config = get_default_qoemu_config()
     coordinator = Coordinator(qoemu_config)
 
-    coordinator.start(['AL'], ['A'], ['1'],# ['1','2','3','4','5','6','7','8'],
+    coordinator.start(['AL'], ['A'], ['1'], # ['1','2','3','4','5','6','7','8'],
                       generate_stimuli=True, postprocessing=True, overwrite=False)
 
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
