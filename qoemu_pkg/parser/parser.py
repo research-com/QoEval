@@ -422,7 +422,7 @@ def get_parameters(type_id, table_id, entry_id):
             str_parameter_values = line.split(";")[7:10]
             it_name = iter(parameter_names)
             it_value = iter(float_parameter_values + str_parameter_values)
-            return dict(zip(it_name,it_value))
+            return dict(zip(it_name, it_value))
 
 
 def get_entries(type_id_filter=None, table_id_filter=None):

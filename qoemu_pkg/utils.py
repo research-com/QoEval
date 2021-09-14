@@ -3,7 +3,7 @@ from datetime import datetime
 import sys
 import time
 
-from qoemu_pkg.configuration import config, MobileDeviceType
+from qoemu_pkg.configuration import QoEmuConfiguration, MobileDeviceType
 
 QOE_RELEASE = "0.1"
 
@@ -33,13 +33,14 @@ def convert_to_timestr(time_in_seconds: float) -> str:
     return f"{hours}:{minutes}:{seconds}.{ms:03d}"
 
 
-def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step: str = "0") -> str:
+def get_video_id(qoemu_config: QoEmuConfiguration, type_id: str, table_id: str, entry_id: str,
+                 postprocessing_step: str = "0") -> str:
     emulator_id = "E1-"
-    if config.emulator_type.get() == MobileDeviceType.SDK_EMULATOR:
+    if qoemu_config.emulator_type.get() == MobileDeviceType.SDK_EMULATOR:
         emulator_id += "S"
-    if config.emulator_type.get() == MobileDeviceType.GENYMOTION:
+    if qoemu_config.emulator_type.get() == MobileDeviceType.GENYMOTION:
         emulator_id += "G"
-    if config.emulator_type.get() == MobileDeviceType.REAL_DEVICE:
+    if qoemu_config.emulator_type.get() == MobileDeviceType.REAL_DEVICE:
         emulator_id += "R"
 
     emulator_id += f"-{QOE_RELEASE}"
@@ -48,7 +49,7 @@ def get_video_id(type_id: str, table_id: str, entry_id: str, postprocessing_step
     return id
 
 
-def is_stimuli_available(type_id, table_id, entry_id, postprocessing_step: str = "0"):
-    filename = f"{get_video_id(type_id, table_id, entry_id, postprocessing_step)}.avi"
-    filepath = os.path.join(config.video_capture_path.get(), filename)
+def is_stimuli_available(qoemu_config: QoEmuConfiguration, type_id, table_id, entry_id, postprocessing_step: str = "0"):
+    filename = f"{get_video_id(qoemu_config, type_id, table_id, entry_id, postprocessing_step)}.avi"
+    filepath = os.path.join(qoemu_config.video_capture_path.get(), filename)
     return os.path.isfile(filepath)

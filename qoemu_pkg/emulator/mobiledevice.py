@@ -13,18 +13,19 @@ import re
 import socket
 import time
 
-from qoemu_pkg.configuration import MobileDeviceOrientation, config
+from qoemu_pkg.configuration import MobileDeviceOrientation, QoEmuConfiguration
 
 
-def adb_name():
-    if len(config.adb_device_serial.get()) > 1:
-        return f"adb -s {config.adb_device_serial.get()}"  # -e selects emulator, -d usb-connected device, -s serialnr
+def adb_name(qoemu_config: QoEmuConfiguration):
+    if len(qoemu_config.adb_device_serial.get()) > 1:
+        return f"adb -s {qoemu_config.adb_device_serial.get()}"  # -e selects emulator, -d usb-connected device, -s serialnr
     else:
         return "adb"
 
 
-MEASUREMENT_TEST_HOST = "www.youtube.de" # target host for RTT tests
+MEASUREMENT_TEST_HOST = "www.youtube.de"  # target host for RTT tests
 MEASUREMENT_DURATION = 3                 # duration of RTT measurement [s]
+
 
 def check_ext(name):
     log.debug(f"locating {name}")
@@ -36,10 +37,12 @@ def check_ext(name):
     else:
         log.debug(f"using {output.stdout}")
 
+
 class MobileDevice:
 
-    def __init__(self):
+    def __init__(self, qoemu_config: QoEmuConfiguration):
         log.basicConfig(level=log.DEBUG)
+        self.qoemu_config = qoemu_config
         self.check_env()
         self.vd_name = None
         self.config = None
@@ -129,7 +132,7 @@ class MobileDevice:
 
         Parameters
         ----------
-        playstore : bool
+        is_enabled : bool
           Indicates if the playstore API should be enabled (can only be enable if it was installed during creation)
         """
         pass
@@ -150,7 +153,7 @@ class MobileDevice:
         pass
 
     def input_keyevent(self, keyevent: int):
-        subprocess.run(shlex.split(f"{adb_name()} shell input keyevent {keyevent}")).check_returncode()
+        subprocess.run(shlex.split(f"{adb_name(self.qoemu_config)} shell input keyevent {keyevent}")).check_returncode()
 
     def unlock_device(self):
         self.input_keyevent(82)   # menu
@@ -158,7 +161,7 @@ class MobileDevice:
 
     def get_ip_address(self) -> ipaddress:
         output = subprocess.run(shlex.split(
-            f"{adb_name()} shell ifconfig wlan0"),
+            f"{adb_name(self.qoemu_config)} shell ifconfig wlan0"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
         # log.debug(output.stdout)
@@ -179,13 +182,15 @@ class MobileDevice:
     def measure_rtt(self) -> float:
         log.debug(f"Measuring RTT (target host: {MEASUREMENT_TEST_HOST})...")
         # first ping is ignored (includes times for DNS etc.)
-        subprocess.run(shlex.split(f"{adb_name()} shell ping -c 1 {MEASUREMENT_TEST_HOST}"), stdout=subprocess.PIPE)
+        subprocess.run(shlex.split(f"{adb_name(self.qoemu_config)} shell ping -c 1 {MEASUREMENT_TEST_HOST}"),
+                       stdout=subprocess.PIPE)
         # now perform the actual measurement
         output = subprocess.run(shlex.split(
-            f"{adb_name()} shell ping -c {MEASUREMENT_DURATION/0.2} -i 0.2 {MEASUREMENT_TEST_HOST}"),
+            f"{adb_name(self.qoemu_config)} shell ping -c {MEASUREMENT_DURATION/0.2} -i 0.2 {MEASUREMENT_TEST_HOST}"),
             stdout=subprocess.PIPE,
             universal_newlines=True)
-        pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})\sms"
+        pattern = r"\s*rtt min/avg/max/mdev\s*=\s*(\d{1,4}.\d{1,4})/" \
+                  r"(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})/(\d{1,4}.\d{1,4})\sms"
         matcher = re.compile(pattern)
         match = (matcher.search(output.stdout))
         if match:
@@ -196,7 +201,7 @@ class MobileDevice:
             raise RuntimeError("Measuring RTT failed.")
         return float(avg_delay)
 
-    def generate_udp_traffic(self, packet_size: int = 128, packet_rate = 10, duration: float = 10, port: int = 4711):
+    def generate_udp_traffic(self, packet_size: int = 128, packet_rate=10, duration: float = 10, port: int = 4711):
         """
         Send random UDP packet to this mobile device, i.e. to avoid going into power-saving mode.
 
@@ -212,7 +217,7 @@ class MobileDevice:
         inter_tx_interval = 1.0 / packet_rate
         end_time = time.time() + duration
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        while(time.time() < end_time):
+        while time.time() < end_time:
             sock.sendto(data, (str(self.ip_address), port))
             time.sleep(inter_tx_interval)
 

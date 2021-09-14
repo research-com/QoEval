@@ -12,7 +12,8 @@ import com.dtmilano.android.viewclient
 import logging as log
 from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
 
-_UPDATE_DELAY = 2 # update delay for refreshing the list of ui elements
+_UPDATE_DELAY = 2  # update delay for refreshing the list of ui elements
+
 
 def _touch_element(vc, element_id: str) -> bool:
     # find and touch Youtube player window
@@ -26,6 +27,7 @@ def _touch_element(vc, element_id: str) -> bool:
     else:
         log.debug(f"Looking for {element_id} - but NOT found!")
     return False
+
 
 class _UiTracing(UseCase):
     def __init__(self, device, serialno, **kwargs):
@@ -50,14 +52,14 @@ class _UiTracing(UseCase):
 
         log.info(f"Starting ui tracing on device with serial: {self.serialno}")
 
-        self.time_end = time.time()+duration
+        self.time_end = time.time() + duration
 
         # ViewClient.sleep(_UPDATE_DELAY)
         self._vc.traverse()
 
         for id in self.elements:
             time.sleep(0.5)
-            while not _touch_element(self._vc,id) and time.time() < self.time_end:
+            while not _touch_element(self._vc, id) and time.time() < self.time_end:
                 time.sleep(_UPDATE_DELAY)
                 self._vc.traverse()
 

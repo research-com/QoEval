@@ -38,7 +38,7 @@ def _get_interactions(url: str):
     if url.startswith("https://www.google.de"):
         enter_search = UseCaseInteractionElement(info="enter search term", trigger_id="com.android.chrome:id/url_bar",
                                              user_input="Perpignan", key='KEYCODE_ENTER', delay=1)
-        #click_wiki = WebInteractionElement("click on wikipedia link", None, "https://de.wikipedia.org/wiki/Perpignan",
+        # click_wiki = WebInteractionElement("click on wikipedia link", None, "https://de.wikipedia.org/wiki/Perpignan",
         #                                   None, None, 5)
         wait = UseCaseInteractionElement(info="wait some time and go to home screen", key='KEYCODE_HOME', delay=8)
         return UseCaseInteraction(elements=[enter_search, wait])

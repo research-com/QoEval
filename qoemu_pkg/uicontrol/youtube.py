@@ -41,6 +41,7 @@ def _get_intent_url(url, start_time):
             intent_url = f"{intent_url}?t={int(start_time)}"
     return intent_url
 
+
 class _Youtube(UseCase):
     def __init__(self, device, serialno, **kwargs):
         super().__init__(device, serialno)
@@ -122,7 +123,8 @@ class _Youtube(UseCase):
         # self._vc.traverse()
         # self._touch_view_by_text(self.resolution) -- cannot be used since we illegally might select Automatic
         end_time = time.time() + 3.0
-        while (time.time() < end_time):
+        target_views = None
+        while time.time() < end_time:
             # find view and touch element with specified text
             self._vc.dump(window=-1, sleep=0)
             target_views = self._vc.findViewsWithAttributeThatMatches(self._vc.textProperty,
@@ -221,7 +223,7 @@ class _Youtube(UseCase):
         if not self.url or len(self.url) == 0:
             log.warning("URL is not set")
 
-        intent_url = _get_intent_url(self.url,self.start_time)
+        intent_url = _get_intent_url(self.url, self.start_time)
 
         log.info(f"Starting target youtube video: {intent_url}")
 

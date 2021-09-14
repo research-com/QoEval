@@ -66,14 +66,14 @@ class QoEmuConfiguration:
         self.vid_start_detect_thr_size_normal_relevance = IntOption(self, 'VidStartDetectThrSizeNormalRelevance', 10000)
         self.vid_start_detect_thr_size_high_relevance = IntOption(self, 'VidStartDetectThrSizeHighRelevance', 40000)
         self.vid_start_detect_thr_nr_frames = IntOption(self, 'VidStartDetectThrNrFrames', 3)
-        self.vid_erase_box = ListIntOption(self, 'VidEraseBox', None)
+        self.vid_erase_box = ListIntOption(self, 'VidEraseBox', "")
         self.vid_init_buffer_time_manual = FloatOption(self, 'VidInitBufferTimeManual', None)
 
         self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
-        self.audio_erase_start_stop = ListIntOption(self, 'AudioEraseStartStop', None)
+        self.audio_erase_start_stop = ListIntOption(self, 'AudioEraseStartStop', "")
 
     def save_to_file(self, file: str = None):
-        if file != None:
+        if file is not None:
             file_path = file
         else:
             file_path = _default_config_file_locations[0]
@@ -82,7 +82,7 @@ class QoEmuConfiguration:
             self.configparser.write(configfile)
 
     def read_from_file(self, file: str = None):
-        if file != None:
+        if file is not None:
             file_path = file
         else:
             file_path = _default_config_file_locations
@@ -189,11 +189,10 @@ class ListIntOption(Option):
         self.config.configparser.set(self.section, self.option, self.value)
 
 
-parser = configparser.ConfigParser()
-
-parser.read(_default_config_file_locations)  # note: last file will take precedence in case of overlap
-
-if QOEMU_SECTION not in parser:
-    raise RuntimeError('No configuration file found - not even the default configuration. Check your installation.')
-
-config = QoEmuConfiguration(parser)
+def get_default_qoemu_config() -> QoEmuConfiguration:
+    parser = configparser.ConfigParser()
+    parser.read(_default_config_file_locations)  # note: last file will take precedence in case of overlap
+    if QOEMU_SECTION not in parser:
+        raise RuntimeError('No configuration file found - not even the default configuration. Check your installation.')
+    config = QoEmuConfiguration(parser)
+    return config

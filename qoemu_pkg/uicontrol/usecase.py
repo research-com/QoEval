@@ -54,7 +54,7 @@ class UseCase:
 
     def _touch_view_by_id(self, id: str, max_waiting_time: float = 0.5, text_input=None):
         end_time = time.time() + max_waiting_time
-        while (time.time() < end_time):
+        while time.time() < end_time:
             # find view and touch element with specified id
             self._vc.dump(window=-1, sleep=0)
             target_view = self._vc.findViewById(id)
@@ -71,7 +71,7 @@ class UseCase:
 
     def _touch_view_by_text(self, text: str, max_waiting_time: float = 0.5, text_input=None):
         end_time = time.time() + max_waiting_time
-        while (time.time() < end_time):
+        while time.time() < end_time:
             # find view and touch element with specified text
             self._vc.dump(window=-1, sleep=0)
             target_view = self._vc.findViewWithText(text)
