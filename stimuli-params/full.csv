@@ -144,7 +144,7 @@ VS-J-6;"Basic set";6450;42;1000;220;220;Assessment;Auto;C;;;;;
 Web-Browsing;;;;;;;;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
-WB-A-1;"Basic set";40;285;50000;18;18;Reference;;o2;"Starten der o2-App
+WB-A-1;"Basic set";40;285;50000;18;18;Reference;;o2;"Anzeige der O2 Webseite
 Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
 Resolution: Auto";https://www.o2online.de/;Throughput
 WB-A-2;"Basic set";40;270;10000;18;18;Assessment;;;;
@@ -158,7 +158,7 @@ WB-A-9;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
-WB-B-1;"Basic set";40;350;50000;18;18;Reference;;"Spiegel online";"Starten der Spiegel-App
+WB-B-1;"Basic set";40;350;50000;18;18;Reference;;"Spiegel online";"Anzeige der Spiegel Webseite
 Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
 Resolution: Auto";https://www.spiegel.de/;Throughput
 WB-B-2;"Basic set";40;350;10000;18;18;Assessment;;;;
@@ -282,6 +282,35 @@ WB-J-6;"Basic set";184;180;750;18;18;Assessment;;;;
 WB-J-7;"Basic set";190;172;500;18;18;Assessment;;;;
 WB-J-8;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-J-9;"Basic set";205;80;100;18;18;Assessment;;;;
+;;;;;;;;;;;
+;;;;;;;;;;;
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+AL-A-1;"Basic set";40;350;50000;18;18;Reference;;;"Starten der Spiegel-App
+Excerpt from 00:00 (min:sec) to 00:20 (min:sec).
+Resolution: Auto";app://com.zdf.android.mediathek/.ui.common.MainActivity;Throughput
+AL-A-2;"Basic set";40;350;10000;18;18;Assessment;;;;
+AL-A-3;"Basic set";85;300;5000;18;18;Assessment;;;;
+AL-A-4;"Basic set";160;220;2000;18;18;Assessment;;;;
+AL-A-5;"Basic set";180;186;1000;18;18;Assessment;;;;
+AL-A-6;"Basic set";184;180;750;18;18;Assessment;;;;
+AL-A-7;"Basic set";190;172;500;18;18;Assessment;;;;
+AL-A-8;"Basic set";200;155;200;18;18;Assessment;;;;
+AL-A-9;"Basic set";205;80;100;18;18;Assessment;;;;
+;;;;;;;;;;;
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+AL-B-1;"Basic set";40;350;50000;18;18;Reference;;;"Starten der ZDF Mediathek App
+Excerpt from 00:00 (min:sec) to 00:20 (min:sec).
+Resolution: Auto";app://de.spiegel.android.app.spon/.activities.SplashScreenActivity;Throughput
+AL-B-2;"Basic set";40;350;10000;18;18;Assessment;;;;
+AL-B-3;"Basic set";85;300;5000;18;18;Assessment;;;;
+AL-B-4;"Basic set";160;220;2000;18;18;Assessment;;;;
+AL-B-5;"Basic set";180;186;1000;18;18;Assessment;;;;
+AL-B-6;"Basic set";184;180;750;18;18;Assessment;;;;
+AL-B-7;"Basic set";190;172;500;18;18;Assessment;;;;
+AL-B-8;"Basic set";200;155;200;18;18;Assessment;;;;
+AL-B-9;"Basic set";205;80;100;18;18;Assessment;;;;
+;;;;;;;;;;;
+;;;;;;;;;;;
 "Annahmen für die Erstellung der Stimuli";;;
 ;;;
 "Adaption und Auflösung des Video-Codecs";;;

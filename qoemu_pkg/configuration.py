@@ -50,17 +50,13 @@ class QoEmuConfiguration:
     def __init__(self, configparser: configparser.ConfigParser):
         self.modified_since_last_save = False
         self.configparser = configparser
+
+        # general options and paths
         self.vd_path = Option(self, 'AVDPath', _default_avd_path, expand_user=True)
         self.video_capture_path = Option(self, 'VideoCapturePath', _default_video_capture_path, expand_user=True)
         self.trigger_image_path = Option(self, 'TriggerImagePath', '.', expand_user=True)
         self.parameter_file = Option(self, 'ParameterFile', './parameters.csv', expand_user=True)
         self.dynamic_parameter_path = Option(self, 'DynamicParameterPath', '.', expand_user=True)
-        self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
-        self.show_device_screen_mirror = BoolOption(self, 'ShowDeviceScreenMirror', True)
-        self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
-        self.excluded_ports = ListIntOption(self, 'ExcludedPorts', [22, 5000, 5002])
-        self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
-        self.resolution_override = Option(self, 'ResolutionOverride', "")
 
         self.coordinator_generate_stimuli = BoolOption(self, "CoordinatorGenerateStimuli", True)
         self.coordinator_postprocessing = BoolOption(self, "CoordinatorPostprocessing", False)
@@ -69,9 +65,20 @@ class QoEmuConfiguration:
         self.gui_coordinator_stimuli = ListDictOption(self, "CoordinatorStimuliToGenerate", [])
         self.gui_current_config_file = Option(self, "GUIConfigFile", "~/.config/qoemu/qoemu_gui.conf", expand_user=True)
 
+        # capturing options
+        self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
+        self.show_device_screen_mirror = BoolOption(self, 'ShowDeviceScreenMirror', True)
+        self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
+        self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
+        self.resolution_override = Option(self, 'ResolutionOverride', "")
+
         self.adb_device_serial = Option(self, 'AdbDeviceSerial', '')
         self.audio_device_emu = Option(self, 'AudioDeviceEmu', '')
         self.audio_device_real = Option(self, 'AudioDeviceReal', '')
+
+        # network emulation options
+        self.excluded_ports = ListIntOption(self, 'ExcludedPorts', [22, 5000, 5002])
+        self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
         self.traffic_analysis_live = BoolOption(self, 'TrafficAnalysisLiveVisualization', False)
         self.traffic_analysis_plot = BoolOption(self, 'TrafficAnalysisPlot', True)
         self.traffic_analysis_bin_sizes = ListIntOption(self, "TrafficAnalysisBinSizes", [])
@@ -79,6 +86,7 @@ class QoEmuConfiguration:
 
         self.net_em_sanity_check = BoolOption(self, 'NetEmSanityCheck', True)
 
+        # post-processing options
         self.vid_start_detect_thr_size_normal_relevance = IntOption(self, 'VidStartDetectThrSizeNormalRelevance', 10000)
         self.vid_start_detect_thr_size_high_relevance = IntOption(self, 'VidStartDetectThrSizeHighRelevance', 40000)
         self.vid_start_detect_thr_nr_frames = IntOption(self, 'VidStartDetectThrNrFrames', 3)
@@ -87,6 +95,14 @@ class QoEmuConfiguration:
 
         self.audio_target_volume = FloatOption(self, 'AudioTargetVolume', -2.0)
         self.audio_erase_start_stop = ListFloatOption(self, 'AudioEraseStartStop', [])
+
+        # post-processing options for specific use-case: application launch
+        self.app_launch_additional_recording_duration = FloatOption(self, 'AppLaunchAdditionalRecordingDuration', 0.0)
+        self.app_launch_vid_erase_box = ListIntOption(self, 'AppLaunchVidEraseBox', "")
+
+        # post-processing options for specific use-case: web browsing
+        self.web_browse_additional_recording_duration = FloatOption(self, 'WebBrowseAdditionalRecordingDuration', 0.0)
+        self.web_browse_vid_erase_box = ListIntOption(self, 'WebBrowseVidEraseBox', "")
 
         add_tooltips(self)
 

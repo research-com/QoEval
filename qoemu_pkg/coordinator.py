@@ -92,6 +92,8 @@ class Coordinator:
             return UseCaseType.YOUTUBE
         if self._type_id.startswith("WB"):
             return UseCaseType.WEB_BROWSING
+        if self._type_id.startswith("AL"):
+            return UseCaseType.APP_LAUNCH
         return None
 
     def _get_uc_orientation(self) -> MobileDeviceOrientation:
@@ -171,8 +173,13 @@ class Coordinator:
         elif self._get_uc_type() == UseCaseType.WEB_BROWSING:
             self.ui_control.set_use_case(UseCaseType.WEB_BROWSING, url=url)
             duration = 60.0  # maximum length of web-browsing use-case
+        elif self._get_uc_type() == UseCaseType.APP_LAUNCH:
+            self.ui_control.set_use_case(UseCaseType.APP_LAUNCH, package=url.partition("/")[0],
+                                         activity=url.partition("/")[2])
+            duration = 30.0  # maximum length of app-launch use-case
         else:
             raise RuntimeError("Not a valid use case")
+
         self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; url: {url}; len: {duration}s ")
         self.ui_control.prepare_use_case()
         self._gen_log.flush()
@@ -256,7 +263,7 @@ class Coordinator:
 
         if self.qoemu_config.traffic_analysis_plot.get():
             self.analysis.wait_until_completed()
-            for plot_setting in config.traffic_analysis_plot_settings.get():
+            for plot_setting in self.qoemu_config.traffic_analysis_plot_settings.get():
                 plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
                                      plot_setting["directions"], plot_setting["protocols"], plot_setting["kind"])
                 name = f'{self.stats_filepath}_{plot_setting["kind"]}'
@@ -328,7 +335,7 @@ class Coordinator:
                             raise
                 finally:
                     self._finish()
-                    log.info(f"{FINISH_CAMPAIGN_LOG}{get_video_id(type_id, table_id, entry_id)}")
+                    log.info(f"{FINISH_CAMPAIGN_LOG}{get_video_id(self.qoemu_config, type_id, table_id, entry_id)}")
 
     def _perform_postprocessing(self, type_id, table_id, ids_to_process, overwrite: bool = False):
         trigger_dir = self.qoemu_config.trigger_image_path.get()
@@ -351,7 +358,7 @@ class Coordinator:
                 # store a copy of the qoemu configuration used for post-processing (to be reproducible)
                 self.qoemu_config.save_to_file(cfg_log)
 
-            postprocessor = PostProcessor()
+            postprocessor = PostProcessor(self.qoemu_config)
             print(f"Processing: {video_id_in}")
             # print("Semi-manual post-processing starts... ")
             # print("Please use a video player of your choice to answer the following questions.")
@@ -370,10 +377,15 @@ class Coordinator:
 
             trigger_image_start = os.path.join(trigger_dir, f"{type_id}-{table_id}_start.png")
             trigger_image_end = os.path.join(trigger_dir, f"{type_id}-{table_id}_end.png")
-            print("Detecting start of stimuli video section... ", end='')
-            start_frame_nr = determine_frame(unprocessed_video_path, trigger_image_start)
-            t_raw_start = frame_to_time(unprocessed_video_path, start_frame_nr)
-            print(f"{t_raw_start} s")
+            if self._get_uc_type() == UseCaseType.APP_LAUNCH:
+                # for the app launch use-case, the relevant section starts right at the capturing start time
+                start_frame_nr = 0
+                t_raw_start = 0
+            else:
+                print("Detecting start of stimuli video section... ", end='')
+                start_frame_nr = determine_frame(unprocessed_video_path, trigger_image_start)
+                t_raw_start = frame_to_time(unprocessed_video_path, start_frame_nr)
+                print(f"{t_raw_start} s")
 
             t_init_buf_manual = self.qoemu_config.vid_init_buffer_time_manual.get()
 
@@ -432,17 +444,34 @@ class Coordinator:
             print(f"{t_raw_end} s")
             d_start_to_end = t_raw_end - t_raw_start
 
+            if self._get_uc_type() == UseCaseType.APP_LAUNCH:
+                d_start_to_end = d_start_to_end + self.qoemu_config.app_launch_additional_recording_duration.get()
+            elif self._get_uc_type() == UseCaseType.WEB_BROWSING:
+                d_start_to_end = d_start_to_end + self.qoemu_config.web_browse_additional_recording_duration.get()
+
             if t_raw_start > t_raw_end:
                 raise RuntimeError(
                     f"Detected start of stimuli section at {t_raw_start}s is later than the detected end "
                     f"at {t_raw_end}s ! Check trigger images and verify that they are part of the recorded stimuli.")
 
+            if self._get_uc_type() == UseCaseType.APP_LAUNCH and \
+                    self.qoemu_config.app_launch_vid_erase_box.get() is not None:
+                # for the app launch use-case, we use a different default erase box
+                erase_box = self.qoemu_config.app_launch_vid_erase_box.get()
+            elif self._get_uc_type() == UseCaseType.WEB_BROWSING and \
+                    self.qoemu_config.web_browse_vid_erase_box.get() is not None:
+                erase_box = self.qoemu_config.app_launch_vid_erase_box.get()
+            else:
+                # use default value for all other use-case types
+                erase_box = self.qoemu_config.vid_erase_box.get()
+
             print("Cutting and merging video stimuli...")
             postprocessor.process(video_id_in, video_id_out, t_init_buf, t_raw_start, d_start_to_end,
                                   normalize_audio=is_normalizing_audio,
                                   erase_audio=self.qoemu_config.audio_erase_start_stop.get(),
-                                  erase_box=self.qoemu_config.vid_erase_box.get())
+                                  erase_box = erase_box)
             print(f"{FINISH_POST_LOG}{video_id_in} ==> {video_id_out}")
+
 
         """
         Start coordinating the emulation run for generating one or more stimuli.
@@ -513,8 +542,9 @@ def main():
     qoemu_config = get_default_qoemu_config()
     coordinator = Coordinator(qoemu_config)
 
-    coordinator.start(['VS'], ['G'], ['1', '2', '3', '4', '5', '6', '7', '8'],
+    coordinator.start(['AL'], ['A'], ['1'], # ['1','2','3','4','5','6','7','8'],
                       generate_stimuli=True, postprocessing=True, overwrite=False)
+
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")

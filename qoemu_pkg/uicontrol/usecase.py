@@ -1,8 +1,11 @@
 import time
 from enum import Enum
 import logging as log
+import com.dtmilano.android.viewclient
 # noinspection PyUnresolvedReferences
 from com.dtmilano.android.adb.adbclient import Device
+from typing import List
+from dataclasses import dataclass
 
 
 # define available types of use-cases (used for factory)
@@ -19,6 +22,22 @@ class UseCaseState(Enum):
     PREPARED = 2
     EXECUTED = 3
     SHUTDOWN = 4
+
+
+@dataclass
+class UseCaseInteractionElement:
+    info: str
+    trigger_id: str = None
+    trigger_text: str = None
+    user_input: str = None
+    key: str = None
+    delay: float = 0.0
+    max_wait: float = 5.0
+
+
+@dataclass
+class UseCaseInteraction:
+    elements: List[UseCaseInteractionElement]
 
 
 class UseCase:
@@ -67,8 +86,46 @@ class UseCase:
         log.error(f"View with text {text} NOT found!")
         raise RuntimeError(f"View with text {text} NOT found!")
 
+    def _handle_interactions(self, interactions):
+        for interaction in interactions.elements:
+            log.debug(f"Handling interaction: {interaction.info}")
+            if interaction.delay > 0:
+                com.dtmilano.android.viewclient.sleep(interaction.delay)
+            # self._vc.dump(window=-1, sleep=0)
+            # self._vc.traverse()
+            if interaction.trigger_id:
+                self._touch_view_by_id(interaction.trigger_id, interaction.max_wait, interaction.user_input)
+            if interaction.trigger_text:
+                self._touch_view_by_text(interaction.trigger_text, interaction.max_wait, interaction.user_input)
+            if interaction.key:
+                self.device.press(interaction.key)
+
+    def set_time(self, time_to_set_hour: str, time_to_set_minute: str):
+        self.device.shell(f"am start -n com.android.settings/.Settings\$DateTimeSettingsActivity")
+        self._touch_view_by_text("Uhrzeit", 5)
+        self._touch_view_by_id("android:id/toggle_mode")
+        self._touch_view_by_id("android:id/input_hour", 1.0, time_to_set_hour)
+        self._touch_view_by_id("android:id/input_minute", 1.0, time_to_set_minute)
+        self._touch_view_by_text("OK")
+        time.sleep(1)
+        self.device.press('KEYCODE_HOME', 'DOWN_AND_UP')
+        # while True:
+        #     time.sleep(5)
+        #     self._vc.dump(window=-1, sleep=0)
+        #     self._vc.traverse()
+
+    def set_autotime(self, state_auto: bool = True):
+        if state_auto:
+            s = "1"
+        else:
+            s = "0"
+        self.device.shell(f"settings put global auto_time {s}")
+
     def prepare(self):
-        pass
+        if self.state != UseCaseState.CREATED:
+            raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.CREATED')
+        self._vc = com.dtmilano.android.viewclient.ViewClient(
+            *com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit(serialno=self.serialno))
 
     def execute(self, duration: float):
         self.time_end = time.time() + duration
