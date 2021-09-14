@@ -153,6 +153,9 @@ class _Youtube(UseCase):
         """
         Prepare the device for youtube playback
         """
+
+        super().prepare()
+
         log.debug(f"prepare: Youtube use-case for device with serialno: {self.serialno}")
         if self.state != UseCaseState.CREATED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.CREATED')

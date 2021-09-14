@@ -86,6 +86,8 @@ class Coordinator:
             return UseCaseType.YOUTUBE
         if self._type_id.startswith("WB"):
             return UseCaseType.WEB_BROWSING
+        if self._type_id.startswith("AL"):
+            return UseCaseType.APP_LAUNCH
         return None
 
     def _get_uc_orientation(self) -> MobileDeviceOrientation:
@@ -163,6 +165,10 @@ class Coordinator:
         if self._get_uc_type() == UseCaseType.WEB_BROWSING:
             self.ui_control.set_use_case(UseCaseType.WEB_BROWSING, url=url)
             duration = 60.0  # maximum length of web-browsing use-case
+        if self._get_uc_type() == UseCaseType.APP_LAUNCH:
+            self.ui_control.set_use_case(UseCaseType.APP_LAUNCH, package=url.partition("/")[0],
+                                         activity=url.partition("/")[2])
+            duration = 30.0  # maximum length of app-launch use-case
         self._gen_log.write(f"delay bias: {delay_bias_ul_dl}ms; url: {url}; len: {duration}s ")
         self.ui_control.prepare_use_case()
         self._gen_log.flush()
@@ -503,8 +509,8 @@ if __name__ == '__main__':
 
     coordinator = Coordinator()
 
-    coordinator.start(['VS'], ['G'], ['1','2','3','4','5','6','7','8'],
-                      generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['AL'], ['A'], # ['1','2','3','4','5','6','7','8'],
+                      generate_stimuli=True, postprocessing=False, overwrite=False)
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
     print("Done.")

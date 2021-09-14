@@ -77,20 +77,28 @@ if __name__ == '__main__':
     # Tagesschau Intro:
     # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/5lEd5D2J27Y?t=8")
     # Tagesschau letzte Sendung Jan Hofer:
-    ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://www.youtube.com/watch?v=1dxhytrMmkM?t=895")
+    # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://www.youtube.com/watch?v=1dxhytrMmkM?t=895")
     # Beethoven
     # ui_control.set_use_case(UseCaseType.YOUTUBE, url="https://youtu.be/TpWpqs864y0?t=3819")
-    ui_control.prepare_use_case()
-    ui_control.execute_use_case(30)
-    ui_control.shutdown_use_case()
+    # ui_control.prepare_use_case()
+    # ui_control.execute_use_case(30)
+    # ui_control.shutdown_use_case()
 
     # set and execute a launch app use-case (see applaunch.py)
+    # Spiegel Online App:
     # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="de.spiegel.android.app.spon",
-    #                        activity=".activities.SplashScreenActivity")
-    # ui_control.prepare_use_case()
-    # ui_control.execute_use_case(60)
-    # time.sleep(5)
-    # ui_control.shutdown_use_case()
+    #                       activity=".activities.SplashScreenActivity")
+    # Süddeutsche Zeitung App:
+    # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="de.sde.mobile",
+    #                         activity=".mainactivity.MainActivity")
+    # ZDF App
+    ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="com.zdf.android.mediathek",
+                                                    activity=".ui.common.MainActivity")
+
+    ui_control.prepare_use_case()
+    ui_control.execute_use_case(20)
+    time.sleep(5)
+    ui_control.shutdown_use_case()
 
     # open a webbpage
     # ui_control.set_use_case(UseCaseType.WEB_BROWSING, url="https://news.google.de")

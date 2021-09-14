@@ -68,6 +68,35 @@ sudo apt install yarn
 ```
 * `node` needs to be updated to a recent version, e.g. by using the node version manager (nvm)
 
+## Use-Case Specific Information
+
+### App-Launch
+In order to configure an app-launch use-case, you need to know the package and activity name. In order to find out
+the package name of an app, open the Google Play store, search for the app and you can find the package name
+as value of the "id" parameter in the URL.
+
+Example: If you search for the "Süddeutsche App" in the Play Store, you will be directed to
+``
+https://play.google.com/store/apps/details?id=de.sde.mobile
+``
+meaning that `de.sde.mobile` is the package name for this app. 
+
+Likewise, you can find out that `com.zdf.android.mediathek` is the id of
+the ZDF App.
+
+In order to find out the activity name, you can observe the log while starting the app. E.g.
+in order to get the name of the start activity of the "Süddeutsche App" you can use a command like
+
+``
+adb logcat | grep de.sde.mobile
+``
+
+Here you will find a log entry like
+``
+09-14 11:03:54.831  1538  2339 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 pkg=de.sde.mobile cmp=de.sde.mobile/.mainactivity.MainActivity} from uid 10284
+``
+from which you can conclude that `.mainactivity.MainActivity` is the main activity that is started by the launcher intent.
+
 
 ## Hardware Device Control
 For controlling a real Android phone:

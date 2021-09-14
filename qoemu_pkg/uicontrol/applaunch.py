@@ -16,8 +16,20 @@ Requires package name and activity name
 
 """
 import logging as log
-from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState
+import time
 
+from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState, UseCaseInteractionElement, UseCaseInteraction
+
+_SHORT_TIME = 2   # short waiting time [s]
+
+
+# TODO: refactor the handling of interactions - should be dynamic based on a config file
+def _get_interactions(app_package: str):
+    if app_package.startswith("de.sde.mobile"):  # Spiegel Online App
+        allow_push = UseCaseInteractionElement(info="Allow push notifications", trigger_text="ERLAUBEN", max_wait=2)
+        # wait = UseCaseInteractionElement(info="wait some time and go to home screen", key='KEYCODE_HOME', delay=8)
+        return UseCaseInteraction(elements=[allow_push])
+    return None
 
 class _AppLaunch(UseCase):
     def __init__(self, device, serialno, **kwargs):
@@ -29,14 +41,21 @@ class _AppLaunch(UseCase):
         """
         Prepare the device for launching the app
         """
-        if self.state != UseCaseState.CREATED:
-            raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.CREATED')
+        super().prepare()
 
         installed_packages = self.device.shell("pm list packages")
         if installed_packages.find(self._package) == -1:
             log.error(f"Package {self._package} is not installed - please install via playstore or adb")
-        else:
-            self.state = UseCaseState.PREPARED
+            return
+
+        # reset app
+        log.debug(f"Resetting app {self._package}")
+        self.device.shell("am force-stop {self._package}")
+        time.sleep(_SHORT_TIME)
+        self.device.shell(f"pm clear {self._package}")
+        time.sleep(_SHORT_TIME)
+
+        self.state = UseCaseState.PREPARED
 
     def execute(self, duration: float):
         if self.state != UseCaseState.PREPARED:
@@ -44,19 +63,32 @@ class _AppLaunch(UseCase):
 
         if not self._package or len(self._package) == 0 or not self._activity or len(self._activity) == 0:
             log.warning("package/activity is not set")
+            start_parameter = self._package
+        else:
+            start_parameter = f"{self._package}/{self._activity}"
 
-        log.info(f"Starting: {self._package}/{self._activity}")
+        log.info(f"Starting: {start_parameter}")
 
-        self.device.shell(f"am start -n {self._package}/{self._activity}")
+        self.device.shell(f"am start -n {start_parameter}")
+
+        # time.sleep(_SHORT_TIME)
+        # self._vc.dump(window=-1, sleep=0)
+        # self._vc.traverse()
+
+        interactions = _get_interactions(self._package)
+        if interactions:
+            self._handle_interactions(interactions)
+
+        time.sleep(duration)
 
         self.state = UseCaseState.EXECUTED
 
     def shutdown(self):
         log.debug("Shutdown of use-case...")
         # stop app
-        self.device.shell("am force-stop {self._package}")
+        self.device.shell(f"am force-stop {self._package}")
         # reset app
-        # self.device.shell("pm clear {self._package}")
+        # self.device.shell(f"pm clear {self._package}")
         # return to home screen
         self.device.press('KEYCODE_HOME', 'DOWN_AND_UP')
         self.state = UseCaseState.SHUTDOWN

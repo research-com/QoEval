@@ -226,6 +226,20 @@ def get_link(type_id, table_id, entry_id):
                         result = search("https:{};", line)
                     return "https:" + result[0]
         return
+    if type_id == "AL":
+        table_found = False
+        for line in file:
+
+            if line.startswith(f"{type_id}-{table_id}"):
+                table_found = True
+
+            if table_found:
+                if "app://" in line:
+                    result = search("app://{})", line)
+                    if result is None:
+                        result = search("app://{};", line)
+                    return result[0]
+        return
 
 
 def get_start(type_id, table_id, entry_id):

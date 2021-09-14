@@ -1,8 +1,11 @@
 import time
 from enum import Enum
 import logging as log
+import com.dtmilano.android.viewclient
 # noinspection PyUnresolvedReferences
 from com.dtmilano.android.adb.adbclient import Device
+from typing import List
+from dataclasses import dataclass
 
 
 # define available types of use-cases (used for factory)
@@ -10,7 +13,7 @@ class UseCaseType(Enum):
     YOUTUBE = "_Youtube"
     WEB_BROWSING = "_WebBrowsing"
     APP_LAUNCH = "_AppLaunch"
-    UI_TRACING = "_UiTracing"    # a special use-case for tracing user-interface elements
+    UI_TRACING = "_UiTracing"  # a special use-case for tracing user-interface elements
 
 
 class UseCaseState(Enum):
@@ -21,19 +24,35 @@ class UseCaseState(Enum):
     SHUTDOWN = 4
 
 
+@dataclass
+class UseCaseInteractionElement:
+    info: str
+    trigger_id: str = None
+    trigger_text: str = None
+    user_input: str = None
+    key: str = None
+    delay: float = 0.0
+    max_wait: float = 5.0
+
+
+@dataclass
+class UseCaseInteraction:
+    elements: List[UseCaseInteractionElement]
+
+
 class UseCase:
     def __init__(self, device_to_use, serialno):
         # noinspection PyUnresolvedReferences
         log.basicConfig(level=log.DEBUG)
         self.device = device_to_use
         self.serialno = serialno
-        if self.serialno == None:
+        if self.serialno is None:
             raise RuntimeError("no serial")
         self.time_end = None
         self._vc = None
         self.state = UseCaseState.CREATED
 
-    def _touch_view_by_id(self, id: str, max_waiting_time: float = 0.5, text_input = None):
+    def _touch_view_by_id(self, id: str, max_waiting_time: float = 0.5, text_input=None):
         end_time = time.time() + max_waiting_time
         while (time.time() < end_time):
             # find view and touch element with specified id
@@ -50,7 +69,7 @@ class UseCase:
         log.error(f"View {id} NOT found!")
         raise RuntimeError(f"View {id} NOT found!")
 
-    def _touch_view_by_text(self, text: str, max_waiting_time: float = 0.5, text_input = None):
+    def _touch_view_by_text(self, text: str, max_waiting_time: float = 0.5, text_input=None):
         end_time = time.time() + max_waiting_time
         while (time.time() < end_time):
             # find view and touch element with specified text
@@ -67,10 +86,27 @@ class UseCase:
         log.error(f"View with text {text} NOT found!")
         raise RuntimeError(f"View with text {text} NOT found!")
 
-    def prepare(self):
-        pass
+    def _handle_interactions(self, interactions):
+        for interaction in interactions.elements:
+            log.debug(f"Handling interaction: {interaction.info}")
+            if interaction.delay > 0:
+                com.dtmilano.android.viewclient.sleep(interaction.delay)
+            # self._vc.dump(window=-1, sleep=0)
+            # self._vc.traverse()
+            if interaction.trigger_id:
+                self._touch_view_by_id(interaction.trigger_id, interaction.max_wait, interaction.user_input)
+            if interaction.trigger_text:
+                self._touch_view_by_text(interaction.trigger_text, interaction.max_wait, interaction.user_input)
+            if interaction.key:
+                self.device.press(interaction.key)
 
-    def execute(self,duration: float):
+    def prepare(self):
+        if self.state != UseCaseState.CREATED:
+            raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.CREATED')
+        self._vc = com.dtmilano.android.viewclient.ViewClient(
+            *com.dtmilano.android.viewclient.ViewClient.connectToDeviceOrExit(serialno=self.serialno))
+
+    def execute(self, duration: float):
         self.time_end = time.time() + duration
 
     def shutdown(self):
