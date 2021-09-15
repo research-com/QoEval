@@ -120,7 +120,7 @@ class ParameterFrame(tk.Frame):
             parser.load_parameter_file(filename, False)
         except FileNotFoundError:
             self.gui.qoemu_config.parameter_file.set(self.parameter_file.get())
-            messagebox.showerror    ("Error", "Parameter file not found")
+            messagebox.showerror    (f"Error", f"Parameter file \"{filename}\" not found")
             return
 
         if filename != self.gui.qoemu_config.parameter_file.get():
