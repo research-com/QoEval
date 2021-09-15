@@ -182,7 +182,7 @@ class IntOption(Option):
         self.default = default
 
     def get(self) -> int:
-        self.value = int(self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
+        self.value = self.config.configparser.getint(section=self.section, option=self.option, fallback=self.default)
         return self.value
 
     def set(self, value: int):
@@ -198,7 +198,7 @@ class FloatOption(Option):
         self.default = default
 
     def get(self) -> float:
-        self.value = float(self.config.configparser.get(section=self.section, option=self.option, fallback=self.default))
+        self.value = self.config.configparser.getfloat(section=self.section, option=self.option, fallback=self.default)
         return self.value
 
     def set(self, value: float):
@@ -230,7 +230,10 @@ class ListIntOption(Option):
 
     def get(self) -> List[int]:
         self.value = self.config.configparser.get(section=self.section, option=self.option, fallback=self.default)
-        return ast.literal_eval(self.value)
+        if self.value:
+            return ast.literal_eval(self.value)
+        else:
+            return None
 
     def set(self, value: List[int]):
         self.config.modified_since_last_save = True
