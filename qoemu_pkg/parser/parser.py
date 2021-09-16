@@ -424,6 +424,7 @@ def get_parameters(type_id, table_id, entry_id):
             # evaluate parameters for artificial buffer generation (VSB stimuli), if present
             if len(splitted_line)>12:
                 gen_parameter_values_str = splitted_line[10:12]
+                gen_parameter_values_str = [_replace_empty_with_default(i, "0") for i in gen_parameter_values_str]
                 gen_parameter_values = [float(i) for i in gen_parameter_values_str]
             else:
                 gen_parameter_values = [0.0, 0.0]
@@ -479,3 +480,10 @@ def get_entries(type_id_filter=None, table_id_filter=None):
                                      get_codec(type_id, table_id, entry_id),
                                      *get_parameters(type_id, table_id, entry_id)))
     return entries
+
+
+def _replace_empty_with_default(value: str, default_value: str):
+    if not value or len(value) == 0:
+        return default_value
+    else:
+        return value
