@@ -2,8 +2,11 @@
 """
     Stimuli campaign coordinator
 """
+
 from qoemu_pkg.analysis import analysis
 from qoemu_pkg.capture.capture import CaptureEmulator, CaptureRealDevice
+from qoemu_pkg.postprocessing.bufferer.bufferer import Bufferer
+from qoemu_pkg.postprocessing.buffering_generator import BufferingGenerator
 from qoemu_pkg.postprocessing.postprocessor import PostProcessor
 from qoemu_pkg.postprocessing.determine_video_start import determine_video_start
 from qoemu_pkg.postprocessing.determine_image_timestamp import determine_frame, frame_to_time
@@ -88,11 +91,11 @@ class Coordinator:
     def _get_uc_type(self) -> UseCaseType:
         if self._type_id.startswith("VS"):
             return UseCaseType.YOUTUBE
-        if self._type_id.startswith("WB"):
+        elif self._type_id.startswith("WB"):
             return UseCaseType.WEB_BROWSING
-        if self._type_id.startswith("AL"):
+        elif self._type_id.startswith("AL"):
             return UseCaseType.APP_LAUNCH
-        return None
+        raise RuntimeError(f'Use-case type of \"{self._type_id}\" is unknown.')
 
     def _get_uc_orientation(self) -> MobileDeviceOrientation:
         if self._get_uc_type() == UseCaseType.YOUTUBE:
@@ -218,7 +221,7 @@ class Coordinator:
             measured_rtt_during_emulation = self.emulator.measure_rtt()
             max_allowed_rtt_during_emulation = (self._params['dul'] + self._params['ddl'] +
                                                 max(DELAY_TOLERANCE_MIN,
-                                                delay_tol_rel * (self._params['dul'] + self._params['ddl'])))
+                                                    delay_tol_rel * (self._params['dul'] + self._params['ddl'])))
             self._gen_log.write(
                 f" emu rtt: {measured_rtt_during_emulation}ms max rtt: {max_allowed_rtt_during_emulation}ms ")
             if measured_rtt_during_emulation > max_allowed_rtt_during_emulation:
@@ -304,7 +307,16 @@ class Coordinator:
         for entry_id in ids_to_generate:
             if not overwrite and is_stimuli_available(self.qoemu_config, type_id, table_id, entry_id, "0"):
                 print(f"Stimuli {get_video_id(self.qoemu_config, type_id, table_id, entry_id)} "
-                      f"already available - skipped. ")
+                      f"skipped (already available). ")
+                continue
+
+            alternative_stimuli = \
+                get_stimuli_path(self.qoemu_config, type_id, table_id, entry_id, "0", True)
+
+            if not overwrite and alternative_stimuli is not None:
+                print(f"Stimuli {get_video_id(self.qoemu_config, type_id, table_id, entry_id)} "
+                      f"skipped ({alternative_stimuli} was generated with the same relevant parameters "
+                      f"and can be re-used). ")
                 continue
 
             retry_counter = 0
@@ -353,7 +365,19 @@ class Coordinator:
                       f"post-processed file exists - skipped. ")
                 continue
 
+            alternative_stimuli = \
+                get_stimuli_path(self.qoemu_config, type_id, table_id, entry_id, "1", True)
+
+            # we can re-use the existing post-processed file for VSB if an alternative stimuli exists
+            # (since VSB use-cases might only differ in the buffer-generating parameters)
+            if type_id == "VSB" and alternative_stimuli is not None:
+                print(f"Stimuli {get_video_id(self.qoemu_config, type_id, table_id, entry_id)} "
+                      f"post-processed file exists ({alternative_stimuli} was generated "
+                      f"with the same relevant parameters and can be re-used). ")
+                continue
+
             cfg_log = os.path.join(self.qoemu_config.video_capture_path.get(), f"{video_id_out}.cfg")
+
             if os.path.isfile(cfg_log):
                 log.debug(f"Found an existing configuration - loading {cfg_log}")
                 self.qoemu_config.read_from_file(cfg_log)
@@ -373,6 +397,14 @@ class Coordinator:
 
             # auto-detect video t_init_buf, t_raw_start, t_raw_end
             unprocessed_video_path = f"{os.path.join(self.qoemu_config.video_capture_path.get(), video_id_in)}.avi"
+
+            if not os.path.isfile(unprocessed_video_path):
+                # try to find alternative unprocessed input file
+                alternative_stimuli = \
+                    get_stimuli_path(self.qoemu_config, type_id, table_id, entry_id, "0", True)
+                log.debug(f"Unprocessed video file {unprocessed_video_path} does not exist but found a valid "
+                          f"alternative: {alternative_stimuli}")
+                unprocessed_video_path = alternative_stimuli
 
             if not os.path.isfile(unprocessed_video_path):
                 log.error(f"Cannot open unprocessed video file {unprocessed_video_path}")
@@ -415,7 +447,7 @@ class Coordinator:
                             f"this situation. Please specify VidInitBufferTimeManual in the configuration file"
                             f"of this stimuli.")
 
-            if not t_init_buf_manual and is_detecting_t_init:
+            if not t_init_buf_manual and is_detecting_t_init and not self._type_id == "VSB":
                 t_detect_start = max(0, t_raw_start - (2.5 * VIDEO_PRE_START))
                 print(f"Detecting start of video playback (search starts at: {t_detect_start} s) ... ", end='')
                 t_init_buf = determine_video_start(self.qoemu_config, unprocessed_video_path, t_detect_start)
@@ -475,6 +507,20 @@ class Coordinator:
                                   erase_box=erase_box)
             print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
 
+    def _add_generated_buffering(self, type_id, table_id, ids_to_process, overwrite: bool = False):
+        self._type_id = type_id
+        self._table_id = table_id
+        generator = BufferingGenerator(self.qoemu_config)
+        for entry_id in ids_to_process:
+            self._entry_id = entry_id
+            if not overwrite and is_stimuli_available(self.qoemu_config, type_id, table_id, entry_id, "2"):
+                print(f"Stimuli {get_video_id(self.qoemu_config, type_id, table_id, entry_id)} "
+                      f"post-processed file (P2: generated_buffering) exists - skipped. ")
+                continue
+            generator.generate(type_id, table_id, entry_id)
+
+
+
         """
         Start coordinating the emulation run for generating one or more stimuli.
 
@@ -528,6 +574,9 @@ class Coordinator:
             if postprocessing:
                 self._perform_postprocessing(type_id, table_id, ids_to_evaluate, overwrite)
 
+            if type_id == "VSB":
+                self._add_generated_buffering(type_id, table_id, ids_to_evaluate, overwrite)
+
         except RuntimeError as err:
             traceback.print_exc()
             print(
@@ -544,7 +593,7 @@ def main():
     qoemu_config = get_default_qoemu_config()
     coordinator = Coordinator(qoemu_config)
 
-    coordinator.start(['AL'], ['A'], ['1'], # ['1','2','3','4','5','6','7','8'],
+    coordinator.start(['VSB'], ['F'], # ['1','2','3','4','5','6','7','8'],
                       generate_stimuli=True, postprocessing=True, overwrite=False)
 
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)

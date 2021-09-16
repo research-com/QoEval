@@ -1,11 +1,12 @@
 import os
-from datetime import datetime
 import sys
 import time
+from datetime import datetime
+from typing import List
 
 from qoemu_pkg.configuration import QoEmuConfiguration, MobileDeviceType
-
-QOE_RELEASE = "0.1"
+from . import __version__
+from .parser.parser import get_entry_ids, get_parameters, get_codec
 
 
 def wait_countdown(time_in_sec: int):
@@ -43,13 +44,68 @@ def get_video_id(qoemu_config: QoEmuConfiguration, type_id: str, table_id: str, 
     if qoemu_config.emulator_type.get() == MobileDeviceType.REAL_DEVICE:
         emulator_id += "R"
 
-    emulator_id += f"-{QOE_RELEASE}"
+    emulator_id += f"-{__version__}"
 
     id = f"{type_id}-{table_id}-{entry_id}_{emulator_id}_P{postprocessing_step}"
     return id
 
 
-def is_stimuli_available(qoemu_config: QoEmuConfiguration, type_id, table_id, entry_id, postprocessing_step: str = "0"):
-    filename = f"{get_video_id(qoemu_config, type_id, table_id, entry_id, postprocessing_step)}.avi"
+def get_stimuli_filename(qoemu_config: QoEmuConfiguration, type_id, table_id, entry_id,
+                         postprocessing_step: str = "0") -> str:
+    return f"{get_video_id(qoemu_config, type_id, table_id, entry_id, postprocessing_step)}.avi"
+
+
+def is_stimuli_available(qoemu_config: QoEmuConfiguration, type_id, table_id, entry_id,
+                         postprocessing_step: str = "0") -> bool:
+    filename = get_stimuli_filename(qoemu_config, type_id, table_id, entry_id, postprocessing_step)
     filepath = os.path.join(qoemu_config.video_capture_path.get(), filename)
     return os.path.isfile(filepath)
+
+
+# Compare only relevant parts of two parameter sets to determine if these are alternative parameter sets
+# Note: Which parameters are relevant can depend on the type of the stimuli, since e.g. for
+#       Video Stream With Generated Buffering (VSB) the t_init parameter is only relevant for post-processing step 2
+def are_alternative_params(params_A, params_B, type_id, postprocessing_step):
+    checklist = ['rul', 'rdl', 'dul', 'ddl', 'codec', 'dynamic']
+    if not ( type_id == "VSB" and postprocessing_step in ["0", "1"] ):
+        checklist.append('t_init')
+    is_ok = True
+    for check in checklist:
+        is_ok = is_ok and params_A[check] == params_B[check]
+    return is_ok
+
+
+def get_existing_stimuli_with_same_parameters(qoemu_config: QoEmuConfiguration, type_id, table_id, entry_id,
+                                              postprocessing_step) -> List[str]:
+    stimuli = []
+
+    ids_available = get_entry_ids(type_id, table_id)
+    desired_params = get_parameters(type_id, table_id, entry_id)
+    desired_codec = get_codec(type_id, table_id, entry_id)
+
+    for entry_id_to_check in ids_available:
+        params = get_parameters(type_id, table_id, entry_id_to_check)
+        if are_alternative_params(params, desired_params, type_id, postprocessing_step) and \
+                is_stimuli_available(qoemu_config, type_id, table_id, entry_id_to_check, postprocessing_step):
+            path_to_stimuli = os.path.join(qoemu_config.video_capture_path.get(),
+                                           get_stimuli_filename(qoemu_config, type_id, table_id, entry_id_to_check,
+                                                                postprocessing_step))
+            stimuli.append(path_to_stimuli)
+
+    return stimuli
+
+
+def get_stimuli_path(qoemu_config: QoEmuConfiguration, type_id, table_id, entry_id,
+                     postprocessing_step: str = "0",
+                     reuse_existing_with_same_parameters=True) -> str:
+    if is_stimuli_available(qoemu_config, type_id, table_id, entry_id, postprocessing_step):
+        return os.path.join(qoemu_config.video_capture_path.get(),
+                            get_stimuli_filename(qoemu_config, type_id, table_id, entry_id, postprocessing_step))
+
+    if reuse_existing_with_same_parameters:
+        stimuli = get_existing_stimuli_with_same_parameters(qoemu_config, type_id, table_id,
+                                                            entry_id, postprocessing_step)
+        if stimuli and len(stimuli) > 0:
+            return stimuli[0]
+
+    return None
