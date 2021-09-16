@@ -304,6 +304,7 @@ class Coordinator:
         self._is_prepared = False
 
     def _generate_stimuli(self, type_id, table_id, ids_to_generate, overwrite: bool = False):
+        self._export_parameter_table(type_id, table_id)
         for entry_id in ids_to_generate:
             if not overwrite and is_stimuli_available(self.qoemu_config, type_id, table_id, entry_id, "0"):
                 print(f"Stimuli {get_video_id(self.qoemu_config, type_id, table_id, entry_id)} "
@@ -353,6 +354,7 @@ class Coordinator:
                     self._finish()
 
     def _perform_postprocessing(self, type_id, table_id, ids_to_process, overwrite: bool = False):
+        self._export_parameter_table(type_id, table_id)
         trigger_dir = self.qoemu_config.trigger_image_path.get()
         self._type_id = type_id
         self._table_id = table_id
@@ -519,6 +521,20 @@ class Coordinator:
                 continue
             generator.generate(type_id, table_id, entry_id)
 
+    def _export_parameter_table(self, type_id, table_id):
+        output_file = f"{type_id}-{table_id}"
+        output_path = f"{os.path.join(self.qoemu_config.video_capture_path.get(), output_file)}.csv"
+        export_entries(type_id, table_id, output_path, compact=False)
+        output_path = f"{os.path.join(self.qoemu_config.video_capture_path.get(), output_file)}_compact.csv"
+        export_entries(type_id, table_id, output_path, compact=True)
+
+    def export_all_parameter_tables(self):
+        load_parameter_file(self.qoemu_config.parameter_file.get())
+        all_type_ids = get_type_ids()
+        for type_id in all_type_ids:
+            all_table_ids = get_table_ids(type_id)
+            for table_id in all_table_ids:
+                self._export_parameter_table(type_id, table_id)
 
 
         """
@@ -593,7 +609,10 @@ def main():
     qoemu_config = get_default_qoemu_config()
     coordinator = Coordinator(qoemu_config)
 
-    coordinator.start(['VSB'], ['F'], # ['1','2','3','4','5','6','7','8'],
+    # export all (for documentation)
+    # coordinator.export_all_parameter_tables()
+
+    coordinator.start(['VSB'], ['D'], # ['1','2','3','4','5','6','7','8'],
                       generate_stimuli=True, postprocessing=True, overwrite=False)
 
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
