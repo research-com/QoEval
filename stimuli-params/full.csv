@@ -141,6 +141,57 @@ VS-J-5;"Basic set";3300;45;2000;160;160;Assessment;Auto;C;;;;;
 VS-J-6;"Basic set";6450;42;1000;220;220;Assessment;Auto;C;;;;;
 ;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;
+Video Buffering (artificially generated!);;;;;;;;;;;
+;;;;;;;;;;;
+;;;;;;;;;;;;;;
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";Codec;;;;Video;Link;Assessment
+VSB-D-1;"Time to start";720;80;50000;16;16;Reference;Auto;;;;"Beethoven: Symphony no. 5 in C Minor, op. 67 | Christian Thielemann (Full HD 1080p)
+Excerpt from appr. 00:00:57 (h:min:sec) to 00:01:14 (h:min:sec).
+(Alternative excerpt (t.b.d.): from 00:00:57 to 00:01:18).
+Resolution: Auto, 1080p, 720p, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=yTL8j-JU_ow;"Time to start"
+VSB-D-2;"Time to start";1000;80;50000;16;16;Assessment;Auto;;;;;;
+VSB-D-3;"Time to start";2000;80;50000;16;16;Assessment;Auto;;;;;;
+VSB-D-4;"Time to start";3000;80;50000;16;16;Assessment;Auto;;;;;;
+VSB-D-4;"Time to start";6000;80;50000;16;16;"Anchor 1";Auto;;;;;;
+VSB-D-5;"Time to start";9000;80;50000;16;16;Assessment;Auto;;;;;;
+VSB-D-6;"Time to start";14000;80;50000;16;16;Assessment;Auto;;;;;;
+VSB-D-7;"Time to start";19000;80;50000;16;16;Assessment;Auto;;;;;;
+VSB-D-8;"Time to start";24000;80;50000;16;16;Assessment;Auto;;;;;;
+VSB-D-5;"Time to start";14000;580;50000;16;16;"Anchor 2";Auto;;;;;;
+"Anmerkung zum Einfügen von Rebuffering-Unterbrechungen: Um ein möglichst realistisches Verhalten zu erzeugen, soll die Rebuffering-Unterbrechung nach Möglichkeit durch Drosseln der Verbindung erfolgen. Die für die Stimuli VS-E-x und VS-F-x definierte Anzahl und Dauer der Rebuffering-Phasen soll als Anhaltspunkt genommen werden, die exakten Werte für die Anzahl und Dauer der Unterbrechungen soll aus den Messungen ermittelt werden.";;;;;;;;;;;;;;
+"Noch 1 Stimulus frei definierbar.";;;;;;;;;;;;;;
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";Codec;"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";Video;Link;Assessment
+VSB-X-1;"Num. Rebuffering";6000;80;50000;16;16;"Reference/Anchor 1";Auto;;0;0;"Beethoven: Symphony no. 5 in C Minor, op. 67 | Christian Thielemann (Full HD 1080p)
+Excerpt from appr. 00:00:57 (h:min:sec) to 00:01:14 (h:min:sec).
+(Alternative excerpt (t.b.d.): from 00:00:57 to 00:01:18).
+Resolution: Auto, 1080p, 720p, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=yTL8j-JU_ow;"Number of rebuffering phases"
+VSB-E-1;"Num. Rebuffering";6000;80;50000;16;16;"Anchor 3";Auto;;1;4000;;;
+VSB-E-2;"Num. Rebuffering";6000;80;50000;16;16;Assessment;Auto;;2;4000;;;
+VSB-E-3;"Num. Rebuffering";6000;80;50000;16;16;Assessment;Auto;;3;4000;;;
+VSB-E-4;"Num. Rebuffering";6000;80;50000;16;16;Assessment;Auto;;4;4000;;;
+VSB-E-5;"Num. Rebuffering";6000;80;50000;16;16;Assessment;Auto;;5;4000;;;
+VSB-E-6;"Num. Rebuffering";6000;80;50000;16;16;Assessment;Auto;;6;4000;;;
+VSB-E-7;"Num. Rebuffering";6000;80;50000;16;16;Assessment;Auto;;7;4000;;;
+VSB-E-8;"Num. Rebuffering";6000;80;50000;16;16;Assessment;Auto;;8;4000;;;
+VSB-C-5;"Num. Rebuffering";14000;80;50000;16;16;"Anchor 2";;Auto;1;4000;;;
+;;;;;;;;;;;;;;
+"Noch 1 Stimulus frei definierbar.";;;;;;;;;;;;;;
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";Video;Link;Assessment
+VSB-F-1;"Reb. Duration";6000;80;50000;16;16;Reference;Auto;;1;200;"Beethoven: Symphony no. 5 in C Minor, op. 67 | Christian Thielemann (Full HD 1080p)
+Excerpt from appr. 00:00:57 (h:min:sec) to 00:01:14 (h:min:sec).
+(Alternative excerpt (t.b.d.): from 00:00:57 to 00:01:18).
+Resolution: Auto, 1080p, 720p, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=yTL8j-JU_ow;"Duration of rebuffering phases"
+VSB-F-2;"Reb. Duration";6000;80;50000;16;16;Assessment;Auto;;1;500;;;
+VSB-F-3;"Reb. Duration";6000;80;50000;16;16;Assessment;Auto;;1;1000;;;
+VSB-F-4;"Reb. Duration";6000;80;50000;16;16;Assessment;Auto;;1;2000;;;
+VSB-F-5;"Reb. Duration";6000;80;50000;16;16;Assessment;Auto;;1;3000;;;
+VSB-E-1;"Reb. Duration";6000;80;50000;16;16;"Anchor 3";Auto;;1;4000;;;
+VSB-F-6;"Reb. Duration";6000;80;50000;16;16;Assessment;Auto;;1;5000;;;
+VSB-F-7;"Reb. Duration";6000;80;50000;16;16;Assessment;Auto;;1;10000;;;
+VSB-F-8;"Reb. Duration";6000;80;50000;16;16;Assessment;Auto;;1;20000;;;
+VSB-C-5;"Reb. Duration";14000;80;50000;16;16;"Anchor 2";Auto;;1;8000;;;
+;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;
 Web-Browsing;;;;;;;;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment

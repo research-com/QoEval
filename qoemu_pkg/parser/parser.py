@@ -190,7 +190,7 @@ def get_link(type_id, table_id, entry_id):
         log.error("No file loaded")
         return
 
-    if type_id == "VS":
+    if type_id == "VS" or type_id == "VSB":
 
         link = None
         link_found = False
@@ -405,23 +405,30 @@ def get_parameters(type_id, table_id, entry_id):
             Returns
             -------
             *str
-                The list of parameters: [t_init, rul, rdl, dul, ddl]
+                The list of parameters: [t_init, rul, rdl, dul, ddl, stimulus, codec, dynamic, genbufn, genbuft]
 
             """
     if not file_loaded:
         log.error("No file loaded")
         return
 
-    parameter_names = ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic']
+    parameter_names = ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'genbufn', 'genbuft']
 
     for line in file:
         if line.startswith(f"{type_id}-{table_id}-{entry_id}"):
-            float_parameter_values_str = line.split(";")[2:7]
+            splitted_line = line.split(";")
+            float_parameter_values_str = splitted_line[2:7]
             float_parameter_values = [float(i) for i in float_parameter_values_str]
             # evaluate string parameters
-            str_parameter_values = line.split(";")[7:10]
+            str_parameter_values = splitted_line[7:10]
+            # evaluate parameters for artificial buffer generation (VSB stimuli), if present
+            if len(splitted_line)>12:
+                gen_parameter_values_str = splitted_line[10:12]
+                gen_parameter_values = [float(i) for i in gen_parameter_values_str]
+            else:
+                gen_parameter_values = [0.0, 0.0]
             it_name = iter(parameter_names)
-            it_value = iter(float_parameter_values + str_parameter_values)
+            it_value = iter(float_parameter_values + str_parameter_values + gen_parameter_values)
             return dict(zip(it_name, it_value))
 
 

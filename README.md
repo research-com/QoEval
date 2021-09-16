@@ -69,8 +69,13 @@ sudo apt install yarn
 * `node` needs to be updated to a recent version, e.g. by using the node version manager (nvm)
 
 ## Use-Case Specific Information
+Currently, the following use-case types are supported by QoEmu:
+* **Video Streaming (VS)**
+* **Video Streaming with artificially generated Buffering (VSB)**
+* **Web Browsing (WB)**
+* **App Launch (AL)**
 
-### App-Launch
+### App-Launch (AL)
 In order to configure an app-launch use-case, you need to know the package and activity name. In order to find out
 the package name of an app, open the Google Play store, search for the app and you can find the package name
 as value of the "id" parameter in the URL.

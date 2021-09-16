@@ -89,7 +89,7 @@ class PostProcessor:
                 f"Postprocessing error: Start time of main video ({main_video_start_time}s) is less than "
                 f"end of buffer initialization ({initbuf_len}s).")
 
-        if main_video_start_time - initbuf_len > DELTA_INITBUF_VIDEO_START_MAX:
+        if main_video_start_time - initbuf_len > DELTA_INITBUF_VIDEO_START_MAX and initbuf_len != 0.0:
             raise RuntimeError(
                 f"Postprocessing plausibility check failed: "
                 f"Start time of main video ({main_video_start_time}s) is more than "
