@@ -6,9 +6,10 @@ from collections import namedtuple
 import os
 from typing import List
 
-from parse import *
 import logging as log
 from importlib_resources import files
+from parse import search
+from parse import log as parselog
 
 Entry = namedtuple("Entry", "type_id table_id entry_id link start end codec t_init rul rdl dul ddl")
 _PARAMETER_NAMES = ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'genbufn', 'genbuft']
@@ -34,6 +35,9 @@ def load_parameter_file(file_path, is_relative_path=True):
        """
     global file
     global file_loaded
+
+    parselog.setLevel('WARNING')
+
     try:
         if is_relative_path:
             file_path = os.path.join("../", file_path)
@@ -41,6 +45,9 @@ def load_parameter_file(file_path, is_relative_path=True):
         else:
             file = open(file_path).read().split("\n")
         file_loaded = True
+        if not _is_correct_parameter_file():
+            log.warning(f"Parameter file \"{file_path}\" is not fully parsable - some use-cases might not have valid "
+                        f"parameter values. Please check the format of the csv file.")
     except FileNotFoundError:
         log.error(f"Parameter file \"{file_path}\" not found")
         raise FileNotFoundError
@@ -573,6 +580,27 @@ def export_entries(type_id: str, table_id: str, output_path: str, compact: bool 
 
     output_file.close()
     log.info(f"Exported {type_id}-{table_id} to {output_path}.")
+
+
+def _is_correct_parameter_file() -> bool:
+    status_ok = True
+    all_type_ids = get_type_ids()
+    for type_id in all_type_ids:
+        all_table_ids = get_table_ids(type_id)
+        for table_id in all_table_ids:
+            all_entry_ids = get_entry_ids(type_id, table_id)
+            for entry_id in all_entry_ids:
+                try:
+                    get_parameters(type_id, table_id, entry_id)
+                    get_codec(type_id, table_id, entry_id)
+                    get_link(type_id, table_id, entry_id)
+                    get_start(type_id, table_id, entry_id)
+                    get_end(type_id, table_id, entry_id)
+                except ValueError as ve:
+                    log.error(f"Error while parsing {type_id}-{table_id}-{entry_id} - {ve}")
+                    status_ok = False
+
+    return status_ok
 
 
 def _remove_columns(csv_line: str, columns: List[int]) -> str:
