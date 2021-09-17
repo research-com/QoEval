@@ -1,21 +1,23 @@
 """Module for parsing .csv stimuli-parameter files"""
 
-# TODO: Refactor to reduce redundant code when detecting url, start, end
+# TODO: Refactor to reduce redundant code when detecting url, start, end, parameter names / named tuple
 
 from collections import namedtuple
 import os
+from typing import List
+
 from parse import *
 import logging as log
-
-CSV_FILENAME = '../../stimuli-params/full.csv'
+from importlib_resources import files
 
 Entry = namedtuple("Entry", "type_id table_id entry_id link start end codec t_init rul rdl dul ddl")
+_PARAMETER_NAMES = ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'genbufn', 'genbuft']
 
 file = []
 file_loaded = False
 
 
-def load_parameter_file(file_path=CSV_FILENAME, is_relative_path=True):
+def load_parameter_file(file_path, is_relative_path=True):
     """
        Loads the specified file globally. If no file is specified it will load CSV_FILENAME.
 
@@ -34,9 +36,8 @@ def load_parameter_file(file_path=CSV_FILENAME, is_relative_path=True):
     global file_loaded
     try:
         if is_relative_path:
-            file_dir = os.path.dirname(os.path.realpath('__file__'))
-            file_path = os.path.join(file_dir, file_path)
-            file = open(file_path).read().split("\n")
+            file_path = os.path.join("../", file_path)
+            file = files('qoemu_pkg').joinpath(file_path).read_text().split("\n")
         else:
             file = open(file_path).read().split("\n")
         file_loaded = True
@@ -166,6 +167,43 @@ def get_entry_ids(type_id, table_id):
     return entry_ids
 
 
+def get_table_ids(type_id):
+    """
+    Returns a list of the table id's belonging to the specified type
+
+    The provided paramter file identifies each set of parameters with an ID in the following form
+    "VS-B-4"
+    The second part of this id corresponds to a table of parameters and is
+    therefore called table_id in this module.
+
+    Parameters
+    ----------
+    type_id : str
+        The type id of which the entry id's should be returned.
+
+    Returns
+    -------
+    *str
+         Returns a list of all table id's belonging to the type
+
+    """
+
+    if not file_loaded:
+        log.error("No file loaded")
+        return
+
+    table_ids = []
+
+    for line in file:
+        if line.startswith(f"{type_id}-"):
+            search_string = f"{type_id}-" + "{}"
+            id = search(search_string, line)[0]
+            if id not in table_ids:
+                table_ids.append(id)
+
+    return table_ids
+
+
 def get_link(type_id, table_id, entry_id):
     """
         Returns the link belonging to the specified entry
@@ -190,7 +228,7 @@ def get_link(type_id, table_id, entry_id):
         log.error("No file loaded")
         return
 
-    if type_id == "VS":
+    if type_id == "VS" or type_id == "VSB":
 
         link = None
         link_found = False
@@ -405,23 +443,29 @@ def get_parameters(type_id, table_id, entry_id):
             Returns
             -------
             *str
-                The list of parameters: [t_init, rul, rdl, dul, ddl]
+                The list of parameters: [t_init, rul, rdl, dul, ddl, stimulus, codec, dynamic, genbufn, genbuft]
 
             """
     if not file_loaded:
         log.error("No file loaded")
         return
 
-    parameter_names = ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic']
-
     for line in file:
         if line.startswith(f"{type_id}-{table_id}-{entry_id}"):
-            float_parameter_values_str = line.split(";")[2:7]
+            splitted_line = line.split(";")
+            float_parameter_values_str = splitted_line[2:7]
             float_parameter_values = [float(i) for i in float_parameter_values_str]
             # evaluate string parameters
-            str_parameter_values = line.split(";")[7:10]
-            it_name = iter(parameter_names)
-            it_value = iter(float_parameter_values + str_parameter_values)
+            str_parameter_values = splitted_line[7:10]
+            # evaluate parameters for artificial buffer generation (VSB stimuli), if present
+            if len(splitted_line) > 12:
+                gen_parameter_values_str = splitted_line[10:12]
+                gen_parameter_values_str = [_replace_empty_with_default(i, "0") for i in gen_parameter_values_str]
+                gen_parameter_values = [float(i) for i in gen_parameter_values_str]
+            else:
+                gen_parameter_values = [0.0, 0.0]
+            it_name = iter(_PARAMETER_NAMES)
+            it_value = iter(float_parameter_values + str_parameter_values + gen_parameter_values)
             return dict(zip(it_name, it_value))
 
 
@@ -472,3 +516,75 @@ def get_entries(type_id_filter=None, table_id_filter=None):
                                      get_codec(type_id, table_id, entry_id),
                                      *get_parameters(type_id, table_id, entry_id)))
     return entries
+
+
+def export_entries(type_id: str, table_id: str, output_path: str, compact: bool = False):
+    """
+            Exports a parameter table as individual .csv file (e.g. for documentation purposes)
+
+            :param str type_id :
+                The type id of the requested entries
+            :param str table_id :
+                The table id of the requested entries
+            :param str output_path :
+                The path to the output file
+            :param compact:
+                If set to True, a compact format is used (for reports only)
+            """
+    if not file_loaded:
+        log.error("No file loaded")
+        return
+
+    output_file = open(output_path, "w")
+
+    nr_ids_to_be_written = len(get_entry_ids(type_id, table_id))
+
+    is_header_written = False
+
+    if compact:
+        columns_to_be_removed = [1,7,12,13,14]
+    else:
+        columns_to_be_removed = []
+
+    is_in_relevant_section = False
+
+    for line in file:
+        if line.startswith(f"Stimulus-ID"):
+            if compact:
+                header_line = line.replace("Stimulus-ID", "ID")
+                header_line = _remove_columns(header_line, columns_to_be_removed)
+            else:
+                header_line = line
+
+        if line.startswith(f"{type_id}-{table_id}-"):
+            is_in_relevant_section = True
+            if not is_header_written:
+                output_file.write(header_line+"\n")
+                is_header_written = True
+            if compact:
+                line = _remove_columns(line, columns_to_be_removed)
+            nr_ids_to_be_written = nr_ids_to_be_written - 1
+
+        if is_in_relevant_section and (not compact or line.startswith(f"{type_id}-{table_id}-")):
+            output_file.write(line + "\n")
+
+        if nr_ids_to_be_written < 1:
+            break
+
+    output_file.close()
+    log.info(f"Exported {type_id}-{table_id} to {output_path}.")
+
+
+def _remove_columns(csv_line: str, columns: List[int]) -> str:
+    splitted_line = csv_line.split(";")
+    columns.sort(reverse=True)
+    for column in columns:
+        if column < len(splitted_line):
+            del splitted_line[column]
+    return ";".join(splitted_line)
+
+def _replace_empty_with_default(value: str, default_value: str):
+    if not value or len(value) == 0:
+        return default_value
+    else:
+        return value
