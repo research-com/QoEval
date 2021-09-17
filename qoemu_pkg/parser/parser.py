@@ -8,6 +8,7 @@ from typing import List
 
 from parse import *
 import logging as log
+from importlib_resources import files
 
 Entry = namedtuple("Entry", "type_id table_id entry_id link start end codec t_init rul rdl dul ddl")
 _PARAMETER_NAMES = ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'genbufn', 'genbuft']
@@ -35,9 +36,8 @@ def load_parameter_file(file_path, is_relative_path=True):
     global file_loaded
     try:
         if is_relative_path:
-            file_dir = os.path.dirname(os.path.realpath('__file__'))
-            file_path = os.path.join(file_dir, file_path)
-            file = open(file_path).read().split("\n")
+            file_path = os.path.join("../", file_path)
+            file = files('qoemu_pkg').joinpath(file_path).read_text().split("\n")
         else:
             file = open(file_path).read().split("\n")
         file_loaded = True
