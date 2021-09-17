@@ -56,38 +56,6 @@ VS-D-6;"Time to start";14000;80;2000;400;400;Assessment;Auto;;;;;;
 VS-D-7;"Time to start";19000;80;2000;400;400;Assessment;Auto;;;;;;
 VS-D-8;"Time to start";24000;80;2000;400;400;Assessment;Auto;;;;;;
 VS-C-5;"Time to start";14000;50;1000;700;700;"Anchor 2";Auto;;;;;;
-"Anmerkung zum Einfügen von Rebuffering-Unterbrechungen: Um ein möglichst realistisches Verhalten zu erzeugen, soll die Rebuffering-Unterbrechung nach Möglichkeit durch Drosseln der Verbindung erfolgen. Die für die Stimuli VS-E-x und VS-F-x definierte Anzahl und Dauer der Rebuffering-Phasen soll als Anhaltspunkt genommen werden, die exakten Werte für die Anzahl und Dauer der Unterbrechungen soll aus den Messungen ermittelt werden.";;;;;;;;;;;;;;
-"Noch 1 Stimulus frei definierbar.";;;;;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Num. Rebuffering";"Rebuffering duration  [ms]";"Stimulus in picture";Codec;;Video;Link;Assessment
-VS-C-4;"Num. Rebuffering";6000;80;2000;400;400;0;n/a;"Reference/Anchor 1";Auto;;"Film “Trois couleurs bleu”:
-Excerpt from appr. 00:20 (min:sec) to 00:33 (min:sec).
-(Alternative excerpt (t.b.d.): from 00:20 to 00:28 or from 00:20 to 00:38).
-Resolution: Auto, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=Hxu6my_t4pM;"Number of rebuffering phases"
-VS-E-1;"Num. Rebuffering";6000;80;2000;400;400;1;4000;"Anchor 3";Auto;;;;
-VS-E-2;"Num. Rebuffering";6000;80;2000;400;400;2;4000;Assessment;Auto;;;;
-VS-E-3;"Num. Rebuffering";6000;80;2000;400;400;3;4000;Assessment;Auto;;;;
-VS-E-4;"Num. Rebuffering";6000;80;2000;400;400;4;4000;Assessment;Auto;;;;
-VS-E-5;"Num. Rebuffering";6000;80;2000;400;400;5;4000;Assessment;Auto;;;;
-VS-E-6;"Num. Rebuffering";6000;80;2000;400;400;6;4000;Assessment;Auto;;;;
-VS-E-7;"Num. Rebuffering";6000;80;2000;400;400;7;4000;Assessment;Auto;;;;
-VS-E-8;"Num. Rebuffering";6000;80;2000;400;400;8;4000;Assessment;Auto;;;;
-VS-C-5;"Num. Rebuffering";14000;50;1000;700;700;1;4000;"Anchor 2";Auto;;;;
-;;;;;;;;;;;;;;
-"Noch 1 Stimulus frei definierbar.";;;;;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Num. Rebuffering";"Rebuffering duration  [ms]";"Stimulus in picture";Codec;;Video;Link;Assessment
-VS-F-1;"Reb. Duration";6000;80;2000;400;400;1;200;Reference;Auto;;"Film “Trois couleurs bleu”:
-Excerpt from appr. 00:20 (min:sec) to 00:33 (min:sec).
-(Alternative excerpt (t.b.d.): from 00:20 to 00:28 or from 00:20 to 00:38).
-Resolution: Auto, 480p, 360p, 240p, 144p";https://www.youtube.com/watch?v=Hxu6my_t4pM;"Duration of rebuffering phases"
-VS-F-2;"Reb. Duration";6000;80;2000;400;400;1;500;Assessment;Auto;;;;
-VS-F-3;"Reb. Duration";6000;80;2000;400;400;1;1000;Assessment;Auto;;;;
-VS-F-4;"Reb. Duration";6000;80;2000;400;400;1;2000;Assessment;Auto;;;;
-VS-F-5;"Reb. Duration";6000;80;2000;400;400;1;3000;Assessment;Auto;;;;
-VS-E-1;"Reb. Duration";6000;80;2000;400;400;1;4000;"Anchor 3";Auto;;;;
-VS-F-6;"Reb. Duration";6000;80;2000;400;400;1;5000;Assessment;Auto;;;;
-VS-F-7;"Reb. Duration";6000;80;2000;400;400;1;10000;Assessment;Auto;;;;
-VS-F-8;"Reb. Duration";6000;80;2000;400;400;1;20000;Assessment;Auto;;;;
-VS-C-5;"Reb. Duration";14000;50;1000;700;700;1;8000;"Anchor 2";Auto;;;;
 ;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";Codec;;;;Video;Link;Assessment
