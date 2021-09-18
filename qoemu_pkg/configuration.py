@@ -18,6 +18,8 @@ QOEMU_SECTION = 'QOEMU'
 NETEM_SECTION = 'NETEM'
 VALUE_SEPERATOR = ";"
 
+GUI_DEFAULT_CONFIG_FILE = "qoemu_gui_default.conf"
+GUI_DEFAULT_CONFIG_FILE_LOCATION = os.path.join(os.path.expanduser("~/.config/qoemu/"), GUI_DEFAULT_CONFIG_FILE)
 
 class MobileDeviceOrientation(Enum):
     PORTRAIT = 'portrait'
@@ -53,6 +55,11 @@ class QoEmuConfiguration:
         :param config_file_path: The config file to be loaded, if None the default config file will be loaded
         """
         self.configparser = configparser.ConfigParser()
+        self.configparser.optionxform = str  # to preserve camel case of option names when saving
+        # To keep comments:
+        # parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value = True)
+        # Alternative to consider
+        # parser = configupdater.ConfigUpdater()
         if config_file_path:
             self.configparser.read(config_file_path)
         else:
@@ -69,18 +76,22 @@ class QoEmuConfiguration:
         self.parameter_file = Option(self, 'ParameterFile', './parameters.csv', expand_user=True)
         self.dynamic_parameter_path = Option(self, 'DynamicParameterPath', '.', expand_user=True)
 
+        # coordinator settings
         self.coordinator_generate_stimuli = BoolOption(self, "CoordinatorGenerateStimuli", True)
         self.coordinator_postprocessing = BoolOption(self, "CoordinatorPostprocessing", False)
         self.coordinator_overwrite = BoolOption(self, "CoordinatorOverwrite", False)
 
+        # gui
         self.gui_coordinator_stimuli = ListDictOption(self, "CoordinatorStimuliToGenerate", [])
-        self.gui_current_config_file = Option(self, "GUIConfigFile", "~/.config/qoemu/qoemu_gui.conf", expand_user=True)
+        self.gui_default_config_file = Option(self, "GUIDefaultConfigFile", GUI_DEFAULT_CONFIG_FILE_LOCATION,
+                                              expand_user=True)
+        self.gui_current_config_file = Option(self, "GUICurrentConfigFile", GUI_DEFAULT_CONFIG_FILE_LOCATION,
+                                              expand_user=True)
 
         # capturing options
         self.show_device_frame = BoolOption(self, 'ShowDeviceFrame', False)
         self.show_device_screen_mirror = BoolOption(self, 'ShowDeviceScreenMirror', True)
         self.emulator_type = MobileDeviceTypeOption(self, 'EmulatorType', 'none')
-        self.net_device_name = Option(self, 'NetDeviceName', 'eth0')
         self.resolution_override = Option(self, 'ResolutionOverride', "")
 
         self.adb_device_serial = Option(self, 'AdbDeviceSerial', '')
@@ -109,13 +120,20 @@ class QoEmuConfiguration:
 
         # post-processing options for specific use-case: application launch
         self.app_launch_additional_recording_duration = FloatOption(self, 'AppLaunchAdditionalRecordingDuration', 0.0)
-        self.app_launch_vid_erase_box = ListIntOption(self, 'AppLaunchVidEraseBox', "")
+        self.app_launch_vid_erase_box = ListIntOption(self, 'AppLaunchVidEraseBox', [])
 
         # post-processing options for specific use-case: web browsing
         self.web_browse_additional_recording_duration = FloatOption(self, 'WebBrowseAdditionalRecordingDuration', 0.0)
-        self.web_browse_vid_erase_box = ListIntOption(self, 'WebBrowseVidEraseBox', "")
+        self.web_browse_vid_erase_box = ListIntOption(self, 'WebBrowseVidEraseBox', [])
 
         add_tooltips(self)
+
+    def mark_modified(self):
+        self.modified_since_last_save = True
+        print("modified")
+
+    def mark_unmodified(self):
+        self.modified_since_last_save = False
 
     def save_to_file(self, file: str = None):
         if file is not None:
@@ -125,7 +143,7 @@ class QoEmuConfiguration:
 
         with open(file_path, 'w') as configfile:
             self.configparser.write(configfile)
-        self.modified_since_last_save = False
+        self.mark_unmodified()
 
     def read_from_file(self, file: str = None):
         if file is not None:
@@ -161,7 +179,9 @@ class Option:
         return self.value
 
     def set(self, value: str):
-        self.config.modified_since_last_save = True
+        if self.get() == value:
+            return
+        self.config.mark_modified()
         if self.expand_user:
             self.value = value.replace(os.path.expanduser('~'), '~', 1)
         else:
@@ -181,7 +201,9 @@ class BoolOption(Option):
         return self.value
 
     def set(self, value: bool):
-        self.config.modified_since_last_save = True
+        if self.get() == value:
+            return
+        self.config.mark_modified()
         self.value = str(value)
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
@@ -197,7 +219,9 @@ class IntOption(Option):
         return self.value
 
     def set(self, value: int):
-        self.config.modified_since_last_save = True
+        if self.get() == value:
+            return
+        self.config.mark_modified()
         self.value = value
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
@@ -213,7 +237,9 @@ class FloatOption(Option):
         return self.value
 
     def set(self, value: float):
-        self.config.modified_since_last_save = True
+        if self.get() == value:
+            return
+        self.config.mark_modified()
         self.value = value
         self.config.configparser.set(section=self.section, option=self.option, value=str(self.value))
 
@@ -227,11 +253,13 @@ class MobileDeviceTypeOption(Option):
         return MobileDeviceType[self.value]
 
     def set(self, value: Union[MobileDeviceType, str]):
-        self.config.modified_since_last_save = True
         if type(value) == MobileDeviceType:
             self.value = value.name
         else:
             self.value = value
+        if self.get().name == value:
+            return
+        self.config.mark_modified()
         self.config.configparser.set(self.section, self.option, self.value)
 
 
@@ -247,7 +275,9 @@ class ListIntOption(Option):
             return None
 
     def set(self, value: List[int]):
-        self.config.modified_since_last_save = True
+        if self.get() == value:
+            return
+        self.config.mark_modified()
         self.value = str(value)
         self.config.configparser.set(self.section, self.option, self.value)
 
@@ -263,7 +293,9 @@ class ListFloatOption(Option):
         return result
 
     def set(self, value: List[float]):
-        self.config.modified_since_last_save = True
+        if self.get() == value:
+            return
+        self.config.mark_modified()
         self.value = str(value)
         self.config.configparser.set(self.section, self.option, self.value)
 
@@ -278,7 +310,9 @@ class ListOption(Option):
         return ast.literal_eval(self.value)
 
     def set(self, value: List[str]):
-        self.config.modified_since_last_save = True
+        if self.get() == value:
+            return
+        self.config.mark_modified()
         self.value = str(value)
         self.config.configparser.set(self.section, self.option, self.value)
 
@@ -292,7 +326,9 @@ class ListDictOption(Option):
         return ast.literal_eval(self.value)
 
     def set(self, value: List[Dict]):
-        self.config.modified_since_last_save = True
+        if self.get() == value:
+            return
+        self.config.mark_modified()
         self.value = str(value)
         self.config.configparser.set(self.section, self.option, self.value)
 
