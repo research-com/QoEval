@@ -51,6 +51,7 @@ class Gui(tk.Tk):
             self.qoemu_config = QoEmuConfiguration()
             self.current_config_path = tk.StringVar()
             self.current_config_path.set(GUI_DEFAULT_CONFIG_FILE_LOCATION)
+            self.qoemu_config.save_to_file(GUI_DEFAULT_CONFIG_FILE_LOCATION)
 
         self.updatable_elements = []
 
@@ -137,10 +138,9 @@ class Gui(tk.Tk):
 
     @staticmethod
     def save_current_config_path_in_default_config(path):
-        temp_config = QoEmuConfiguration()
-        temp_config.read_from_file(temp_config.gui_default_config_file.get())
+        temp_config = QoEmuConfiguration(GUI_DEFAULT_CONFIG_FILE_LOCATION)
         temp_config.gui_current_config_file.set(path)
-        temp_config.save_to_file(temp_config.gui_default_config_file.get())
+        temp_config.save_to_file(GUI_DEFAULT_CONFIG_FILE_LOCATION)
 
     def save_config_as(self):
         path_object = filedialog.asksaveasfile(initialdir=
