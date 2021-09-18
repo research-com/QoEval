@@ -109,13 +109,17 @@ class ParameterFrame(tk.Frame):
             self.gui.qoemu_config.gui_coordinator_stimuli.set([])
             self.open_file(path)
 
-    def open_file(self, filename):
+    def open_file(self, filename, update=False):
 
         try:
             parser.load_parameter_file(filename)
         except FileNotFoundError:
             self.gui.qoemu_config.parameter_file.set(self.parameter_file.get())
-            messagebox.showerror    (f"Error", f"Parameter file \"{filename}\" not found")
+            if update:
+                messagebox.showerror(f"Error", f"Parameter file \"{filename}\" specified "
+                                               f"in selected config file not found")
+            else:
+                messagebox.showerror(f"Error", f"Parameter file \"{filename}\" not found")
             return
 
         if filename != self.gui.qoemu_config.parameter_file.get():
@@ -199,7 +203,7 @@ class ParameterFrame(tk.Frame):
     def save_to_config(self):
         pass
 
-    def update_display(self):
+    def update_display(self, update=True):
         self.open_file(self.gui.qoemu_config.parameter_file.get())
 
 
