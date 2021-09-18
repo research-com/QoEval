@@ -5,7 +5,7 @@
 import time
 
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name
-from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
+from qoemu_pkg.configuration import QoEmuConfiguration
 import logging as log
 import subprocess
 import shlex
@@ -177,7 +177,7 @@ class GenymotionEmulator(MobileDevice):
 if __name__ == '__main__':
     # executed directly as a script
     print("Emulator control")
-    emu = GenymotionEmulator(get_default_qoemu_config())
+    emu = GenymotionEmulator(QoEmuConfiguration())
     # emu.delete_vd()
     emu.launch(orientation=MobileDeviceOrientation.LANDSCAPE, playstore=False)
     print(f"Started emulator with IP address: {emu.get_ip_address()}")
