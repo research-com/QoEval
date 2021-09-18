@@ -9,13 +9,12 @@ from run_frame import *
 from qoemu_pkg.configuration import *
 from qoemu_pkg import configuration
 import tooltip_strings
+from qoemu_pkg import __version__
 
-GUI_CONFIG_FILE = "qoemu_gui.conf"
-GUI_CONFIG_FILE_LOCATION = os.path.join(os.path.expanduser("~/.config/qoemu/"), GUI_CONFIG_FILE)
 
 ELEMENT_LIST_TO_UPDATE = []
 
-GUI_TITLE = f"QoEmu {qoemu_pkg.utils.QOE_RELEASE} "
+GUI_TITLE = f"QoEmu {__version__} "
 WINDOW_SIZE = "700x700"
 ICON_PATH = os.path.join(os.path.dirname(__file__), 'QoEmuIcon.png')
 
@@ -26,9 +25,6 @@ ANALYSIS_TAB_NAME = 'Analysis'
 RUN_TAB_NAME = 'Run'
 TAB_WIDTH = 15
 CONFIG_FILE_DESC = "Current config file:"
-
-
-
 
 
 class Gui(tk.Tk):
@@ -42,11 +38,15 @@ class Gui(tk.Tk):
         style = ttk.Style()
         style.theme_settings("default", {"TNotebook.Tab": {"configure": {"padding": [10, 2]}}})
 
-        self.qoemu_config = QoEmuConfiguration()
-
-        self.current_config_path = tk.StringVar()
-        self.current_config_path.set(self.qoemu_config.gui_current_config_file.get())
-        self.qoemu_config.read_from_file(self.current_config_path.get())
+        try:
+            self.qoemu_config = QoEmuConfiguration(GUI_DEFAULT_CONFIG_FILE_LOCATION)
+            self.current_config_path = tk.StringVar()
+            self.current_config_path.set(self.qoemu_config.gui_current_config_file.get())
+            self.qoemu_config.read_from_file(self.current_config_path.get())
+        except RuntimeError:
+            self.qoemu_config = QoEmuConfiguration()
+            self.current_config_path = tk.StringVar()
+            self.current_config_path.set(GUI_DEFAULT_CONFIG_FILE_LOCATION)
 
         self.updatable_elements = []
 
@@ -76,14 +76,21 @@ class Gui(tk.Tk):
                                              command=self.load_default_config)
         self.button_load_default.pack(fill=tk.X, side="right", expand=2)
 
+        self.button_load_config = tk.Button(self.button_frame, text="Load Config", command=self.load_config)
+        self.button_load_config.pack(fill=tk.X, side="right", expand=0)
+
+        self.button_save_config_as = tk.Button(self.button_frame, text="Save Config As", command=self.save_config_as)
+        self.button_save_config_as.pack(fill=tk.X, side="right", expand=0)
+
         self.button_save_config = tk.Button(self.button_frame, text="Save Config", command=self.save_config)
         self.button_save_config.pack(fill=tk.X, side="right", expand=0)
 
         self.parameter_frame = ParameterFrame(self, self)
+        self.run_frame = RunFrame(self, self, self.parameter_frame.get_checked_entries)
         self.settings_frame = EmulationFrame(self, self)
         self.post_processing_frame = PostProcessingFrame(self, self)
         self.analysis_frame = AnalysisFrame(self, self)
-        self.run_frame = RunFrame(self, self, self.parameter_frame.get_checked_entries)
+
 
         self.notebook.add(self.parameter_frame, text=f'{PARAMETERS_TAB_NAME: ^{TAB_WIDTH}s}')
         self.notebook.add(self.settings_frame, text=f'{EMULATION_TAB_NAME: ^20s}')
@@ -100,14 +107,64 @@ class Gui(tk.Tk):
                 print("Creation of the directory %s failed" % path)
             else:
                 print("Successfully created the directory %s " % path)
+        self.update_elements_config()
         self.qoemu_config.save_to_file(self.qoemu_config.gui_current_config_file.get())
 
-    def load_default_config(self):
-        self.qoemu_config.read_from_file()
+    def update_elements_display(self):
         for element in self.updatable_elements:
-            element.update()
-        self.current_config_path.set(self.qoemu_config.gui_current_config_file.get())
+            element.update_display()
+
+    def update_elements_config(self):
+        for element in self.updatable_elements:
+            element.update_config()
+
+    def load_config(self):
+        path_object = filedialog.askopenfile(initialdir=
+                                             os.path.dirname(self.qoemu_config.gui_current_config_file.get()),
+                                             filetypes=[("config files", "*.conf")])
+        if not path_object:
+            return
+        path = path_object.name
+        if not path.endswith(".conf"):
+            answer = messagebox.askokcancel("Warning", "This doesn't seem to be a configuration file. Continue?")
+            if not answer:
+                return
+
+        self.qoemu_config.read_from_file(path)
+        self.update_elements_display()
+        self.current_config_path.set(path)
         self.update_title()
+        self.save_current_config_path_in_default_config(path)
+
+    @staticmethod
+    def save_current_config_path_in_default_config(path):
+        temp_config = QoEmuConfiguration()
+        temp_config.read_from_file(temp_config.gui_default_config_file.get())
+        temp_config.gui_current_config_file.set(path)
+        temp_config.save_to_file(temp_config.gui_default_config_file.get())
+
+    def save_config_as(self):
+        path_object = filedialog.asksaveasfile(initialdir=
+                                               os.path.dirname(self.qoemu_config.gui_current_config_file.get()),
+                                               filetypes=[("config files", "*.conf")])
+        if not path_object:
+            return
+        path = path_object.name
+        if not path.endswith(".conf"):
+            path += ".conf"
+        self.qoemu_config.gui_current_config_file.set(path)
+        self.current_config_path.set(path)
+        self.save_config()
+        self.save_current_config_path_in_default_config(path)
+        self.update_title()
+
+    def load_default_config(self):
+        self.qoemu_config.read_from_file(GUI_DEFAULT_CONFIG_FILE_LOCATION)
+        self.current_config_path.set(GUI_DEFAULT_CONFIG_FILE_LOCATION)
+        self.save_current_config_path_in_default_config(GUI_DEFAULT_CONFIG_FILE_LOCATION)
+        self.update_elements_display()
+        self.update_title()
+
 
     def on_exit(self):
         if self.qoemu_config.modified_since_last_save:
@@ -128,7 +185,7 @@ class Gui(tk.Tk):
         self.destroy()
 
     def update_title(self):
-        self.title(GUI_TITLE + " - " + os.path.split(self.qoemu_config.gui_current_config_file.get())[1])
+        self.title(GUI_TITLE + " - " + os.path.split(self.current_config_path.get())[-1])
 
 
 def main():

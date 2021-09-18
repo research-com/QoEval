@@ -5,6 +5,7 @@ Handle configuration options
 
 """
 import ast
+import logging as log
 import os
 import pathlib
 import configparser
@@ -54,19 +55,7 @@ class QoEmuConfiguration:
 
         :param config_file_path: The config file to be loaded, if None the default config file will be loaded
         """
-        self.configparser = configparser.ConfigParser()
-        self.configparser.optionxform = str  # to preserve camel case of option names when saving
-        # To keep comments:
-        # parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value = True)
-        # Alternative to consider
-        # parser = configupdater.ConfigUpdater()
-        if config_file_path:
-            self.configparser.read(config_file_path)
-        else:
-            self.configparser.read(_default_config_file_locations)  # note: last file will take precedence in case of overlap
-        if QOEMU_SECTION not in self.configparser:
-            raise RuntimeError(
-                'No configuration file found - not even the default configuration. Check your installation.')
+        self.configparser = self.configparser = self._get_config_parser(config_file_path)
         self.modified_since_last_save = False
 
         # general options and paths
@@ -130,7 +119,6 @@ class QoEmuConfiguration:
 
     def mark_modified(self):
         self.modified_since_last_save = True
-        print("modified")
 
     def mark_unmodified(self):
         self.modified_since_last_save = False
@@ -145,13 +133,31 @@ class QoEmuConfiguration:
             self.configparser.write(configfile)
         self.mark_unmodified()
 
-    def read_from_file(self, file: str = None):
-        if file is not None:
-            file_path = file
+    def read_from_file(self, config_file_path: str = None):
+        if config_file_path is not None:
+            file_path = config_file_path
         else:
             file_path = _default_config_file_locations
-        self.configparser.read(file_path)
+        self.configparser = self._get_config_parser(config_file_path)
         # print({section: dict(self.configparser[section]) for section in self.configparser.sections()})
+
+    @staticmethod
+    def _get_config_parser(config_file_path: str = None) -> configparser.ConfigParser:
+        parser = configparser.ConfigParser()
+        parser.optionxform = str  # to preserve camel case of option names when saving
+        # To keep comments:
+        # parser = configparser.ConfigParser(comment_prefixes='/', allow_no_value = True)
+        # Alternative to consider
+        # parser = configupdater.ConfigUpdater()
+        if config_file_path:
+            parser.read(config_file_path)
+        else:
+            parser.read(
+                _default_config_file_locations)  # note: last file will take precedence in case of overlap
+        if QOEMU_SECTION not in parser:
+            raise RuntimeError(
+                'No configuration file found - not even the default configuration. Check your installation.')
+        return parser
 
     def store_netem_params(self, emulation_parameters):
         for p in emulation_parameters:
@@ -250,17 +256,18 @@ class MobileDeviceTypeOption(Option):
 
     def get(self) -> MobileDeviceType:
         self.value = self.config.configparser.get(section=self.section, option=self.option, fallback=self.default)
-        return MobileDeviceType[self.value]
+        try:
+            return MobileDeviceType[self.value]
+        except KeyError:
+            raise KeyError("Could not parse MobileDeviceType from config")
 
     def set(self, value: Union[MobileDeviceType, str]):
         if type(value) == MobileDeviceType:
-            self.value = value.name
-        else:
-            self.value = value
+            value = value.name
         if self.get().name == value:
             return
         self.config.mark_modified()
-        self.config.configparser.set(self.section, self.option, self.value)
+        self.config.configparser.set(self.section, self.option, value)
 
 
 class ListIntOption(Option):

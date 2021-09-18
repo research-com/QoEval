@@ -90,16 +90,11 @@ class ParameterFrame(tk.Frame):
         # end
 
         # update config
-        self.tree.bind('<<TreeviewSelect>>', self._update_config)
+        self.tree.bind('<<TreeviewSelect>>', self.update_config)
 
-        if self.gui.qoemu_config.parameter_file.get().startswith("./"):
-            path = os.path.abspath(os.path.normpath(os.path.join("../../", self.gui.qoemu_config.parameter_file.get())))
-            path = os.path.normpath(path)
-        else:
-            path = self.gui.qoemu_config.parameter_file.get()
-        self.open_file(path)
+        self.open_file(self.gui.qoemu_config.parameter_file.get())
 
-    def _update_config(self, *args):
+    def update_config(self, *args):
         entries = self.get_checked_entries()
         entry_list = []
         for entry in entries:
@@ -117,7 +112,7 @@ class ParameterFrame(tk.Frame):
     def open_file(self, filename):
 
         try:
-            parser.load_parameter_file(filename, False)
+            parser.load_parameter_file(filename)
         except FileNotFoundError:
             self.gui.qoemu_config.parameter_file.set(self.parameter_file.get())
             messagebox.showerror    (f"Error", f"Parameter file \"{filename}\" not found")
@@ -167,10 +162,10 @@ class ParameterFrame(tk.Frame):
             checked_tristate_list = [
                 ('tristate' in self.tree.item(child)['tags'] or 'checked' in self.tree.item(child)['tags']) for child in
                 self.tree.get_children(f"{type_id}")]
-            if all(checked_list):
-                self.tree.item(f"{type_id}", tags=['checked'])
             if any(checked_tristate_list):
                 self.tree.item(f"{type_id}", tags=['tristate'], open=True)
+            if all(checked_list):
+                self.tree.item(f"{type_id}", tags=['checked'])
 
         self.parameter_file.set(self.gui.qoemu_config.parameter_file.get())
         return
@@ -204,8 +199,7 @@ class ParameterFrame(tk.Frame):
     def save_to_config(self):
         pass
 
-    def update(self):
-
+    def update_display(self):
         self.open_file(self.gui.qoemu_config.parameter_file.get())
 
 
