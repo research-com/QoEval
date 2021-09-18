@@ -3,7 +3,7 @@ from qoemu_pkg.coordinator import Coordinator
 
 
 def main():
-    qoemu_config = get_default_qoemu_config()
+    qoemu_config = QoEmuConfiguration()
 
     qoemu_config.read_from_file(qoemu_config.gui_current_config_file.get())
 

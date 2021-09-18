@@ -42,7 +42,7 @@ class Gui(tk.Tk):
         style = ttk.Style()
         style.theme_settings("default", {"TNotebook.Tab": {"configure": {"padding": [10, 2]}}})
 
-        self.qoemu_config = get_default_qoemu_config()
+        self.qoemu_config = QoEmuConfiguration()
 
         self.current_config_path = tk.StringVar()
         self.current_config_path.set(self.qoemu_config.gui_current_config_file.get())
