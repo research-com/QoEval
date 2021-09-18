@@ -17,6 +17,7 @@ from qoemu_pkg.parser import parser
 OPEN_FILE_TEXT = "Open Parameter File"
 PARAMETER_FILE_DESC = "Parameter File:"
 
+
 class ParameterFrame(tk.Frame):
 
     def __init__(self, master, gui: Gui):
@@ -92,7 +93,7 @@ class ParameterFrame(tk.Frame):
         # update config
         self.tree.bind('<<TreeviewSelect>>', self.update_config)
 
-        self.open_file(self.gui.qoemu_config.parameter_file.get())
+        self.open_file(self.gui.qoemu_config.parameter_file.get(), path_from_config=True)
 
     def update_config(self, *args):
         entries = self.get_checked_entries()
@@ -109,13 +110,13 @@ class ParameterFrame(tk.Frame):
             self.gui.qoemu_config.gui_coordinator_stimuli.set([])
             self.open_file(path)
 
-    def open_file(self, filename, update=False):
+    def open_file(self, filename, path_from_config=False):
 
         try:
             parser.load_parameter_file(filename)
         except FileNotFoundError:
             self.gui.qoemu_config.parameter_file.set(self.parameter_file.get())
-            if update:
+            if path_from_config:
                 messagebox.showerror(f"Error", f"Parameter file \"{filename}\" specified "
                                                f"in selected config file not found")
             else:
