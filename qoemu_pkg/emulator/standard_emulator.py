@@ -5,7 +5,7 @@
 import time
 
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, adb_name
-from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
+from qoemu_pkg.configuration import QoEmuConfiguration
 
 import logging as log
 import configparser
@@ -227,7 +227,7 @@ class StandardEmulator(MobileDevice):
 
 def main():
     print("Emulator control")
-    emu = StandardEmulator(get_default_qoemu_config())
+    emu = StandardEmulator(QoEmuConfiguration())
     # emu.delete_vd()
     emu.launch(orientation=MobileDeviceOrientation.LANDSCAPE, playstore=False)
     ipaddr = emu.get_ip_address()

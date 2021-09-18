@@ -12,7 +12,7 @@ import Xlib
 import Xlib.display
 from collections import namedtuple
 from qoemu_pkg.utils import convert_to_seconds
-from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
+from qoemu_pkg.configuration import QoEmuConfiguration
 
 # Define constants
 FFMPEG = "ffmpeg"
@@ -252,8 +252,8 @@ class CaptureEmulator(Capture):
 
 def main():
     print("QoE screen capturing")
-    # cap = CaptureEmulator(get_default_qoemu_config())
-    cap = CaptureRealDevice(get_default_qoemu_config())
+    # cap = CaptureEmulator(QoEmuConfiguration())
+    cap = CaptureRealDevice(QoEmuConfiguration())
     cap.start_recording("output")
 
 

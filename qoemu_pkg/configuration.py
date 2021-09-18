@@ -13,8 +13,6 @@ from typing import List, Union, Dict
 from qoemu_pkg.gui.tooltip_strings import add_tooltips
 
 # default file name of configuration file and mandatory section name
-import qoemu_pkg.analysis.analysis
-
 QOEMU_CONF = 'qoemu.conf'
 QOEMU_SECTION = 'QOEMU'
 NETEM_SECTION = 'NETEM'
@@ -46,10 +44,23 @@ if os.environ.get("QOEMU_CONF"):
 
 
 class QoEmuConfiguration:
+    """ This class reads a QoEmu Config file, provides setters and getters for the options and allows saving of a config
+    """
 
-    def __init__(self, configparser: configparser.ConfigParser):
+    def __init__(self, config_file_path: str = None):
+        """
+
+        :param config_file_path: The config file to be loaded, if None the default config file will be loaded
+        """
+        self.configparser = configparser.ConfigParser()
+        if config_file_path:
+            self.configparser.read(config_file_path)
+        else:
+            self.configparser.read(_default_config_file_locations)  # note: last file will take precedence in case of overlap
+        if QOEMU_SECTION not in self.configparser:
+            raise RuntimeError(
+                'No configuration file found - not even the default configuration. Check your installation.')
         self.modified_since_last_save = False
-        self.configparser = configparser
 
         # general options and paths
         self.vd_path = Option(self, 'AVDPath', _default_avd_path, expand_user=True)
@@ -300,3 +311,4 @@ def get_default_qoemu_config() -> QoEmuConfiguration:
         raise RuntimeError('No configuration file found - not even the default configuration. Check your installation.')
     config = QoEmuConfiguration(parser)
     return config
+
