@@ -18,7 +18,7 @@ file = []
 file_loaded = False
 
 
-def load_parameter_file(file_path, is_relative_path=True):
+def load_parameter_file(file_path):
     """
        Loads the specified file globally. If no file is specified it will load CSV_FILENAME.
 
@@ -29,8 +29,6 @@ def load_parameter_file(file_path, is_relative_path=True):
        ----------
        file_path : str, optional
             File path of the file to be loaded, default is the constant CSV_FILENAME
-       is_relative_path : bool, optional
-            True if the path is relative, default is True
 
        """
     global file
@@ -39,11 +37,11 @@ def load_parameter_file(file_path, is_relative_path=True):
     parselog.setLevel('WARNING')
 
     try:
-        if is_relative_path:
+        if os.path.isabs(file_path):
+            file = open(file_path).read().split("\n")
+        else:
             file_path = os.path.join("../", file_path)
             file = files('qoemu_pkg').joinpath(file_path).read_text().split("\n")
-        else:
-            file = open(file_path).read().split("\n")
         file_loaded = True
         if not _is_correct_parameter_file():
             log.warning(f"Parameter file \"{file_path}\" is not fully parsable - some use-cases might not have valid "
