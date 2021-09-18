@@ -77,11 +77,11 @@ class Gui(tk.Tk):
 
         self.button_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
         self.button_frame.pack(fill=tk.Y, expand=0, side="top")
-        self.button_load_default = tk.Button(self.button_frame, text="Load Default Config",
+        self.button_load_default = tk.Button(self.button_frame, text="Open Default Config",
                                              command=self.load_default_config)
         self.button_load_default.pack(fill=tk.X, side="right", expand=2)
 
-        self.button_load_config = tk.Button(self.button_frame, text="Load Config", command=self.load_config)
+        self.button_load_config = tk.Button(self.button_frame, text="Open Config", command=self.load_config)
         self.button_load_config.pack(fill=tk.X, side="right", expand=0)
 
         self.button_save_config_as = tk.Button(self.button_frame, text="Save Config As", command=self.save_config_as)
