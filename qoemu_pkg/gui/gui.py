@@ -38,6 +38,10 @@ class Gui(tk.Tk):
         style = ttk.Style()
         style.theme_settings("default", {"TNotebook.Tab": {"configure": {"padding": [10, 2]}}})
 
+        path = os.path.dirname(GUI_DEFAULT_CONFIG_FILE_LOCATION)
+        if not os.path.exists(path):
+            os.makedirs(path)
+
         try:
             self.qoemu_config = QoEmuConfiguration(GUI_DEFAULT_CONFIG_FILE_LOCATION)
             self.current_config_path = tk.StringVar()
@@ -101,12 +105,7 @@ class Gui(tk.Tk):
     def save_config(self):
         path = os.path.dirname(self.qoemu_config.gui_current_config_file.get())
         if not os.path.exists(path):
-            try:
-                os.makedirs(path)
-            except OSError:
-                print("Creation of the directory %s failed" % path)
-            else:
-                print("Successfully created the directory %s " % path)
+            os.makedirs(path)
         self.update_elements_config()
         self.qoemu_config.save_to_file(self.qoemu_config.gui_current_config_file.get())
 
@@ -120,7 +119,7 @@ class Gui(tk.Tk):
 
     def load_config(self):
         path_object = filedialog.askopenfile(initialdir=
-                                             os.path.dirname(self.qoemu_config.gui_current_config_file.get()),
+                                             os.path.dirname(GUI_DEFAULT_CONFIG_FILE_LOCATION),
                                              filetypes=[("config files", "*.conf")])
         if not path_object:
             return
@@ -145,7 +144,7 @@ class Gui(tk.Tk):
 
     def save_config_as(self):
         path_object = filedialog.asksaveasfile(initialdir=
-                                               os.path.dirname(self.qoemu_config.gui_current_config_file.get()),
+                                               os.path.dirname(GUI_DEFAULT_CONFIG_FILE_LOCATION),
                                                filetypes=[("config files", "*.conf")])
         if not path_object:
             return

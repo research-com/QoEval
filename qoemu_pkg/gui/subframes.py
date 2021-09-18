@@ -98,7 +98,7 @@ class FolderFrame(tk.Frame):
         self.entry.bind('<FocusOut>', self.update_config)
 
     def open_folder(self):
-        path = filedialog.askdirectory()
+        path = filedialog.askdirectory(initialdir=self.config_variable.get())
         if len(path) > 0:
             self.path.set(path)
             self.update_config()
