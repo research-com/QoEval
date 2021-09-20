@@ -16,7 +16,7 @@ import qoemu_pkg.gui.gui
 from qoemu_pkg.coordinator import Coordinator, FINISH_CAMPAIGN_LOG, FINISH_POST_LOG
 import threading
 from typing import Callable, List, Optional
-from subframes import *
+from qoemu_pkg.gui.subframes import *
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:

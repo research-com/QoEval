@@ -4,17 +4,17 @@ import os.path
 import tkinter as tk
 
 import qoemu_pkg.analysis.analysis
-from config import *
+from qoemu_pkg.gui.config import *
 from tkinter import filedialog, messagebox
 from qoemu_pkg.configuration import *
 import logging as log
-from tooltip import Tooltip
+from qoemu_pkg.gui.tooltip import Tooltip
 from typing import List
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from qoemu_pkg.gui.gui import Gui
-import tooltip_strings
+import qoemu_pkg.gui.tooltip_strings
 
 
 class StringSelectFrame(tk.Frame):

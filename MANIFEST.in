@@ -2,3 +2,6 @@ include README.md
 include requirements.txt
 recursive-include qoemu_pkg *.conf
 recursive-include qoemu_pkg/videos *.avi
+recursive-include qoemu_pkg/spinner *.png
+recursive-include qoemu_pkg/spinner *.md
+recursive-include qoemu_pkg/gui *.png
