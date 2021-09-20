@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import tkinter as tk
-from subframes import *
+from qoemu_pkg.gui.subframes import *
 import qoemu_pkg.analysis.analysis as analysis
 from typing import TYPE_CHECKING
 

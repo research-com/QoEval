@@ -1,4 +1,4 @@
-# QoEmu V0.1
+# QoEmu V0.5
 
 ## Installation
 
@@ -34,14 +34,21 @@ python3.9 -m build
 Afterwards, the package can be installed using pip:
 
 ```
-pip3 install dist/qoemu-pkg-hm-0.1.0.tar.gz
+pip3 install dist/qoemu-pkg-hm-0.5.0.tar.gz
 ```
 
-### Running QoEmu
-A user-friendly GUI for QoEmu is currently under development. Until it is available,
-the ``coordinator.py`` is used to control the emulation.
+### Running QoEmu - Graphical User Interface (GUI)
 
-The package installs a command-line entry point for it - after installing the package, you 
+QoEmu includes a simple graphical user interface which allows to modify the emulation parameters, run the
+emulation and evaluate the results. After installing the package simply enter
+
+```
+qoemu-gui
+```
+
+### Running QoEmu - Command Line
+
+The package also installs a command-line entry point for the QoEmu commandline utility - after installing the package, you 
 can simply launch qoemu via command-line. Stimuli type (e.g. "VS") and stimuli table id (e.g. "B") need to be 
 specified. The third parameter specified the stimuli id, use ALL to generate all stimuli within the table.
 ```

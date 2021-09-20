@@ -1,5 +1,5 @@
 from __future__ import annotations
-from subframes import *
+from qoemu_pkg.gui.subframes import *
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

@@ -1,14 +1,14 @@
 from tkinter import messagebox
 
 import qoemu_pkg.utils
-from emulation_frame import *
-from parameter_frame import *
-from post_processing_frame import *
-from analysis_frame import *
-from run_frame import *
+from qoemu_pkg.gui.emulation_frame import *
+from qoemu_pkg.gui.parameter_frame import *
+from qoemu_pkg.gui.post_processing_frame import *
+from qoemu_pkg.gui.analysis_frame import *
+from qoemu_pkg.gui.run_frame import *
 from qoemu_pkg.configuration import *
 from qoemu_pkg import configuration
-import tooltip_strings
+import qoemu_pkg.gui.tooltip_strings
 from qoemu_pkg import __version__
 
 
