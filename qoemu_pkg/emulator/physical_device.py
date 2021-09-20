@@ -8,7 +8,7 @@ import time
 from qoemu_pkg.emulator.mobiledevice import check_ext, MobileDevice, MobileDeviceOrientation, \
     MEASUREMENT_DURATION
 
-from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
+from qoemu_pkg.configuration import QoEmuConfiguration
 import logging as log
 import subprocess
 import shlex
@@ -144,7 +144,7 @@ class PhysicalDevice(MobileDevice):
 
 def main():
     print("physical device control")
-    pd = PhysicalDevice(get_default_qoemu_config())
+    pd = PhysicalDevice(QoEmuConfiguration())
     pd.launch(orientation=MobileDeviceOrientation.LANDSCAPE, playstore=False)
     ipaddr = pd.get_ip_address()
     rtt = pd.measure_rtt()

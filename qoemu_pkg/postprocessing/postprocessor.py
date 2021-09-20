@@ -6,7 +6,7 @@ import subprocess
 
 import importlib_resources
 
-from qoemu_pkg.configuration import QoEmuConfiguration, get_default_qoemu_config
+from qoemu_pkg.configuration import QoEmuConfiguration
 from qoemu_pkg.videos import t_init
 
 FFMPEG = "ffmpeg"
@@ -195,7 +195,7 @@ class PostProcessor:
 
 
 def main():
-    p = PostProcessor(get_default_qoemu_config())
+    p = PostProcessor(QoEmuConfiguration())
     p.process("VS-C-1_E1-R-0.1_P0", "test", 2, 5, 10, normalize_audio=True, erase_box=[2180, 930, 130, 130])
 
     print("Done.")

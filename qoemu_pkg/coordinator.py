@@ -10,7 +10,7 @@ from qoemu_pkg.postprocessing.buffering_generator import BufferingGenerator
 from qoemu_pkg.postprocessing.postprocessor import PostProcessor
 from qoemu_pkg.postprocessing.determine_video_start import determine_video_start
 from qoemu_pkg.postprocessing.determine_image_timestamp import determine_frame, frame_to_time
-from qoemu_pkg.configuration import MobileDeviceOrientation, QoEmuConfiguration, get_default_qoemu_config
+from qoemu_pkg.configuration import MobileDeviceOrientation, QoEmuConfiguration
 from qoemu_pkg.emulator.genymotion_emulator import GenymotionEmulator
 from qoemu_pkg.emulator.standard_emulator import StandardEmulator
 from qoemu_pkg.emulator.physical_device import PhysicalDevice
@@ -44,6 +44,8 @@ def gen_log_file(qoemu_config: QoEmuConfiguration):
     return os.path.join(qoemu_config.video_capture_path.get(), 'qoemu.log')
 
 
+FINISH_CAMPAIGN_LOG = "Campaign finished for stimulus: "
+FINISH_POST_LOG = "Finished post-processing: "
 _AUTO_CODEC = "auto"
 
 
@@ -264,22 +266,16 @@ class Coordinator:
 
         if self.qoemu_config.traffic_analysis_plot.get():
             self.analysis.wait_until_completed()
-            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
-                                 [analysis.OUT], [analysis.ALL], analysis.BAR)
-            plot.save_pdf(f"{self.stats_filepath}_out")
-            plot.save_png(f"{self.stats_filepath}_out")
-            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
-                                 [analysis.IN], [analysis.ALL], analysis.BAR)
-            plot.save_pdf(f"{self.stats_filepath}_in")
-            plot.save_png(f"{self.stats_filepath}_in")
-            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
-                                 [analysis.OUT], [analysis.ALL], analysis.HIST)
-            plot.save_pdf(f"{self.stats_filepath}_hist_out")
-            plot.save_png(f"{self.stats_filepath}_hist_out")
-            plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
-                                 [analysis.IN], [analysis.ALL], analysis.HIST)
-            plot.save_pdf(f"{self.stats_filepath}_hist_in")
-            plot.save_png(f"{self.stats_filepath}_hist_in")
+            for plot_setting in self.qoemu_config.traffic_analysis_plot_settings.get():
+                plot = analysis.Plot(self.stats_filepath, 0, convert_to_seconds(capture_time), analysis.BYTES,
+                                     plot_setting["directions"], plot_setting["protocols"], plot_setting["kind"])
+                name = f'{self.stats_filepath}_{plot_setting["kind"]}'
+                for direction in plot_setting["directions"]:
+                    name = f'{name}_{direction}'
+                for protocol in plot_setting["protocols"]:
+                    name = f'{name}_{protocol}'
+                plot.save_pdf(name)
+                plot.save_png(name)
 
         self.netem.disable_netem()
 
@@ -352,6 +348,7 @@ class Coordinator:
                             raise
                 finally:
                     self._finish()
+                    log.info(f"{FINISH_CAMPAIGN_LOG}{get_video_id(self.qoemu_config, type_id, table_id, entry_id)}")
 
     def _perform_postprocessing(self, type_id, table_id, ids_to_process, overwrite: bool = False):
         self._export_parameter_table(type_id, table_id)
@@ -506,8 +503,9 @@ class Coordinator:
             postprocessor.process(video_id_in, video_id_out, t_init_buf, t_raw_start, d_start_to_end,
                                   normalize_audio=is_normalizing_audio,
                                   erase_audio=self.qoemu_config.audio_erase_start_stop.get(),
-                                  erase_box=erase_box)
-            print(f"Finished post-processing: {video_id_in} ==> {video_id_out}")
+                                  erase_box = erase_box)
+            print(f"{FINISH_POST_LOG}{video_id_in} ==> {video_id_out}")
+
 
     def _add_generated_buffering(self, type_id, table_id, ids_to_process, overwrite: bool = False):
         self._type_id = type_id
@@ -606,7 +604,7 @@ class Coordinator:
 def main():
     print("Coordinator main started")
 
-    qoemu_config = get_default_qoemu_config()
+    qoemu_config = QoEmuConfiguration()
     coordinator = Coordinator(qoemu_config)
 
     # export all (for documentation)
