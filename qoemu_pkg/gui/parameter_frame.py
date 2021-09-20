@@ -74,8 +74,7 @@ class ParameterFrame(tk.Frame):
 
         # treeview column config
 
-        self.tree['columns'] = (
-            't_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'link', 'start', 'end')
+        self.tree['columns'] = qoemu_pkg.parser.parser.PARAMETER_NAMES
         self.tree.column("#0", stretch=False, minwidth=80, width=120)
         for column in self.tree['columns']:
             self.tree.heading(column, text=column)

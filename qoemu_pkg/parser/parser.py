@@ -12,7 +12,7 @@ from parse import search
 from parse import log as parselog
 
 Entry = namedtuple("Entry", "type_id table_id entry_id link start end codec t_init rul rdl dul ddl")
-_PARAMETER_NAMES = ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'genbufn', 'genbuft']
+PARAMETER_NAMES = ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'genbufn', 'genbuft']
 
 file = []
 file_loaded = False
@@ -469,7 +469,7 @@ def get_parameters(type_id, table_id, entry_id):
                 gen_parameter_values = [float(i) for i in gen_parameter_values_str]
             else:
                 gen_parameter_values = [0.0, 0.0]
-            it_name = iter(_PARAMETER_NAMES)
+            it_name = iter(PARAMETER_NAMES)
             it_value = iter(float_parameter_values + str_parameter_values + gen_parameter_values)
             return dict(zip(it_name, it_value))
 
