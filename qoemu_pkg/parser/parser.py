@@ -559,6 +559,9 @@ def export_entries(type_id: str, table_id: str, output_path: str, compact: bool 
         if line.startswith(f"Stimulus-ID"):
             if compact:
                 header_line = line.replace("Stimulus-ID", "ID")
+                header_line = header_line.replace("Dynamic", "Dyn")
+                header_line = header_line.replace("Num. Rebuffering", "# Buf")
+                header_line = header_line.replace("Rebuffering duration  [ms]", "Buf [ms]")
                 header_line = _remove_columns(header_line, columns_to_be_removed)
             else:
                 header_line = line
