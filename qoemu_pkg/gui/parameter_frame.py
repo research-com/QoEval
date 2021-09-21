@@ -74,17 +74,16 @@ class ParameterFrame(tk.Frame):
 
         # treeview column config
 
-        self.tree['columns'] = (
-            't_init', 'rul', 'rdl', 'dul', 'ddl', 'stimulus', 'codec', 'dynamic', 'link', 'start', 'end')
+        self.tree['columns'] = qoemu_pkg.parser.parser.PARAMETER_NAMES
         self.tree.column("#0", stretch=False, minwidth=80, width=120)
         for column in self.tree['columns']:
             self.tree.heading(column, text=column)
             if column == "link":
-                self.tree.column(column, stretch=False, minwidth=120, width=400)
+                self.tree.column(column, stretch=False, minwidth=120, width=400, anchor="e")
             elif column in ['t_init', 'rul', 'rdl', 'dul', 'ddl', 'codec']:
-                self.tree.column(column, stretch=False, minwidth=60, width=60)
+                self.tree.column(column, stretch=False, minwidth=60, width=60, anchor="e")
             else:
-                self.tree.column(column, stretch=False, minwidth=60, width=100)
+                self.tree.column(column, stretch=False, minwidth=60, width=100, anchor="e")
 
         # make leftclick copy possible in treeview
         self.tree.bind('<ButtonRelease-1>', self._tree_copy_click_handler)
