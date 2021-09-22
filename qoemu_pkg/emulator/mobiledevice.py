@@ -32,7 +32,7 @@ def check_ext(name):
     output = subprocess.run(['which', name], stdout=subprocess.PIPE,
                             universal_newlines=True)
     if len(output.stdout) == 0:
-        log.error(f"External component {name} not found. Must be in path - please install AndroidStudio.")
+        log.error(f"External component {name} not found. Must be in path - please install and try again.")
         raise RuntimeError('External component not found.')
     else:
         log.debug(f"using {output.stdout}")

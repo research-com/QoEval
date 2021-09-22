@@ -39,13 +39,9 @@ def load_parameter_file(file_path):
     parselog.setLevel('WARNING')
 
     try:
-        if os.path.isabs(file_path):
-            file = open(file_path).read().split("\n")
-        else:
-            file_path = os.path.join("../", file_path)
-            file = files('qoemu_pkg').joinpath(file_path).read_text().split("\n")
+        file = open(file_path).read().split("\n")
         file_loaded = True
-        if not _is_correct_parameter_file():
+        if not is_correct_parameter_file():
             log.warning(f"Parameter file \"{file_path}\" is not fully parsable - some use-cases might not have valid "
                         f"parameter values. Please check the format of the csv file.")
     except FileNotFoundError:
@@ -585,7 +581,7 @@ def export_entries(type_id: str, table_id: str, output_path: str, compact: bool 
     log.info(f"Exported {type_id}-{table_id} to {output_path}.")
 
 
-def _is_correct_parameter_file() -> bool:
+def is_correct_parameter_file() -> bool:
     status_ok = True
     all_type_ids = get_type_ids()
     for type_id in all_type_ids:
