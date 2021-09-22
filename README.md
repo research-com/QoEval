@@ -199,11 +199,6 @@ network emulation cannot be limited to the IP of the emulator
 
 For controlling the device, [AndroidViewClient](https://github.com/dtmilano/AndroidViewClient) is required. 
 
-Alternatives (currently not used in the project):
-* monkeyrunner API via Python: https://developer.android.com/studio/test/monkeyrunner/, https://www.thegeekstuff.com/2014/08/monkeyrunner-android/
-* monkey tool via adb: \
-  `monkey -p com.google.android.youtube -c android.intent.category.LAUNCHER 1` 
-* `uiautomatorviewer` (sdk tool) to get x,y
 
 
 ## Known Bugs and Problems
@@ -230,6 +225,7 @@ qoemu reference platform is a Google Pixel 5:
 We make use of a bunch of other software tools - and thank all authors of these for
 for making them publicly available. These include, but are not limited to:
 * Android View Client https://github.com/dtmilano/AndroidViewClient
+* Bufferer https://github.com/slhck/bufferer
 * Genimotion Android Emulator https://www.genymotion.com/
 * Genimotion scrcpy https://github.com/Genymobile/scrcpy
 * The GPAC suite for video and audio processing:
