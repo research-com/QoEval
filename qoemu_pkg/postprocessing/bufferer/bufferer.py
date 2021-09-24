@@ -320,7 +320,11 @@ class Bufferer:
 
         base_cmd.extend(["-filter_complex", ";".join(filters)])
         base_cmd.extend(["-map", "[outv]"])
-        base_cmd.extend(["-c:v", self.vcodec, "-pix_fmt", self.pixfmt, "-vsync", "cfr"])
+        # LW: removed -vsync cfr, pix_mt options to be identical to P1 encoding
+        # base_cmd.extend(["-c:v", self.vcodec, "-pix_fmt", self.pixfmt, "-vsync", "cfr"])
+        base_cmd.extend(["-c:v", self.vcodec])
+        # LW: add -vtag xvid (as within P1 encoding)
+        base_cmd.extend(["-vtag", "xvid"])
         # LW: add qscale option to increase quality
         base_cmd.extend(["-qscale:v", "1"])
         base_cmd.append(self._get_tmp_filename("video"))
