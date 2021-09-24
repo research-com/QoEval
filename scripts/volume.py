@@ -12,6 +12,7 @@ HEADER = "file, maximum volume, mean volume, histogram_2db, histogram_3db, histo
 
 def _get_volume_info(input_filename_list: List[str]) -> str:
     result = ""
+    input_filename_list.sort()
     for input_filename in input_filename_list:
         command = f"{FFMPEG} -i {input_filename} -af \"volumedetect\" -vn -sn -dn -f null /dev/null "
         output = subprocess.run(shlex.split(command), stderr=subprocess.PIPE,
