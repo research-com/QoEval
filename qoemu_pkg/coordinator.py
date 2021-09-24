@@ -577,8 +577,8 @@ class Coordinator:
 
         # ids_to_evaluate =  ['1'] #,'5','4','3','2','1']
 
-        if ids_to_evaluate is None:
-            raise RuntimeError(f"No Stimuli-IDs to evaluate - "
+        if ids_to_evaluate is None or len(ids_to_evaluate) < 1:
+            raise RuntimeError(f"No Stimuli-IDs to evaluate for {type_id}-{table_id} - "
                                f"check parameter file \"{self.qoemu_config.parameter_file.get()}\"")
 
         try:
@@ -610,8 +610,8 @@ def main():
     # export all (for documentation)
     # coordinator.export_all_parameter_tables()
 
-    coordinator.start(['VSB'], ['D'], # ['1','2','3','4','5','6','7','8'],
-                      generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['VSB'], ['B'], # ['1','2','3','4','5','6','7','8'],
+                      generate_stimuli=False, postprocessing=True, overwrite=False)
 
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
