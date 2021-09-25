@@ -60,10 +60,8 @@ class VideoPlayer(tk.Tk):
 
 
         self.trigger_path = os.path.expanduser(args[0])
-        print(self.trigger_path)
         if not os.path.exists(self.trigger_path):
             os.makedirs(self.trigger_path)
-            print("path made")
 
         self.video_paths = args[1:]
         if len(self.video_paths) > 1:
@@ -127,7 +125,6 @@ class VideoPlayerFrame(tk.Frame):
         self.media = self.vlc_instance.media_new(str(self.file_path))  # Path, unicode
         self.player.set_media(self.media)
         self.loaded_media_mrl = self.player.get_media().get_mrl()
-        # print(self.loaded_media_mrl)
 
         self.button_pause = tk.Button(self.buttons_panel, text="playpause", command=self.play_pause, width=3)
         self.button_pause.pack(side=tk.LEFT, expand=0)
@@ -169,15 +166,8 @@ class VideoPlayerFrame(tk.Frame):
         self.OnTick()
 
     def mute(self):
-        if self.player.audio_get_mute():
-            self.button_mute.configure(text="Mute")
-        else:
-            self.button_mute.configure(text="Unmute")
         self.player.audio_toggle_mute()
-
-
-
-        pass
+        self.update_mute_status()
 
     def frame_forward(self):
         curr_time = self.player.get_time()
@@ -214,6 +204,14 @@ class VideoPlayerFrame(tk.Frame):
             self.button_pause.configure(text="Pause")
 
 
+
+    def update_mute_status(self):
+        if self.player.is_playing():
+            if self.player.audio_get_mute():
+                self.button_mute.configure(text="Unmute")
+            else:
+                self.button_mute.configure(text="Mute")
+
     def stop(self):
         self.player.stop()
 
@@ -248,12 +246,8 @@ class VideoPlayerFrame(tk.Frame):
     def OnTick(self):
         """Timer tick, update the time slider to the video time.
         """
+        self.update_mute_status()
         if self.player:
-            if self.player.audio_get_mute():
-                self.button_mute.configure(text="Unmute")
-            else:
-                self.button_mute.configure(text="Mute")
-
             if self.player.is_playing():
                 self.button_pause.configure(text="Pause")
             else:
@@ -286,6 +280,5 @@ def main(*args):
 
 
 if __name__ == '__main__':
-    print("hello there")
-    print(sys.argv)
+
     main(sys.argv[1:])
