@@ -7,6 +7,7 @@ from qoemu_pkg.gui.post_processing_frame import *
 from qoemu_pkg.gui.analysis_frame import *
 from qoemu_pkg.gui.run_frame import *
 from qoemu_pkg.configuration import *
+from qoemu_pkg.gui.results_frame import *
 from qoemu_pkg import configuration
 import qoemu_pkg.gui.tooltip_strings
 from qoemu_pkg import __version__
@@ -25,6 +26,7 @@ ANALYSIS_TAB_NAME = 'Analysis'
 RUN_TAB_NAME = 'Run'
 TAB_WIDTH = 15
 CONFIG_FILE_DESC = "Current config file:"
+RESULTS_TAB_NAME = "Results"
 
 
 class Gui(tk.Tk):
@@ -95,13 +97,14 @@ class Gui(tk.Tk):
         self.settings_frame = EmulationFrame(self, self)
         self.post_processing_frame = PostProcessingFrame(self, self)
         self.analysis_frame = AnalysisFrame(self, self)
-
+        self.results_frame = ResultsFrame(self, self)
 
         self.notebook.add(self.parameter_frame, text=f'{PARAMETERS_TAB_NAME: ^{TAB_WIDTH}s}')
         self.notebook.add(self.settings_frame, text=f'{EMULATION_TAB_NAME: ^20s}')
         self.notebook.add(self.post_processing_frame, text=f'{POST_PROCESSING_TAB_NAME: ^{TAB_WIDTH}s}')
         self.notebook.add(self.analysis_frame, text=f'{ANALYSIS_TAB_NAME: ^{TAB_WIDTH}s}')
         self.notebook.add(self.run_frame, text=f'{RUN_TAB_NAME: ^{TAB_WIDTH}s}')
+        self.notebook.add(self.results_frame, text=f'{RESULTS_TAB_NAME: ^{TAB_WIDTH}s}')
 
     def save_config(self):
         path = os.path.dirname(self.qoemu_config.gui_current_config_file.get())
