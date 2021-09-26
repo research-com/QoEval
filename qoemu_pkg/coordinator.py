@@ -401,8 +401,13 @@ class Coordinator:
                 # try to find alternative unprocessed input file
                 alternative_stimuli = \
                     get_stimuli_path(self.qoemu_config, type_id, table_id, entry_id, "0", True)
-                log.debug(f"Unprocessed video file {unprocessed_video_path} does not exist but found a valid "
-                          f"alternative: {alternative_stimuli}")
+                if alternative_stimuli:
+                    log.debug(f"Unprocessed video file {unprocessed_video_path} does not exist but found a valid "
+                              f"alternative: {alternative_stimuli}")
+                else:
+                    log.error(f"Unprocessed video file {unprocessed_video_path} does not exist and there are no"
+                              f"alternatives to be used. Cannot continue.")
+                    raise RuntimeError(f"Video file {unprocessed_video_path} does not exist.")
                 unprocessed_video_path = alternative_stimuli
 
             if not os.path.isfile(unprocessed_video_path):
@@ -610,8 +615,8 @@ def main():
     # export all (for documentation)
     # coordinator.export_all_parameter_tables()
 
-    coordinator.start(['VSB'], ['B'], # ['1','2','3','4','5','6','7','8'],
-                      generate_stimuli=False, postprocessing=True, overwrite=False)
+    coordinator.start(['VS'], ['B'], # ['1','2','3','4','5','6','7','8'],
+                      generate_stimuli=True, postprocessing=True, overwrite=False)
 
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
