@@ -14,41 +14,7 @@ import sys
 if TYPE_CHECKING:
     from qoemu_pkg.gui.gui import Gui
 
-OPEN_FILE_TEXT = "open file"
 _VIDEO = '/home/jk/stimuli/VSB-F-1_E1-R-0.5.0_P1.avi'
-
-WINDOW_SIZE = "700x700"
-
-
-def open_video_player(self):
-    # Toplevel object which will
-    # be treated as a new window
-    self.video_window = tk.Toplevel(self)
-    self.video_player_frame1 = VideoPlayerFrame(self.video_window, self.instance)
-    self.video_player_frame1.pack(fill=tk.BOTH, expand=1)
-    self.video_player_frame2 = VideoPlayerFrame(self.video_window, self.instance)
-    self.video_player_frame2.pack(fill=tk.BOTH, expand=1)
-    # sets the title of the
-    # Toplevel widget
-    # new_window.title("New Window")
-    #
-    # # sets the geometry of toplevel
-    self.video_window.geometry("600x600")
-
-    # self.video_window.protocol("WM_DELETE_WINDOW", self.on_closing)
-
-
-def on_closing(self):
-    if self.video_player_frame1:
-        self.video_player_frame1.stop()
-        self.video_player_frame1.player.release()
-    if self.video_player_frame2:
-        self.video_player_frame2.stop()
-        self.video_player_frame2.player.release()
-    self.video_window.destroy()
-
-    self.instance.release()
-    self.instance = vlc.Instance(['--no-xlib'])
 
 
 class VideoPlayer(tk.Tk):
@@ -65,15 +31,15 @@ class VideoPlayer(tk.Tk):
 
         self.video_paths = args[1:]
         if len(self.video_paths) > 1:
-            self.title("TOP: " + os.path.split(self.video_paths[0])[1] + " / "
-                       "BOTTOM: " + os.path.split(self.video_paths[1])[1])
+            self.title("LEFT: " + os.path.split(self.video_paths[0])[1] + " / "
+                       "RIGHT: " + os.path.split(self.video_paths[1])[1])
         else:
             self.title(os.path.split(self.video_paths[0])[1])
         self.frames = []
 
         for video_path in self.video_paths:
             video_player_frame = VideoPlayerFrame(self, video_path)
-            video_player_frame.pack(fill=tk.BOTH, expand=1)
+            video_player_frame.pack(fill=tk.BOTH, expand=1, side=tk.LEFT)
             self.frames.append(video_player_frame)
         self.protocol("WM_DELETE_WINDOW", self.on_exit)
 
@@ -113,12 +79,12 @@ class VideoPlayerFrame(tk.Frame):
         self.type_id_table_id = "-".join(self.type_id_table_id.split("-")[0:2])
 
         self.buttons_panel = tk.Frame(self)
-        self.buttons_panel.pack(expand=0, side="bottom")
+        self.buttons_panel.pack(expand=0, side=tk.BOTTOM)
 
         self.videopanel = ttk.Frame(self)
         self.canvas = tk.Canvas(self.videopanel)
         self.canvas.pack(fill=tk.BOTH, expand=1)
-        self.videopanel.pack(fill=tk.BOTH, expand=1, side="bottom")
+        self.videopanel.pack(fill=tk.BOTH, expand=1, side=tk.TOP)
 
         self.player = self.vlc_instance.media_player_new()
 
@@ -139,20 +105,18 @@ class VideoPlayerFrame(tk.Frame):
         self.button_screen = tk.Button(self.buttons_panel, text="Trigger End", command=self.trigger_end, width=8)
         self.button_screen.pack(side=tk.LEFT, expand=0)
 
-
-
         h = self.canvas.winfo_id()
         self.player.set_xwindow(h)
 
-        timers = ttk.Frame(self.buttons_panel)
+        self.frame_timers = ttk.Frame(self)
         self.timeVar = tk.DoubleVar()
         self.timeSliderLast = 0
-        self.timeSlider = tk.Scale(timers, variable=self.timeVar, command=self.on_time,
-                                   from_=0, to=0, orient=tk.HORIZONTAL, length=500,
-                                   showvalue=0)  # label='Time',
+        self.timeSlider = tk.   Scale(self.frame_timers, variable=self.timeVar, command=self.on_time,
+                                      from_=0, to=0, orient=tk.HORIZONTAL, length=500,
+                                      showvalue=0)  # label='Time',
         self.timeSlider.pack(side=tk.BOTTOM, fill=tk.X, expand=1)
         self.timeSliderUpdate = time.time()
-        timers.pack(side=tk.RIGHT, fill=tk.X)
+        self.frame_timers.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.button_frame_forward = tk.Button(self.buttons_panel, text="<", command=self.frame_backward, width=1)
         self.button_frame_forward.pack(side=tk.LEFT, expand=0)
@@ -162,6 +126,8 @@ class VideoPlayerFrame(tk.Frame):
 
         self.button_mute = tk.Button(self.buttons_panel, text="Mute", command=self.mute, width=4)
         self.button_mute.pack(side=tk.LEFT, expand=0)
+
+
 
         self.OnTick()
 
