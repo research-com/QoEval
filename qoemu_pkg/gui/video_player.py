@@ -47,6 +47,30 @@ class VideoPlayer(tk.Tk):
         for frame in self.video_frames:
             frame.go_to()
 
+    def second_forward_all(self):
+        for frame in self.video_frames:
+            frame.second_forward(force=True)
+
+    def frame_forward_all(self):
+        for frame in self.video_frames:
+            frame.frame_forward(force=True)
+
+    def frames_forward_all(self):
+        for frame in self.video_frames:
+            frame.frames_forward(force=True)
+
+    def frame_backward_all(self):
+        for frame in self.video_frames:
+            frame.frame_backward(force=True)
+
+    def frames_backward_all(self):
+        for frame in self.video_frames:
+            frame.frames_backward(force=True)
+
+    def second_backward_all(self):
+        for frame in self.video_frames:
+            frame.second_backward(force=True)
+
     def update_sync_buttons(self):
         if any([frame.player.is_playing() for frame in self.video_frames]):
             for frame in self.video_frames:
@@ -99,10 +123,15 @@ class VideoPlayerFrame(tk.Frame):
         self.button_trigger_start = tk.Button(self.buttons_panel, text="Trigger Start", command=self.trigger_start,
                                               width=8)
         self.button_trigger_end = tk.Button(self.buttons_panel, text="Trigger End", command=self.trigger_end, width=8)
+        self.is_controll_all_var = tk.BooleanVar()
+        self.checkbutton_control_all = tk.Checkbutton(self.buttons_panel, text="Control all:", width=8,
+                                                      variable=self.is_controll_all_var)
+        self.button_second_backward = tk.Button(self.buttons_panel, text="<<<", command=self.second_backward, width=1)
         self.button_frames_backward = tk.Button(self.buttons_panel, text="<<", command=self.frames_backward, width=1)
         self.button_frame_backward = tk.Button(self.buttons_panel, text="<", command=self.frame_backward, width=1)
         self.button_frame_forward = tk.Button(self.buttons_panel, text=">", command=self.frame_forward, width=1)
         self.button_frames_forward = tk.Button(self.buttons_panel, text=">>", command=self.frames_forward, width=1)
+        self.button_second_forward = tk.Button(self.buttons_panel, text=">>>", command=self.second_forward, width=1)
         self.button_mute = tk.Button(self.buttons_panel, text="Mute", command=self.mute, width=4)
 
         # slider frame
@@ -153,10 +182,13 @@ class VideoPlayerFrame(tk.Frame):
             self.button_bookmark_go_to_all.pack(side=tk.LEFT, expand=0)
         self.button_trigger_start.pack(side=tk.LEFT, expand=0)
         self.button_trigger_end.pack(side=tk.LEFT, expand=0)
+        self.checkbutton_control_all.pack(side=tk.LEFT, expand=0)
+        self.button_second_backward.pack(side=tk.LEFT, expand=0)
         self.button_frames_backward.pack(side=tk.LEFT, expand=0)
         self.button_frame_backward.pack(side=tk.LEFT, expand=0)
         self.button_frame_forward.pack(side=tk.LEFT, expand=0)
         self.button_frames_forward.pack(side=tk.LEFT, expand=0)
+        self.button_second_forward.pack(side=tk.LEFT, expand=0)
         self.button_mute.pack(side=tk.LEFT, expand=0)
 
     def _pack_frame_slider(self):
@@ -166,21 +198,47 @@ class VideoPlayerFrame(tk.Frame):
         self.player.audio_toggle_mute()
         self.update_mute_status()
 
-    def frame_forward(self):
-        curr_time = self.player.get_time()
-        self.player.set_time(curr_time + 33)
+    def frame_forward(self, force=False):
+        if self.is_controll_all_var.get() and not force:
+            self.master.frame_forward_all()
+        else:
+            curr_time = self.player.get_time()
+            self.player.set_time(curr_time + 33)
 
-    def frame_backward(self):
-        curr_time = self.player.get_time()
-        self.player.set_time(curr_time - 33)
+    def frame_backward(self, force=False):
+        if self.is_controll_all_var.get() and not force:
+            self.master.frame_backward_all()
+        else:
+            curr_time = self.player.get_time()
+            self.player.set_time(curr_time - 33)
 
-    def frames_forward(self):
-        curr_time = self.player.get_time()
-        self.player.set_time(curr_time + 333)
+    def frames_forward(self, force=False):
+        if self.is_controll_all_var.get() and not force:
+            self.master.frames_forward_all()
+        else:
+            curr_time = self.player.get_time()
+            self.player.set_time(curr_time + 333)
 
-    def frames_backward(self):
-        curr_time = self.player.get_time()
-        self.player.set_time(curr_time - 333)
+    def frames_backward(self, force=False):
+        if self.is_controll_all_var.get() and not force:
+            self.master.frames_backward_all()
+        else:
+            curr_time = self.player.get_time()
+            self.player.set_time(curr_time - 333)
+
+    def second_forward(self, force=False):
+        if self.is_controll_all_var.get() and not force:
+            self.master.second_forward_all()
+        else:
+            curr_time = self.player.get_time()
+            self.player.set_time(curr_time + 1000)
+
+    def second_backward(self, force=False):
+        if self.is_controll_all_var.get() and not force:
+            self.master.second_backward_all()
+        else:
+            curr_time = self.player.get_time()
+            self.player.set_time(curr_time - 1000)
 
     def trigger_start(self):
         self.take_screenshot(True)
