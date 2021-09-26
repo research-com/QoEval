@@ -11,7 +11,7 @@ YOUTUBE_URL_PREPREPARE = "https://youtu.be/someinvalidurl"  # preprep url used f
 YOUTUBE_URL_PREPARE_DEFAULT = "https://www.youtube.com/watch?v=GRVwYbQPFQQ"  # Youtube video used in preparation process
 
 # Audio Settings
-_MEDIA_VOLUME = 15
+_MEDIA_VOLUME = 17
 
 # View IDs
 _ID_PLAYER = "com.google.android.youtube:id/watch_player"
