@@ -162,8 +162,8 @@ VSB-F-10;"Reb. Duration";14000;80;50000;16;16;"Anchor 2";Auto;;1;8000;;;
 ;;;;;;;;;;;;;;
 Web-Browsing;;;;;;;;;;;
 ;;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
-WB-A-1;"Basic set";40;285;50000;18;18;Reference;;o2;"Anzeige der O2 Webseite
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
+WB-A-1;"Basic set";40;285;50000;18;18;Reference;;;;;"Anzeige der O2 Webseite
 Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
 Resolution: Auto";https://www.o2online.de/;Throughput
 WB-A-2;"Basic set";40;285;20000;18;18;Assessment;;;;
@@ -177,8 +177,8 @@ WB-A-9;"Basic set";200;160;200;18;18;Assessment;;;;
 WB-A-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 ;;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
-WB-B-1;"Basic set";40;350;50000;18;18;Reference;;"Spiegel online";"Anzeige der Spiegel Webseite
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
+WB-B-1;"Basic set";40;350;50000;18;18;Reference;;;;;"Anzeige der Spiegel Webseite
 Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
 Resolution: Auto";https://www.spiegel.de/;Throughput
 WB-B-2;"Basic set";40;350;20000;18;18;Assessment;;;;
@@ -191,7 +191,7 @@ WB-B-8;"Basic set";190;172;500;18;18;Assessment;;;;
 WB-B-9;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-B-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
 WB-C-1;"Basic set";40;350;50000;18;18;Reference;;"Google News";"Starten von Google News
 Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
 Resolution: Auto";https://news.google.de/;Throughput
@@ -206,7 +206,7 @@ WB-C-9;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-C-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 "Parameter übernommen von WB-B.";;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
 WB-D-1;"Basic set";40;350;50000;18;18;Reference;;YouTube;"Starten der YouTube-App
 
 (Web-Version: https://www.youtube.com/)";Throughput
@@ -221,7 +221,7 @@ WB-D-9;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-D-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 "Parameter übernommen von WB-B.";;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
 WB-E-1;"Basic set";40;350;50000;18;18;Reference;;Wikipedia;"Starten der Wikipedia-App
 
 (Web-Version: https://www.wikipedia.org/)";Throughput
@@ -236,7 +236,7 @@ WB-E-9;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-E-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 "Parameter übernommen von WB-B.";;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
 WB-F-1;"Basic set";40;350;50000;18;18;Reference;;"ETSI Kepler Reference Web Page";https://docbox.etsi.org/STQ/Open/Kepler;Throughput
 WB-F-2;"Basic set";40;350;20000;18;18;Assessment;;;;
 WB-F-3;"Basic set";40;350;10000;18;18;Assessment;;;;
@@ -249,7 +249,7 @@ WB-F-9;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-F-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 "Parameter übernommen von WB-B.";;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
 WB-G-1;"Basic set";40;350;50000;18;18;Reference;;Amazon;"Starten der Amazon-App
 
 (Web-Version: https://www.amazon.de)";Throughput
@@ -264,7 +264,7 @@ WB-G-9;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-G-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 "Parameter übernommen von WB-B.";;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms] - connected mode";"DDL [ms] - connected mode";"Stimulus in picture";;"Web site";Link;Assessment
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
 WB-H-1;"Basic set";40;350;50000;18;18;Reference;;Ebay;"Starten der Ebay-App
 
 (Web-Version: https://www.ebay.de)";Throughput
@@ -284,7 +284,7 @@ WB-H-10;"Basic set";205;80;100;18;18;Assessment;;;;
 "Sequence of web pages";;;;;;;;;;;
 ;;;;;;;;;;;
 "Parameter übernommen von WB-B.";;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
 WB-I-1;"Basic set";40;350;50000;18;18;Reference;;"Search engine task";"manual input ""Perpignan"" → click on: de.wikipedia.org/wiki/Perpignan
 Excerpt from 00:00 (min:sec) to 00:30 (min:sec).
 Resolution: Auto";https://www.google.de/;Throughput
@@ -300,7 +300,7 @@ WB-I-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 ;;;;;;;;;;;
 "Parameter übernommen von WB-B.";;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
 WB-J-1;"Basic set";40;350;50000;18;18;Reference;;"Local underground connection";"https://www.mvg.de/ click on ""Verbindungen"" ? manual input [Start]: ""Marienplatz"" ? manual input [Ziel]: ""Georg-Brauchle-Ring"" ? click on first proposed connection.";Throughput
 WB-J-2;"Basic set";40;350;20000;18;18;Assessment;;;;
 WB-J-3;"Basic set";40;350;10000;18;18;Assessment;;;;
@@ -313,7 +313,7 @@ WB-J-9;"Basic set";200;155;200;18;18;Assessment;;;;
 WB-J-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 ;;;;;;;;;;;
-Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"App Package ID";Link;Assessment
 AL-A-1;"Basic set";40;350;50000;18;18;Reference;;;"Starten der Spiegel-App
 Excerpt from 00:00 (min:sec) to 00:20 (min:sec).
 Resolution: Auto";app://com.zdf.android.mediathek/.ui.common.MainActivity;Throughput
