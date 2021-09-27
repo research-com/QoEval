@@ -324,11 +324,13 @@ class Coordinator:
                     wait_countdown(SHORT_WAITING)
                     excerpt_duration = (convert_to_seconds(get_end(type_id, table_id, entry_id)) -
                                         convert_to_seconds(get_start(type_id, table_id, entry_id)))
-                    # estimate timespan to be recorded - to be careful we double the duration and add four
-                    # minutes (assumed maximum time for youtube to adapt playback to rate) and add some
-                    # extra time during which e.g. the overflow can be shown
-                    time_str = convert_to_timestr(excerpt_duration * 2.0 + 180 + 20)
-                    # time_str = "00:01:00"
+                    # estimate timespan to be recorded - to be careful we double the duration
+                    execution_time = excerpt_duration * 2.0 + 40
+                    if self._get_uc_type() == UseCaseType.YOUTUBE:
+                        # for youtube we add three minutes (assumed maximum time for youtube to adapt playback to rate)
+                        # and add some extra time during which e.g. the overflow can be shown
+                        execution_time = execution_time + 180 + 20
+                    time_str = convert_to_timestr(execution_time)
                     self._execute(time_str)
                     wait_countdown(SHORT_WAITING)
                     is_successful_or_canceled = True
@@ -622,8 +624,8 @@ def main():
     # export all (for documentation)
     # coordinator.export_all_parameter_tables()
 
-    coordinator.start(['VSB'], ['D'], ['1'], # ['1','2','3','4','5','6','7','8'],
-                      generate_stimuli=False, postprocessing=True, overwrite=False)
+    coordinator.start(['WB'], ['B'], ['10'], # ['1','2','3','4','5','6','7','8'],
+                      generate_stimuli=True, postprocessing=True, overwrite=True)
 
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
