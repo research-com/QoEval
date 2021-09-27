@@ -523,6 +523,13 @@ class Coordinator:
                       f"post-processed file (P2: generated_buffering) exists - skipped. ")
                 continue
             generator.generate(type_id, table_id, entry_id)
+        for entry_id in ids_to_process:
+            self._entry_id = entry_id
+            if not overwrite and is_stimuli_available(self.qoemu_config, type_id, table_id, entry_id, "3"):
+                print(f"Stimuli {get_video_id(self.qoemu_config, type_id, table_id, entry_id)} "
+                      f"post-processed file (P3: generated_buffering with setpts) exists - skipped. ")
+                continue
+            generator.recode_setpts(type_id, table_id, entry_id)
 
     def _export_parameter_table(self, type_id, table_id):
         output_file = f"{type_id}-{table_id}"
@@ -615,8 +622,8 @@ def main():
     # export all (for documentation)
     # coordinator.export_all_parameter_tables()
 
-    coordinator.start(['VS'], ['B'], # ['1','2','3','4','5','6','7','8'],
-                      generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['VSB'], ['D'], ['1'], # ['1','2','3','4','5','6','7','8'],
+                      generate_stimuli=False, postprocessing=True, overwrite=False)
 
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
