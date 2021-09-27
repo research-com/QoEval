@@ -426,6 +426,10 @@ class Bufferer:
                     "-c:a",
                     "copy",
                 ]
+                # LW: add -vtag xvid (as within P1 encoding)
+                output_codec_options.extend(["-vtag", "xvid"])
+                # LW: add qscale option to increase quality
+                output_codec_options.extend(["-qscale:v", "1"])
             else:
                 output_codec_options = ["-c", "copy"]
 
