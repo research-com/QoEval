@@ -12,6 +12,7 @@ from qoemu_pkg.postprocessing.postprocessor import FFPROBE
 from qoemu_pkg.utils import get_stimuli_path, get_video_id
 from qoemu_pkg import spinner
 
+FFMPEG = "ffmpeg"
 _SPINNER_NAME = "spinner-thin-line-200-trans.png"
 
 
@@ -93,3 +94,23 @@ class BufferingGenerator:
                 bufferer.insert_buf_audiovisual()
             except Exception as e:
                 raise RuntimeError("generating buffer video failed: " + str(e))
+
+    def recode_setpts(self, type_id, table_id, entry_id):
+        input_path = get_stimuli_path(self.qoemu_config, type_id, table_id, entry_id, "2", True)
+        if not os.path.isfile(input_path):
+            log.error(f"Cannot open post-processed input file {input_path}")
+            raise RuntimeError(f"Video file {input_path} does not exist.")
+
+        output_path = os.path.join(self.qoemu_config.video_capture_path.get(),
+                                   get_video_id(self.qoemu_config, type_id, table_id, entry_id, "3") + ".avi")
+
+        log.info(f"Recoding {input_path} to {output_path} (with PTS starting at zero)...")
+
+        command = f"{FFMPEG} -i {input_path} -c:v mpeg4 -vtag xvid -qscale:v 1 -c:a libmp3lame -qscale:a 1 " \
+                  f"-filter_complex \"[0:v]setpts=PTS-STARTPTS[v0];[0:a]asetpts=PTS-STARTPTS[a0]\" " \
+                  f"-map \"[v0]\" -map \"[a0]\" -y " \
+                  f" {output_path}"
+
+        output = subprocess.run(shlex.split(command), stderr=subprocess.PIPE,
+                                universal_newlines=True)
+        output.check_returncode()

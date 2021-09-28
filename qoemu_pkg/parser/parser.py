@@ -162,10 +162,10 @@ def get_entry_ids(type_id, table_id):
 
     for line in file:
         if line.startswith(f"{type_id}-{table_id}"):
-            search_string = f"{type_id}-{table_id}-" + "{}"
+            search_string = f"{type_id}-{table_id}-" + "{:d}"
             id = search(search_string, line)[0]
             if id not in entry_ids:
-                entry_ids.append(id)
+                entry_ids.append(str(id))
 
     return entry_ids
 

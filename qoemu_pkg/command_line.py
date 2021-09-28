@@ -29,7 +29,7 @@ def main():
     stimuli_entry = args.entry
 
     if stimuli_entry == "ALL":
-        stimuli_entry_list = []
+        stimuli_entry_list = None
     else:
         stimuli_entry_list = [stimuli_entry]
 

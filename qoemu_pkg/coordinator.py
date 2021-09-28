@@ -324,11 +324,13 @@ class Coordinator:
                     wait_countdown(SHORT_WAITING)
                     excerpt_duration = (convert_to_seconds(get_end(type_id, table_id, entry_id)) -
                                         convert_to_seconds(get_start(type_id, table_id, entry_id)))
-                    # estimate timespan to be recorded - to be careful we double the duration and add four
-                    # minutes (assumed maximum time for youtube to adapt playback to rate) and add some
-                    # extra time during which e.g. the overflow can be shown
-                    time_str = convert_to_timestr(excerpt_duration * 2.0 + 180 + 20)
-                    # time_str = "00:01:00"
+                    # estimate timespan to be recorded - to be careful we double the duration
+                    execution_time = excerpt_duration * 2.0 + 40
+                    if self._get_uc_type() == UseCaseType.YOUTUBE:
+                        # for youtube we add three minutes (assumed maximum time for youtube to adapt playback to rate)
+                        # and add some extra time during which e.g. the overflow can be shown
+                        execution_time = execution_time + 180 + 20
+                    time_str = convert_to_timestr(execution_time)
                     self._execute(time_str)
                     wait_countdown(SHORT_WAITING)
                     is_successful_or_canceled = True
@@ -401,8 +403,13 @@ class Coordinator:
                 # try to find alternative unprocessed input file
                 alternative_stimuli = \
                     get_stimuli_path(self.qoemu_config, type_id, table_id, entry_id, "0", True)
-                log.debug(f"Unprocessed video file {unprocessed_video_path} does not exist but found a valid "
-                          f"alternative: {alternative_stimuli}")
+                if alternative_stimuli:
+                    log.debug(f"Unprocessed video file {unprocessed_video_path} does not exist but found a valid "
+                              f"alternative: {alternative_stimuli}")
+                else:
+                    log.error(f"Unprocessed video file {unprocessed_video_path} does not exist and there are no"
+                              f"alternatives to be used. Cannot continue.")
+                    raise RuntimeError(f"Video file {unprocessed_video_path} does not exist.")
                 unprocessed_video_path = alternative_stimuli
 
             if not os.path.isfile(unprocessed_video_path):
@@ -518,6 +525,13 @@ class Coordinator:
                       f"post-processed file (P2: generated_buffering) exists - skipped. ")
                 continue
             generator.generate(type_id, table_id, entry_id)
+        for entry_id in ids_to_process:
+            self._entry_id = entry_id
+            if not overwrite and is_stimuli_available(self.qoemu_config, type_id, table_id, entry_id, "3"):
+                print(f"Stimuli {get_video_id(self.qoemu_config, type_id, table_id, entry_id)} "
+                      f"post-processed file (P3: generated_buffering with setpts) exists - skipped. ")
+                continue
+            generator.recode_setpts(type_id, table_id, entry_id)
 
     def _export_parameter_table(self, type_id, table_id):
         output_file = f"{type_id}-{table_id}"
@@ -577,8 +591,8 @@ class Coordinator:
 
         # ids_to_evaluate =  ['1'] #,'5','4','3','2','1']
 
-        if ids_to_evaluate is None:
-            raise RuntimeError(f"No Stimuli-IDs to evaluate - "
+        if ids_to_evaluate is None or len(ids_to_evaluate) < 1:
+            raise RuntimeError(f"No Stimuli-IDs to evaluate for {type_id}-{table_id} - "
                                f"check parameter file \"{self.qoemu_config.parameter_file.get()}\"")
 
         try:
@@ -610,8 +624,8 @@ def main():
     # export all (for documentation)
     # coordinator.export_all_parameter_tables()
 
-    coordinator.start(['VSB'], ['D'], # ['1','2','3','4','5','6','7','8'],
-                      generate_stimuli=True, postprocessing=True, overwrite=False)
+    coordinator.start(['WB'], ['B'], ['10'], # ['1','2','3','4','5','6','7','8'],
+                      generate_stimuli=True, postprocessing=True, overwrite=True)
 
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 
