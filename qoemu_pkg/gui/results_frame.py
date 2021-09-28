@@ -25,7 +25,7 @@ class ResultsFrame(tk.Frame):
         self.master = master
         self.gui: Gui = gui
 
-        self.gui.updatable_elements.append(self)
+        # self.gui.updatable_elements.append(self)
 
         self.selected_video_paths = []
         self.filenames =[]
@@ -128,7 +128,7 @@ class ResultsFrame(tk.Frame):
             messagebox.showerror("Error", "Please select between 1 and 2 Videos")
             return
         path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "video_player.py")
-        args = self.gui.qoemu_config.trigger_image_path + " ".join(self.selected_video_paths)
+        args = self.gui.qoemu_config.trigger_image_path.get() + " " + " ".join(self.selected_video_paths)
         subprocess.Popen(f"python3 {path} {args}".split(" "), shell=False)
 
     def on_stimulus_select(self, *args):

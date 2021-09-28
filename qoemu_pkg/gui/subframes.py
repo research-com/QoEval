@@ -106,12 +106,12 @@ class FolderFrame(tk.Frame):
     def update_config(self, *args):
         if self.path.get() == self.config_variable.get():
             return
-        if os.path.isdir(self.path.get()):
+        if os.path.isdir(os.path.expanduser(self.path.get())):
             self.config_variable.set(self.path.get().replace(os.path.expanduser('~'), '~', 1))
             log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
         else:
-            messagebox.showerror("Error", "Directory doesn't exist")
             self.path.set(self.config_variable.get())
+            messagebox.showerror("Error", "Directory doesn't exist")
 
     def update_display(self):
         self.entry.delete(0, tk.END)
