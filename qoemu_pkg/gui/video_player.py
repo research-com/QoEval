@@ -8,6 +8,7 @@ from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 from typing import TYPE_CHECKING
 import vlc
+import tkinter.messagebox as messagebox
 from PIL import ImageTk, Image
 import sys
 
@@ -45,7 +46,7 @@ class VideoPlayer(tk.Tk):
 
     def go_to_all(self):
         for frame in self.video_frames:
-            frame.go_to()
+            frame.go_to(force=True)
 
     def second_forward_all(self):
         for frame in self.video_frames:
@@ -71,21 +72,28 @@ class VideoPlayer(tk.Tk):
         for frame in self.video_frames:
             frame.second_backward(force=True)
 
-    def update_sync_buttons(self):
-        if any([frame.player.is_playing() for frame in self.video_frames]):
-            for frame in self.video_frames:
-                frame.button_play_sync.configure(text="Pause all")
-        else:
-            for frame in self.video_frames:
-                frame.button_play_sync.configure(text="Play all")
+    def update_play_buttons(self):
+        is_any_player_playing = any([frame.player.is_playing() for frame in self.video_frames])
+        for frame in self.video_frames:
+            frame.update_play_pause_button(is_any_player_playing)
+
+    def toggle_mute_all(self):
+        for frame in self.video_frames:
+            frame.toggle_mute(force=True)
+            frame.update_mute_status()
+
+    def set_bookmark_all(self):
+        for frame in self.video_frames:
+            frame.set_bookmark(force=True)
 
     def play_sync(self):
-        if any([frame.player.is_playing() for frame in self.video_frames]):
+        is_any_player_playing = any([frame.player.is_playing() for frame in self.video_frames])
+        if is_any_player_playing:
             for frame in self.video_frames:
                 frame.play_pause(force_pause=True)
         else:
             for frame in self.video_frames:
-                frame.play_pause()
+                frame.play_pause(force_play=True)
 
 
 class VideoPlayerFrame(tk.Frame):
@@ -112,19 +120,19 @@ class VideoPlayerFrame(tk.Frame):
         self.canvas = tk.Canvas(self.video_panel)
 
         # buttons panel
-        self.button_pause = tk.Button(self.buttons_panel, text="playpause", command=self.play_pause, width=3)
-        self.button_play_sync = tk.Button(self.buttons_panel, text="Play all", command=self.master.play_sync,
-                                          width=5)
-        self.button_bookmark_go_to = tk.Button(self.buttons_panel, text="Go to", width=5, command=self.go_to)
-        self.button_bookmark_go_to_all = tk.Button(self.buttons_panel, text="Go to all", width=8,
-                                                   command=self.go_to_all)
+        self.button_play_pause = tk.Button(self.buttons_panel, text="playpause", command=self.play_pause, width=3)
+        self.button_bookmark_go_to = tk.Button(self.buttons_panel, text="Go to", width=3, command=self.go_to)
         self.bookmark_time = tk.IntVar()
-        self.button_bookmark_set = tk.Button(self.buttons_panel, text="Bookmark", width=8, command=self.set_bookmark)
-        self.button_trigger_start = tk.Button(self.buttons_panel, text="Trigger Start", command=self.trigger_start,
-                                              width=8)
-        self.button_trigger_end = tk.Button(self.buttons_panel, text="Trigger End", command=self.trigger_end, width=8)
+        self.bookmark_time.set(0)
+        self.button_bookmark_set = tk.Button(self.buttons_panel, text="Set", width=2, command=self.set_bookmark)
+        self.label_bookmark_desc = tk.Label(self.buttons_panel, text="Bookmark:", width=8)
+        self.label_bookmark = tk.Label(self.buttons_panel, width=7, textvariable=self.bookmark_time)
+        self.label_trigger_desc = tk.Label(self.buttons_panel, text="Trigger", width=8)
+        self.button_trigger_start = tk.Button(self.buttons_panel, text="Start", command=self.trigger_start,
+                                              width=3)
+        self.button_trigger_end = tk.Button(self.buttons_panel, text="End", command=self.trigger_end, width=3)
         self.is_controll_all_var = tk.BooleanVar()
-        self.checkbutton_control_all = tk.Checkbutton(self.buttons_panel, text="Control all:", width=8,
+        self.checkbutton_control_all = tk.Checkbutton(self.buttons_panel, text="Control All", width=8,
                                                       variable=self.is_controll_all_var)
         self.button_second_backward = tk.Button(self.buttons_panel, text="<<<", command=self.second_backward, width=1)
         self.button_frames_backward = tk.Button(self.buttons_panel, text="<<", command=self.frames_backward, width=1)
@@ -132,7 +140,7 @@ class VideoPlayerFrame(tk.Frame):
         self.button_frame_forward = tk.Button(self.buttons_panel, text=">", command=self.frame_forward, width=1)
         self.button_frames_forward = tk.Button(self.buttons_panel, text=">>", command=self.frames_forward, width=1)
         self.button_second_forward = tk.Button(self.buttons_panel, text=">>>", command=self.second_forward, width=1)
-        self.button_mute = tk.Button(self.buttons_panel, text="Mute", command=self.mute, width=4)
+        self.button_mute = tk.Button(self.buttons_panel, text="Mute", command=self.toggle_mute, width=4)
 
         # slider frame
         self.timeVar = tk.DoubleVar()
@@ -151,14 +159,17 @@ class VideoPlayerFrame(tk.Frame):
 
         self.on_tick()
 
-    def go_to(self):
-        self.player.set_time(self.bookmark_time.get())
+    def go_to(self, force=False):
+        if self.is_controll_all_var.get() and not force:
+            self.master.go_to_all()
+        else:
+            self.player.set_time(self.bookmark_time.get())
 
-    def go_to_all(self):
-        self.master.go_to_all()
-
-    def set_bookmark(self):
-        self.bookmark_time.set(self.player.get_time())
+    def set_bookmark(self, force=False):
+        if self.is_controll_all_var.get() and not force:
+            self.master.set_bookmark_all()
+        else:
+            self.bookmark_time.set(self.player.get_time())
 
     def _attach_player_to_canvas(self):
         h = self.canvas.winfo_id()
@@ -173,30 +184,41 @@ class VideoPlayerFrame(tk.Frame):
         self.canvas.pack(fill=tk.BOTH, expand=1)
 
     def _pack_buttons_panel(self):
-        self.button_pause.pack(side=tk.LEFT, expand=0)
-        if self.master.is_dual_play:
-            self.button_play_sync.pack(side=tk.LEFT, expand=0)
-        self.button_bookmark_set.pack(side=tk.LEFT, expand=0)
-        self.button_bookmark_go_to.pack(side=tk.LEFT, expand=0)
-        if self.master.is_dual_play:
-            self.button_bookmark_go_to_all.pack(side=tk.LEFT, expand=0)
-        self.button_trigger_start.pack(side=tk.LEFT, expand=0)
-        self.button_trigger_end.pack(side=tk.LEFT, expand=0)
         self.checkbutton_control_all.pack(side=tk.LEFT, expand=0)
+        sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
+        sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
+        self.button_play_pause.pack(side=tk.LEFT, expand=0)
         self.button_second_backward.pack(side=tk.LEFT, expand=0)
         self.button_frames_backward.pack(side=tk.LEFT, expand=0)
         self.button_frame_backward.pack(side=tk.LEFT, expand=0)
         self.button_frame_forward.pack(side=tk.LEFT, expand=0)
         self.button_frames_forward.pack(side=tk.LEFT, expand=0)
         self.button_second_forward.pack(side=tk.LEFT, expand=0)
+        sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
+        sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
+        self.label_bookmark_desc.pack(side=tk.LEFT, expand=0)
+        self.label_bookmark.pack(side=tk.LEFT, expand=0)
+        self.button_bookmark_set.pack(side=tk.LEFT, expand=0)
+        self.button_bookmark_go_to.pack(side=tk.LEFT, expand=0)
+        sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
+        sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=15)
         self.button_mute.pack(side=tk.LEFT, expand=0)
+        sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
+        sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
+        self.label_trigger_desc.pack(side=tk.LEFT, expand=0)
+        self.button_trigger_start.pack(side=tk.LEFT, expand=0)
+        self.button_trigger_end.pack(side=tk.LEFT, expand=0)
+
 
     def _pack_frame_slider(self):
         self.timeSlider.pack(side=tk.BOTTOM, fill=tk.X, expand=1)
 
-    def mute(self):
-        self.player.audio_toggle_mute()
-        self.update_mute_status()
+    def toggle_mute(self, force=False):
+        if self.is_controll_all_var.get() and not force:
+            self.master.toggle_mute_all()
+        else:
+            self.player.audio_toggle_mute()
+            self.update_mute_status()
 
     def frame_forward(self, force=False):
         if self.is_controll_all_var.get() and not force:
@@ -246,31 +268,50 @@ class VideoPlayerFrame(tk.Frame):
     def trigger_end(self):
         self.take_screenshot(False)
 
-    def take_screenshot(self, is_start: bool):
+    def trigger_get_filepath(self, is_start: bool):
         suffix = "_start.png" if is_start else "_end.png"
-        x, y = self.player.video_get_size()
-        path = os.path.join(os.path.expanduser(self.master.trigger_path), self.stimulus_type_and_table_id + suffix)
-        self.player.video_take_snapshot(0, path, x, y)
+        return os.path.join(os.path.expanduser(self.master.trigger_path), self.stimulus_type_and_table_id + suffix)
 
-    def play_pause(self, force_pause=False):
-        if self.player.is_playing():
-            self.button_pause.configure(text="Play")
+    def take_screenshot(self, is_start: bool):
+        path = self.trigger_get_filepath(is_start)
+        overwrite = True
+        if os.path.isfile(path):
+            overwrite = messagebox.askyesno("File already exists", f"{os.path.split(path)[1]} already exists. Overwrite?")
+        if overwrite:
+            x, y = self.player.video_get_size()
+            self.player.video_take_snapshot(0, path, x, y)
+
+    def update_play_pause_button(self, is_any_player_playing: bool=None):
+        if not self.is_controll_all_var.get():
+            is_playing = self.player.is_playing()
+        else:
+            is_playing = is_any_player_playing
+        if is_playing:
+            self.button_play_pause.configure(text="Pause")
+        else:
+            self.button_play_pause.configure(text="Play")
+
+    def play_pause(self, force_play=False, force_pause=False):
+        if self.is_controll_all_var.get() and not force_pause and not force_play:
+            self.master.play_sync()
+            return
+        if self.player.is_playing() and not force_play:
             self.player.pause()
+            self.master.update_play_buttons()
         elif self.player.will_play() and not force_pause:
             self.player.play()
-            self.button_pause.configure(text="Pause")
+            self.master.update_play_buttons()
         elif not force_pause:
             self.player.set_media(self.media)
             self.player.play()
             self.player.set_time(int(self.timeVar.get() * 1e1))
-            self.button_pause.configure(text="Pause")
+            self.master.update_play_buttons()
 
     def update_mute_status(self):
-        if self.player.is_playing():
-            if self.player.audio_get_mute():
-                self.button_mute.configure(text="Unmute")
-            else:
-                self.button_mute.configure(text="Mute")
+        if self.player.audio_get_mute():
+            self.button_mute.configure(text="Unmute")
+        else:
+            self.button_mute.configure(text="Mute")
 
     def stop(self):
         self.player.stop()
@@ -308,20 +349,16 @@ class VideoPlayerFrame(tk.Frame):
         """
         self.update_mute_status()
         if self.player:
-            if self.player.is_playing():
-                self.button_pause.configure(text="Pause")
-            else:
-                self.button_pause.configure(text="Play")
-            self.master.update_sync_buttons()
+            self.master.update_play_buttons()
             # since the self.player.get_length may change while
             # playing, re-set the timeSlider to the correct range
             t = self.player.get_length() * 1e-1  # to seconds
-            if t > 0:
+            if t >= 0:
                 self.timeSlider.config(to=t)
 
                 t = self.player.get_time() * 1e-1  # to seconds
                 # don't change slider while user is messing with it
-                if t > 0 and time.time() > (self.timeSliderUpdate + 2):
+                if t >= 0 and time.time() > (self.timeSliderUpdate + 2):
                     self.timeSlider.set(t)
                     self.timeSliderLast = int(self.timeVar.get())
         # start the 1 second timer again
