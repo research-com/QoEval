@@ -132,8 +132,9 @@ class VideoPlayerFrame(tk.Frame):
                                               width=3)
         self.button_trigger_end = tk.Button(self.buttons_panel, text="End", command=self.trigger_end, width=3)
         self.is_controll_all_var = tk.BooleanVar()
-        self.checkbutton_control_all = tk.Checkbutton(self.buttons_panel, text="Control All", width=8,
-                                                      variable=self.is_controll_all_var)
+        self.checkbutton_control_all = tk.Checkbutton(self.buttons_panel, text="Control All   ", width=8,
+                                                      variable=self.is_controll_all_var,
+                                                      command=self.toggle_control_all_visual_effect)
         self.button_second_backward = tk.Button(self.buttons_panel, text="<<<", command=self.second_backward, width=1)
         self.button_frames_backward = tk.Button(self.buttons_panel, text="<<", command=self.frames_backward, width=1)
         self.button_frame_backward = tk.Button(self.buttons_panel, text="<", command=self.frame_backward, width=1)
@@ -158,6 +159,15 @@ class VideoPlayerFrame(tk.Frame):
         self._attach_player_to_canvas()
 
         self.on_tick()
+
+    def toggle_control_all_visual_effect(self):
+        color = "grey" if self.is_controll_all_var.get() else "lightgrey"
+        for child in self.buttons_panel.winfo_children():
+            # print(child)
+            if type(child) is tk.Button:
+                if child != self.button_trigger_end and child != self.button_trigger_start:
+                    child.configure(bg=color)
+
 
     def go_to(self, force=False):
         if self.is_controll_all_var.get() and not force:
@@ -184,7 +194,7 @@ class VideoPlayerFrame(tk.Frame):
         self.canvas.pack(fill=tk.BOTH, expand=1)
 
     def _pack_buttons_panel(self):
-        self.checkbutton_control_all.pack(side=tk.LEFT, expand=0)
+        self.checkbutton_control_all.pack(side=tk.LEFT, expand=0, fill=tk.Y)
         sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
         sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
         self.button_play_pause.pack(side=tk.LEFT, expand=0)
