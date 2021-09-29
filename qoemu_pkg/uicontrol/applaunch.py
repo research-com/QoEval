@@ -29,9 +29,11 @@ from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState, UseCaseInteractio
 
 
 # Specification of app names for specific app packages (TODO: automatically find out name)
-_APP_NAMES = {'org.wikipedia': 'Wikipedia'}
+_APP_NAMES = {'org.wikipedia': 'Wikipedia',
+              'com.zdf.android.mediathek' : 'ZDFmediathek'}
 
 _SHORT_TIME = 2  # short waiting time [s]
+_RECORDING_START_OFFSET_TIME = 1 # assumed time for guaranteeing that recording has started [s]
 _TIME_TO_SET_HOUR = "10"
 _TIME_TO_SET_MINUTE = "00"
 _RESET_ALL_APP_DATA = False   # if set to True, all cache and user data will be reset - not only the app cache
@@ -101,6 +103,8 @@ class _AppLaunch(UseCase):
     def execute(self, duration: float):
         if self.state != UseCaseState.PREPARED:
             raise RuntimeError('Use case is in unexpected state. Should be in UseCaseState.PREPARED')
+
+        time.sleep(_RECORDING_START_OFFSET_TIME)
 
         if not self._package or len(self._package) == 0 or not self._activity or len(self._activity) == 0:
             log.warning("package/activity is not set")
