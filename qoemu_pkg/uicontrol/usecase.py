@@ -90,7 +90,7 @@ class UseCase:
         for interaction in interactions.elements:
             log.debug(f"Handling interaction: {interaction.info}")
             if interaction.delay > 0:
-                com.dtmilano.android.viewclient.sleep(interaction.delay)
+                time.sleep(interaction.delay)
             # self._vc.dump(window=-1, sleep=0)
             # self._vc.traverse()
             if interaction.trigger_id:

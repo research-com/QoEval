@@ -83,8 +83,21 @@ Currently, the following use-case types are supported by QoEmu:
 * **App Launch (AL)**
 
 ### App-Launch (AL)
-In order to configure an app-launch use-case, you need to know the package and activity name. In order to find out
-the package name of an app, open the Google Play store, search for the app and you can find the package name
+In order to configure an app-launch use-case, you need to know the package and activity name. 
+#### Recommended Procedure
+
+1) To get the package name, e.g. for the spiegel app,
+   you can use
+   adb shell pm list packages | grep spiegel
+
+2) To get the activity name, use the package name with monkey, e.g.
+   adb shell monkey -p 'de.spiegel.android.app.spon' -v 1
+   which will list the activity name, e.g.:
+   ...;component=de.spiegel.android.app.spon/.activities.SplashScreenActivity;end
+
+#### Alternative Procedure
+An alternative way to find out
+the package name of an app, is to open the Google Play store, search for the app and you can find the package name
 as value of the "id" parameter in the URL.
 
 Example: If you search for the "Süddeutsche App" in the Play Store, you will be directed to
