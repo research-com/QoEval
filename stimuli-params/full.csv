@@ -338,6 +338,20 @@ AL-B-8;"Basic set";190;172;500;18;18;Assessment;;;;
 AL-B-9;"Basic set";200;155;200;18;18;Assessment;;;;
 AL-B-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
+Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
+AL-C-1;"Basic set";40;350;50000;18;18;Reference;;;"Starten der Google News App
+Excerpt from 00:00 (min:sec) to 00:20 (min:sec).
+Resolution: Auto";app://com.google.android.apps.magazines/com.google.apps.dots.android.app.activity.CurrentsStartActivity;Throughput
+AL-C-2;"Basic set";40;350;20000;18;18;Assessment;;;;
+AL-C-3;"Basic set";40;350;10000;18;18;Assessment;;;;
+AL-C-4;"Basic set";85;300;5000;18;18;Assessment;;;;
+AL-C-5;"Basic set";160;220;2000;18;18;Assessment;;;;
+AL-C-6;"Basic set";180;186;1000;18;18;Assessment;;;;
+AL-C-7;"Basic set";184;180;750;18;18;Assessment;;;;
+AL-C-8;"Basic set";190;172;500;18;18;Assessment;;;;
+AL-C-9;"Basic set";200;155;200;18;18;Assessment;;;;
+AL-C-10;"Basic set";205;80;100;18;18;Assessment;;;;
+;;;;;;;;;;;
 "Parameter übernommen von WB-B.";;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"Web site";Link;Assessment
 AL-E-1;"Basic set";40;350;50000;18;18;Reference;;;;;"Starten der Wikipedia-App

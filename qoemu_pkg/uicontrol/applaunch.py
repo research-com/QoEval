@@ -30,11 +30,12 @@ from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState, UseCaseInteractio
 # Specification of app names for specific app packages (TODO: automatically find out name)
 _APP_NAMES = {'org.wikipedia': 'Wikipedia',
               'com.zdf.android.mediathek': 'ZDFmediathek',
-              'de.hafas.android.db': 'DB Navigator'}
+              'de.hafas.android.db': 'DB Navigator',
+              'com.google.android.apps.magazines': 'Google News'}
 
 _SHORT_TIME = 2  # short waiting time [s]
 _RECORDING_START_OFFSET_TIME = 1  # assumed time for guaranteeing that recording has started [s]
-_TIME_TO_SET_HOUR = "10"
+_TIME_TO_SET_HOUR = "20"
 _TIME_TO_SET_MINUTE = "00"
 _RESET_ALL_APP_DATA = False  # if set to True, all cache and user data will be reset - not only the app cache
 
@@ -45,6 +46,10 @@ def _get_interactions(app_package: str):
         allow_push = UseCaseInteractionElement(info="Allow push notifications", trigger_text="ERLAUBEN", max_wait=2)
         # wait = UseCaseInteractionElement(info="wait some time and go to home screen", key='KEYCODE_HOME', delay=8)
         return UseCaseInteraction(elements=[allow_push])
+
+    if app_package.startswith("com.google.android.apps.magazines"):  # Google News App
+        swipe_down = UseCaseInteractionElement(info="swipe down", delay=5, swipe='600 1300 600 50')
+        return UseCaseInteraction(elements=[swipe_down])
 
     if app_package.startswith("org.wikipedia"):  # Wikipedia App
         search_input = UseCaseInteractionElement(info="Search input", trigger_text="Wikipedia durchsuchen",
