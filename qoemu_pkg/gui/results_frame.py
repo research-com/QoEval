@@ -20,6 +20,8 @@ _VIDEO = '/home/jk/stimuli/VSB-F-1_E1-R-0.5.0_P1.avi'
 
 class ResultsFrame(tk.Frame):
 
+    """A frame listing and displaying created stimuli files"""
+
     def __init__(self, master, gui: Gui):
         super().__init__(master, background="#DCDCDC", bd=1, relief="sunken")
         self.master = master
@@ -85,7 +87,8 @@ class ResultsFrame(tk.Frame):
 
         self.update()
 
-    def update(self):
+    def update_display(self):
+        """Update the frame to represent the currently loaded config file"""
         self.filenames = os.listdir(self.gui.qoemu_config.video_capture_path.get())
         self.filenames = [filename for filename in self.filenames
                           if os.path.isfile(os.path.join(self.gui.qoemu_config.video_capture_path.get(), filename))]
@@ -103,6 +106,7 @@ class ResultsFrame(tk.Frame):
         self.listbox_stimuli.bind('<<ListboxSelect>>', self.on_stimulus_select)
 
     def on_video_select(self, *unused):
+        """Update selected video paths"""
         self.selected_video_paths = []
         for filename in self.filenames:
             if filename.startswith(self.listbox_stimuli.get(self.listbox_stimuli.curselection())) \
@@ -111,6 +115,7 @@ class ResultsFrame(tk.Frame):
                 self.selected_video_paths.append(video_path)
 
     def open_pdf(self):
+        """Open the selected graph file with the default pdf viewer"""
         try:
             pdf_path = None
             for filename in self.filenames:
@@ -124,6 +129,7 @@ class ResultsFrame(tk.Frame):
             pass
 
     def open_video_player(self):
+        """Open the video player with the selected videos"""
         if len(self.selected_video_paths) > 2 or len(self.selected_video_paths) < 1:
             messagebox.showerror("Error", "Please select between 1 and 2 Videos")
             return
@@ -132,6 +138,7 @@ class ResultsFrame(tk.Frame):
         subprocess.Popen(f"python3 {path} {args}".split(" "), shell=False)
 
     def on_stimulus_select(self, *args):
+        """Update available graphs/videos on select of stimulus"""
         self.listbox_graphs.delete(0, tk.END)
         for filename in self.filenames:
             if filename.startswith(self.listbox_stimuli.get(self.listbox_stimuli.curselection())) \
@@ -151,6 +158,7 @@ class ResultsFrame(tk.Frame):
         self.selected_video_paths = []
 
     def on_graph_select(self, *args):
+        """Display a preview of the graph on select"""
         try:
             for filename in self.filenames:
                 if filename.startswith(self.listbox_stimuli.get(self.listbox_stimuli.curselection())) \
@@ -165,9 +173,3 @@ class ResultsFrame(tk.Frame):
                     self.label_preview.image = tkimage
         except tk.TclError:
             pass
-
-        # for filename in self.filenames:
-        #     if filename.startswith(self.listbox_stimuli.get(self.listbox_stimuli.curselection())) \
-        #                 and filename.endswith("_stats_" + self.listbox_graphs.get(self.listbox_graphs.curselection())):
-        #         pdf_location = os.path.join(self.gui.qoemu_config.video_capture_path.get(), filename)
-        #         subprocess.call(('xdg-open', pdf_location))

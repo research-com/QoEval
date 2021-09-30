@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 
 class PostProcessingFrame(tk.Frame):
+    """Frame to control post processing options"""
     def __init__(self, master, gui: Gui):
         super().__init__(master, background="#DCDCDC", bd=1, relief=RELIEF)
         self.master = master

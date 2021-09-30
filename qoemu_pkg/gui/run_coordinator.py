@@ -3,10 +3,9 @@ from qoemu_pkg.coordinator import Coordinator
 
 
 def main():
+    """Loads the current GUI config and starts the coordinator with its options"""
     qoemu_config = QoEmuConfiguration()
-
     qoemu_config.read_from_file(qoemu_config.gui_current_config_file.get())
-
     coord = Coordinator(qoemu_config)
 
     if qoemu_config.coordinator_generate_stimuli.get():

@@ -4,9 +4,8 @@ if TYPE_CHECKING:
     from qoemu_pkg.configuration import QoEmuConfiguration
 
 
-
-
 def add_tooltips(qoemu_config: QoEmuConfiguration):
+    """Adds tooltips to the config options"""
     qoemu_config.resolution_override.tooltip = ''
     qoemu_config.traffic_analysis_plot_settings.tooltip = 'Choose plot configurations'
 

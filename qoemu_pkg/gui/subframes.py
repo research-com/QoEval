@@ -18,6 +18,9 @@ import qoemu_pkg.gui.tooltip_strings
 
 
 class StringSelectFrame(tk.Frame):
+    
+    """A frame to set a string (or MobileDeviceType) option from a dropdown list"""
+    
     def __init__(self, master, gui: Gui, config_variable: Option, options: List[str], name: str = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
         self.master = master
@@ -55,6 +58,7 @@ class StringSelectFrame(tk.Frame):
         self.value.trace_add("write", self.update_config)
 
     def update_config(self, *args):
+        """Update the config with the currently displayed value"""
         new_value = self.value.get()
         old_value = self.config_variable.get()
         if type(old_value) == MobileDeviceType:
@@ -65,6 +69,7 @@ class StringSelectFrame(tk.Frame):
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         initial_value = self.config_variable.get()
         if type(initial_value) == MobileDeviceType:
             initial_value = initial_value.name
@@ -74,6 +79,9 @@ class StringSelectFrame(tk.Frame):
 
 
 class FolderFrame(tk.Frame):
+    
+    """A frame to set a folder option"""
+    
     def __init__(self, master, gui: Gui, config_variable: Option, name: str = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
         self.master = master
@@ -98,12 +106,14 @@ class FolderFrame(tk.Frame):
         self.entry.bind('<FocusOut>', self.update_config)
 
     def open_folder(self):
+        """Open a folder with a filedialog"""
         path = filedialog.askdirectory(initialdir=self.config_variable.get())
         if len(path) > 0:
             self.path.set(path)
             self.update_config()
 
     def update_config(self, *args):
+        """Update the config with the currently displayed value"""
         if self.path.get() == self.config_variable.get():
             return
         if os.path.isdir(os.path.expanduser(self.path.get())):
@@ -114,11 +124,15 @@ class FolderFrame(tk.Frame):
             messagebox.showerror("Error", "Directory doesn't exist")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         self.entry.delete(0, tk.END)
         self.entry.insert(0, self.config_variable.get())
 
 
 class FileFrame(tk.Frame):
+
+    """A frame to set a file option"""
+
     def __init__(self, master, gui: Gui, config_variable: Option, name: str = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
         self.master = master
@@ -141,12 +155,14 @@ class FileFrame(tk.Frame):
         self.entry.pack(fill=tk.BOTH, side="left", expand=1)
 
     def open_file(self):
+        """Open a filedialog to select a file"""
         path = filedialog.askopenfilename()
         if len(path) > 0:
             self.path.set(path)
             self.update_config()
 
     def update_config(self, *args):
+        """Update the config with the currently displayed value"""
         if self.path.get() == self.config_variable.get():
             return
         if os.path.isfile(self.path.get()):
@@ -157,11 +173,14 @@ class FileFrame(tk.Frame):
             self.path.set(self.config_variable.get())
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         self.entry.delete(0, tk.END)
         self.entry.insert(0, self.config_variable.get())
 
 
 class BooleanFrame(tk.Frame):
+
+    """A frame to set a boolean option"""
 
     def __init__(self, master, gui: Gui, config_variable: BoolOption, name: str = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
@@ -191,12 +210,14 @@ class BooleanFrame(tk.Frame):
         self.value.trace_add("write", self.update_config)
 
     def update_config(self, *args):
+        """Update the config with the currently displayed value"""
         if self.config_variable.get() == self.value.get():
             return
         self.config_variable.set(self.value.get())
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         if self.config_variable.get():
             self.value.set(True)
         else:
@@ -204,6 +225,9 @@ class BooleanFrame(tk.Frame):
 
 
 class StringFrame(tk.Frame):
+
+    """A frame to set a string option with a simple entry field"""
+
     def __init__(self, master, gui: Gui, config_variable: Option, name: str = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
         self.master = master
@@ -226,6 +250,7 @@ class StringFrame(tk.Frame):
         self.input.bind('<FocusOut>', self.update_config)
 
     def update_config(self, *args):
+        """Update the config with the currently displayed value"""
         new_value = self.input.get()
 
         if new_value == self.config_variable.get():
@@ -235,11 +260,13 @@ class StringFrame(tk.Frame):
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         self.input.delete(0, tk.END)
         self.input.insert(0, self.config_variable.get())
 
 
 class IntegerFrame(tk.Frame):
+    """A frame to set an integer option with an entry field"""
     def __init__(self, master, gui: Gui, config_variable: IntOption, name: str = None, min_value: int = None,
                  max_value: int = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
@@ -265,6 +292,7 @@ class IntegerFrame(tk.Frame):
         self.input.bind('<FocusOut>', self.update_config)
 
     def update_config(self, *args):
+        """Update the config with the currently displayed value"""
         try:
             new_value = int(self.input.get())
         except ValueError:
@@ -295,11 +323,13 @@ class IntegerFrame(tk.Frame):
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         self.input.delete(0, tk.END)
         self.input.insert(0, self.config_variable.get())
 
 
 class FloatFrame(tk.Frame):
+    """A frame to set a float option with an entry field"""
     def __init__(self, master, gui: Gui, config_variable: FloatOption, name: str = None, min_value: float = None,
                  max_value: float = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
@@ -325,6 +355,7 @@ class FloatFrame(tk.Frame):
         self.input.bind('<FocusOut>', self.update_config)
 
     def update_config(self, *args):
+        """Update the config with the currently displayed value"""
         try:
             new_value = float(self.input.get())
         except ValueError:
@@ -354,11 +385,13 @@ class FloatFrame(tk.Frame):
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         self.input.delete(0, tk.END)
         self.input.insert(0, str(self.config_variable.get()))
 
 
 class ListIntegerFrame(tk.Frame):
+    """A frame to set a ListInt option"""
     def __init__(self, master, gui: Gui, config_variable: ListIntOption, name: str = None, value_name: str = "Value",
                  min_value: int = None, max_value: int = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
@@ -405,6 +438,7 @@ class ListIntegerFrame(tk.Frame):
         self.listbox.config(yscrollcommand=scrollbar.set)
 
     def delete_value(self):
+        """Delete the selected value from the list"""
         try:
             self.listbox.delete(self.listbox.curselection())
         except tk.TclError:
@@ -413,6 +447,7 @@ class ListIntegerFrame(tk.Frame):
         self.update_config()
 
     def add_value(self):
+        """Add the value from the entry field to the list"""
         try:
             value = int(self.input.get())
         except ValueError:
@@ -440,6 +475,7 @@ class ListIntegerFrame(tk.Frame):
         self.input.delete(0, "end")
 
     def sort_values(self):
+        """Sort all values in the list"""
         values = []
         for entry in self.listbox.get(0, "end"):
             values.append(int(entry))
@@ -449,6 +485,7 @@ class ListIntegerFrame(tk.Frame):
             self.listbox.insert("end", entry)
 
     def update_config(self):
+        """Update the config with the currently displayed value"""
         new_value = [int(element) for element in self.listbox.get(0, tk.END)]
         if self.config_variable.get() == new_value:
             return
@@ -456,6 +493,7 @@ class ListIntegerFrame(tk.Frame):
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         self.listbox.delete(0, tk.END)
         for integer in self.config_variable.get():
             self.listbox.insert(0, str(integer))
@@ -463,6 +501,7 @@ class ListIntegerFrame(tk.Frame):
 
 
 class ListFloatFrame(tk.Frame):
+    """A frame to set a ListFloat option"""
     def __init__(self, master, gui: Gui, config_variable: ListFloatOption, name: str = None, value_name: str = "Value",
                  min_value: int = None, max_value: int = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
@@ -509,6 +548,7 @@ class ListFloatFrame(tk.Frame):
         self.listbox.config(yscrollcommand=scrollbar.set)
 
     def delete_value(self):
+        """Delete the selected value from the list"""
         try:
             self.listbox.delete(self.listbox.curselection())
         except tk.TclError:
@@ -517,6 +557,7 @@ class ListFloatFrame(tk.Frame):
         self.update_config()
 
     def add_value(self):
+        """Add the value from the entry field to the list"""
         try:
             value = float(self.input.get())
         except ValueError:
@@ -541,6 +582,7 @@ class ListFloatFrame(tk.Frame):
         self.input.delete(0, "end")
 
     def sort_values(self):
+        """Sort all values in the list"""
         values = []
         for entry in self.listbox.get(0, "end"):
             values.append(float(entry))
@@ -550,6 +592,7 @@ class ListFloatFrame(tk.Frame):
             self.listbox.insert("end", entry)
 
     def update_config(self):
+        """Update the config with the currently displayed value"""
         new_value = [float(element) for element in self.listbox.get(0, tk.END)]
         if self.config_variable.get() == new_value:
             return
@@ -557,6 +600,7 @@ class ListFloatFrame(tk.Frame):
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         self.listbox.delete(0, tk.END)
         for value in self.config_variable.get():
             self.listbox.insert(0, float(value))
@@ -565,7 +609,10 @@ class ListFloatFrame(tk.Frame):
 
 class AudioStartStopFrame(tk.Frame):
 
-    def __init__(self, master, gui: Gui, config_variable: ListFloatOption, name: str = None, value_name: str = "Value Pair",
+    """A specialized frame for the AudioStartStop option"""
+
+    def __init__(self, master, gui: Gui, config_variable: ListFloatOption, name: str = None,
+                 value_name: str = "Value Pair",
                  min_value: int = None, max_value: int = None):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
         self.master = master
@@ -626,6 +673,7 @@ class AudioStartStopFrame(tk.Frame):
         self.listbox.config(yscrollcommand=scrollbar.set)
 
     def delete_value(self):
+        """Delete the selected value and the corresponding start/stop value from the list"""
         try:
             index = self.listbox.curselection()[0]
             self.listbox.delete(index)
@@ -636,6 +684,7 @@ class AudioStartStopFrame(tk.Frame):
         self.update_config()
 
     def add_value(self):
+        """Verify and add the two values from the entry fields to the list"""
         try:
             value = float(self.input.get())
             value2 = float(self.input2.get())
@@ -691,7 +740,6 @@ class AudioStartStopFrame(tk.Frame):
             last_value = current_value
             traversed += 1
 
-
         self.listbox.insert('end', value)
         self.listbox.insert('end', value2)
         self.sort_values()
@@ -700,6 +748,7 @@ class AudioStartStopFrame(tk.Frame):
         self.input2.delete(0, "end")
 
     def sort_values(self):
+        """Sort all values in the list"""
         values = []
         for entry in self.listbox.get(0, "end"):
             values.append(float(entry))
@@ -709,6 +758,7 @@ class AudioStartStopFrame(tk.Frame):
             self.listbox.insert("end", entry)
 
     def update_config(self):
+        """Update the config with the currently displayed value"""
         new_value = [float(element) for element in self.listbox.get(0, tk.END)]
         if self.config_variable.get() == new_value:
             return
@@ -716,61 +766,16 @@ class AudioStartStopFrame(tk.Frame):
         log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         self.listbox.delete(0, tk.END)
         for value in self.config_variable.get():
             self.listbox.insert(0, float(value))
         self.sort_values()
 
 
-class CheckboxToListFrame(tk.Frame):
-
-    def __init__(self, master, gui: Gui, config_variable: ListOption, value_names: List[str], name: str = None):
-        super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
-        self.master = master
-        self.config_variable = config_variable
-        if name:
-            self.name = name
-        else:
-            self.name = self.config_variable.option
-        self.value_names = value_names
-        self.tooltip = Tooltip(self, text=self.config_variable.tooltip)
-        self.gui: Gui = gui
-        self.gui.updatable_elements.append(self)
-
-        self.label = tk.Label(master=self, text=f"{self.name}: ")
-        self.label.pack(fill=tk.BOTH, expand=0, side="left")
-
-        self.checkbox_variable_tuples = []
-
-        for value_name in value_names:
-            variable = tk.IntVar()
-            checkbox = tk.Checkbutton(self, text=value_name, variable=variable, command=self.update_config)
-            self.checkbox_variable_tuples.append((checkbox, variable))
-
-        for checkbox, variable in self.checkbox_variable_tuples:
-            checkbox.pack(fill=tk.BOTH, expand=1, side="left")
-            if checkbox["text"] in self.config_variable.get():
-                checkbox.select()
-
-    def update_config(self):
-        result = []
-        for checkbox, var in self.checkbox_variable_tuples:
-            if var.get() == 1:
-                result.append(checkbox["text"])
-        if self.config_variable.get() == result:
-            return
-        self.config_variable.set(result)
-        log.debug(f"Config: '{self.name}' set to: {self.config_variable.get()}")
-
-    def update_display(self):
-        for checkbox, variable in self.checkbox_variable_tuples:
-            if checkbox["text"] in self.config_variable.get():
-                checkbox.select()
-            else:
-                checkbox.deselect()
-
-
 class CheckboxToBooleanFrame(tk.Frame):
+
+    """A frame to control multiple boolean options via checkboxes"""
 
     def __init__(self, master, gui: Gui, config_variables: List[BoolOption], name: str, variable_names: List[str]):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
@@ -797,13 +802,14 @@ class CheckboxToBooleanFrame(tk.Frame):
                 checkbox.select()
 
     def update_config(self):
-
+        """Update the config with the currently displayed value"""
         for config_variable, checkbox, var in self.tuples:
             if bool(var.get()) != config_variable.get():
                 config_variable.set(bool(var.get()))
                 log.debug(f"Config: '{checkbox['text']}' set to: {config_variable.get()}")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         for config_variable, checkbox, var in self.tuples:
             if config_variable.get():
                 checkbox.select()
@@ -812,6 +818,9 @@ class CheckboxToBooleanFrame(tk.Frame):
 
 
 class PlotsFrame(tk.Frame):
+
+    """A specialized frame to create and save dicts that represent analysis plot options"""
+
     def __init__(self, master, gui: Gui, config_variable: ListOption, name: str = None, value_name: str = "Value"):
         super().__init__(master, background="#DCDCDC", bd=2, relief=RELIEF)
         self.master = master
@@ -892,6 +901,7 @@ class PlotsFrame(tk.Frame):
                 checkbox.select()
 
     def delete_value(self):
+        """Deleta a dict from the list"""
         try:
             self.listbox.delete(self.listbox.curselection())
         except tk.TclError:
@@ -900,6 +910,7 @@ class PlotsFrame(tk.Frame):
         self.update_config()
 
     def add_value(self):
+        """Add a dict representing the currently selected options to the list"""
         result = {"directions": [], "protocols": [], "kind": []}
         for checkbox, var in self.direction_tuples:
             if var.get() == 1:
@@ -921,6 +932,7 @@ class PlotsFrame(tk.Frame):
         self.update_config()
 
     def update_config(self):
+        """Update the config with the currently displayed value"""
         new_value = [element for element in self.listbox.get(0, tk.END)]
         if self.config_variable.get() == new_value:
             return
@@ -928,6 +940,7 @@ class PlotsFrame(tk.Frame):
         log.debug(f"Config: '{self.name}' modified")
 
     def update_display(self):
+        """Update the the widget to represent the currently loaded config"""
         self.listbox.delete(0, tk.END)
         for dictionary in self.config_variable.get():
             self.listbox.insert(0, str(dictionary))

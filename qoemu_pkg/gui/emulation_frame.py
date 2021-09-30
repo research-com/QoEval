@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 
 class EmulationFrame(tk.Frame):
+    """Frame to control emulation options"""
     def __init__(self, master, gui: Gui):
         super().__init__(master, background="#DCDCDC", bd=1, relief=RELIEF)
         self.master = master

@@ -1,22 +1,48 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import time
 import tkinter as tk
 from tkinter import ttk
-from tkinter.filedialog import askopenfilename
-from typing import TYPE_CHECKING
 import vlc
 import tkinter.messagebox as messagebox
-from PIL import ImageTk, Image
 import sys
 
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from qoemu_pkg.gui.gui import Gui
 
+# Parts of this code is copied from:
+# https://github.com/oaubert/python-vlc/blob/master/examples/tkvlc.py
+#
+# License:
+#
+# tkinter example for VLC Python bindings
+# Copyright (C) 2015 the VideoLAN team
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 021
+# """A simple example for VLC python bindings using tkinter.
+# Requires Python 3.4 or later.
+# Author: Patrick Fay
+# Date: 23-09-2015
+# """
 
 class VideoPlayer(tk.Tk):
+
+    """Root level GUI for playing back up to two videos. Expects a "trigger image path" as first argument and up to two
+    video file paths as second (and third) argument"""
 
     def __init__(self, args):
         tk.Tk.__init__(self)
@@ -27,7 +53,9 @@ class VideoPlayer(tk.Tk):
         if not os.path.exists(self.trigger_path):
             os.makedirs(self.trigger_path)
 
-        self.video_paths = args[1:]
+        print(self.trigger_path)
+
+        self.video_paths = args[1:3]
         self.is_dual_play = True if len(self.video_paths) > 1 else False
 
         if self.is_dual_play:
@@ -73,6 +101,7 @@ class VideoPlayer(tk.Tk):
             frame.second_backward(force=True)
 
     def update_play_buttons(self):
+        """Update play/pause buttons for all players"""
         is_any_player_playing = any([frame.player.is_playing() for frame in self.video_frames])
         for frame in self.video_frames:
             frame.update_play_pause_button(is_any_player_playing)
@@ -87,6 +116,7 @@ class VideoPlayer(tk.Tk):
             frame.set_bookmark(force=True)
 
     def play_sync(self):
+        """Play/Pauses all players in sync"""
         is_any_player_playing = any([frame.player.is_playing() for frame in self.video_frames])
         if is_any_player_playing:
             for frame in self.video_frames:
@@ -97,6 +127,8 @@ class VideoPlayer(tk.Tk):
 
 
 class VideoPlayerFrame(tk.Frame):
+
+    """A tk Frame containing a canvas and controls for video playback"""
 
     def __init__(self, master: VideoPlayer, file_path):
         # A Label widget to show in toplevel
@@ -111,7 +143,7 @@ class VideoPlayerFrame(tk.Frame):
         self.player.set_media(self.media)
         self.loaded_media_mrl = self.player.get_media().get_mrl()
 
-        # base level
+        # root level
         self.buttons_panel = tk.Frame(self)
         self.video_panel = ttk.Frame(self)
         self.frame_slider = ttk.Frame(self)
@@ -152,7 +184,7 @@ class VideoPlayerFrame(tk.Frame):
         self.timeSliderUpdate = time.time()
 
         # pack
-        self._pack_base_level()
+        self._pack_root_level()
         self._pack_video_panel()
         self._pack_buttons_panel()
         self._pack_frame_slider()
@@ -160,40 +192,23 @@ class VideoPlayerFrame(tk.Frame):
 
         self.on_tick()
 
-    def toggle_control_all_visual_effect(self):
-        color = "grey" if self.is_controll_all_var.get() else "lightgrey"
-        for child in self.buttons_panel.winfo_children():
-            # print(child)
-            if type(child) is tk.Button:
-                if child != self.button_trigger_end and child != self.button_trigger_start:
-                    child.configure(bg=color)
-
-
-    def go_to(self, force=False):
-        if self.is_controll_all_var.get() and not force:
-            self.master.go_to_all()
-        else:
-            self.player.set_time(self.bookmark_time.get())
-
-    def set_bookmark(self, force=False):
-        if self.is_controll_all_var.get() and not force:
-            self.master.set_bookmark_all()
-        else:
-            self.bookmark_time.set(self.player.get_time())
-
     def _attach_player_to_canvas(self):
+        """ Embeds the vlc player to the frames canvas"""
         h = self.canvas.winfo_id()
         self.player.set_xwindow(h)
 
-    def _pack_base_level(self):
+    def _pack_root_level(self):
+        """Pack all root level widgets/frames"""
         self.video_panel.pack(fill=tk.BOTH, expand=1, side=tk.TOP)
         self.frame_slider.pack(side=tk.TOP, fill=tk.X)
         self.buttons_panel.pack(expand=0, side=tk.TOP)
 
     def _pack_video_panel(self):
+        """Pack elements of the video panel"""
         self.canvas.pack(fill=tk.BOTH, expand=1)
 
     def _pack_buttons_panel(self):
+        """Pack elements of the buttons panel"""
         self.checkbutton_control_all.pack(side=tk.LEFT, expand=0, fill=tk.Y)
         sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
         sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
@@ -219,11 +234,35 @@ class VideoPlayerFrame(tk.Frame):
         self.button_trigger_start.pack(side=tk.LEFT, expand=0)
         self.button_trigger_end.pack(side=tk.LEFT, expand=0)
 
-
     def _pack_frame_slider(self):
+        """Pack elements of the slider panel"""
         self.timeSlider.pack(side=tk.BOTTOM, fill=tk.X, expand=1)
 
+    def toggle_control_all_visual_effect(self):
+        """Creates a visual feedback for the 'Control all' checkbox"""
+        color = "grey" if self.is_controll_all_var.get() else "lightgrey"
+        for child in self.buttons_panel.winfo_children():
+            # print(child)
+            if type(child) is tk.Button:
+                if child != self.button_trigger_end and child != self.button_trigger_start:
+                    child.configure(bg=color)
+
+    def set_bookmark(self, force=False):
+        """Bookmarks the current time of the player / all players"""
+        if self.is_controll_all_var.get() and not force:
+            self.master.set_bookmark_all()
+        else:
+            self.bookmark_time.set(self.player.get_time())
+
+    def go_to(self, force=False):
+        """Set the time of the player / all players to the saved bookmark"""
+        if self.is_controll_all_var.get() and not force:
+            self.master.go_to_all()
+        else:
+            self.player.set_time(self.bookmark_time.get())
+
     def toggle_mute(self, force=False):
+        """Toggle the mute state of the player / all players"""
         if self.is_controll_all_var.get() and not force:
             self.master.toggle_mute_all()
         else:
@@ -231,6 +270,7 @@ class VideoPlayerFrame(tk.Frame):
             self.update_mute_status()
 
     def frame_forward(self, force=False):
+        """Move the player / all players one frame forward"""
         if self.is_controll_all_var.get() and not force:
             self.master.frame_forward_all()
         else:
@@ -238,6 +278,7 @@ class VideoPlayerFrame(tk.Frame):
             self.player.set_time(curr_time + 33)
 
     def frame_backward(self, force=False):
+        """Move the player / all players one frame backward"""
         if self.is_controll_all_var.get() and not force:
             self.master.frame_backward_all()
         else:
@@ -245,6 +286,7 @@ class VideoPlayerFrame(tk.Frame):
             self.player.set_time(curr_time - 33)
 
     def frames_forward(self, force=False):
+        """Move the player / all players ten frames forward"""
         if self.is_controll_all_var.get() and not force:
             self.master.frames_forward_all()
         else:
@@ -252,6 +294,7 @@ class VideoPlayerFrame(tk.Frame):
             self.player.set_time(curr_time + 333)
 
     def frames_backward(self, force=False):
+        """Move the player / all players ten frames forward"""
         if self.is_controll_all_var.get() and not force:
             self.master.frames_backward_all()
         else:
@@ -259,6 +302,7 @@ class VideoPlayerFrame(tk.Frame):
             self.player.set_time(curr_time - 333)
 
     def second_forward(self, force=False):
+        """Move the player / all players one second forward"""
         if self.is_controll_all_var.get() and not force:
             self.master.second_forward_all()
         else:
@@ -266,6 +310,7 @@ class VideoPlayerFrame(tk.Frame):
             self.player.set_time(curr_time + 1000)
 
     def second_backward(self, force=False):
+        """Move the player / all players one second backwards"""
         if self.is_controll_all_var.get() and not force:
             self.master.second_backward_all()
         else:
@@ -273,16 +318,20 @@ class VideoPlayerFrame(tk.Frame):
             self.player.set_time(curr_time - 1000)
 
     def trigger_start(self):
-        self.take_screenshot(True)
+        """Save a trigger start image from the current frame"""
+        self.save_snapshot(True)
 
     def trigger_end(self):
-        self.take_screenshot(False)
+        """Save a trigger end image from the current frame"""
+        self.save_snapshot(False)
 
     def trigger_get_filepath(self, is_start: bool):
+        """Get the filepath to save the trigger image to"""
         suffix = "_start.png" if is_start else "_end.png"
         return os.path.join(os.path.expanduser(self.master.trigger_path), self.stimulus_type_and_table_id + suffix)
 
-    def take_screenshot(self, is_start: bool):
+    def save_snapshot(self, is_start: bool):
+        """Save a snapshot as trigger image"""
         path = self.trigger_get_filepath(is_start)
         overwrite = True
         if os.path.isfile(path):
@@ -292,6 +341,7 @@ class VideoPlayerFrame(tk.Frame):
             self.player.video_take_snapshot(0, path, x, y)
 
     def update_play_pause_button(self, is_any_player_playing: bool=None):
+        """Updates the text of the play pause button to reflect current playback status"""
         if not self.is_controll_all_var.get():
             is_playing = self.player.is_playing()
         else:
@@ -302,6 +352,7 @@ class VideoPlayerFrame(tk.Frame):
             self.button_play_pause.configure(text="Play")
 
     def play_pause(self, force_play=False, force_pause=False):
+        """Play / pause player / all players. Reload player media if necessary"""
         if self.is_controll_all_var.get() and not force_pause and not force_play:
             self.master.play_sync()
             return
@@ -318,15 +369,14 @@ class VideoPlayerFrame(tk.Frame):
             self.master.update_play_buttons()
 
     def update_mute_status(self):
+        """Updates the text of the mute button to reflect current status"""
         if self.player.audio_get_mute():
             self.button_mute.configure(text="Unmute")
         else:
             self.button_mute.configure(text="Mute")
 
-    def stop(self):
-        self.player.stop()
-
     def on_time(self, *unused):
+        """Callback of the time slider. Updates the time of the player when slider was moved manually"""
         if self.player:
             t = self.timeVar.get()
             if self.timeSliderLast != int(t):
@@ -355,7 +405,7 @@ class VideoPlayerFrame(tk.Frame):
                     self.player.set_media(self.media)
 
     def on_tick(self):
-        """Timer tick, update the time slider to the video time.
+        """Timer tick, update the time slider to the video time. Update buttons to reflect player state.
         """
         self.update_mute_status()
         if self.player:
@@ -382,14 +432,18 @@ class VideoPlayerFrame(tk.Frame):
 
 
 def _get_media(vlc_instance: vlc.Instance, file_path=str):
+    """Create a vlc media from a filepath"""
     return vlc_instance.media_new(str(file_path))
 
 
 def _get_player(vlc_instance: vlc.Instance):
+    """Create a vlc player"""
     return vlc_instance.media_player_new()
 
 
 def _get_vlc_instance():
+    """Create a vlc instance"""
+    return vlc.Instance(['--no-xlib'])
     vlc_instance = vlc.Instance(['--no-xlib'])
     raise RuntimeError("Cannot get vlc instance! If you installed vlc successfully, please check "
                        "that vlc plugins are installed (on Ubuntu: \"sudo apt install vlc-plugin-base\") and"
