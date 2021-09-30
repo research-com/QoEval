@@ -31,7 +31,8 @@ from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState, UseCaseInteractio
 _APP_NAMES = {'org.wikipedia': 'Wikipedia',
               'com.zdf.android.mediathek': 'ZDFmediathek',
               'de.hafas.android.db': 'DB Navigator',
-              'com.google.android.apps.magazines': 'Google News'}
+              'com.google.android.apps.magazines': 'Google News',
+              'com.google.android.youtube' : 'YouTube'}
 
 _SHORT_TIME = 2  # short waiting time [s]
 _RECORDING_START_OFFSET_TIME = 1  # assumed time for guaranteeing that recording has started [s]
@@ -47,7 +48,9 @@ def _get_interactions(app_package: str):
         # wait = UseCaseInteractionElement(info="wait some time and go to home screen", key='KEYCODE_HOME', delay=8)
         return UseCaseInteraction(elements=[allow_push])
 
-    if app_package.startswith("com.google.android.apps.magazines"):  # Google News App
+    # Google News App or Google YouTube
+    if app_package.startswith("com.google.android.apps.magazines"): # or  \
+            #app_package.startswith('com.google.android.youtube'):
         swipe_down = UseCaseInteractionElement(info="swipe down", delay=5, swipe='600 1300 600 50')
         return UseCaseInteraction(elements=[swipe_down])
 
