@@ -88,11 +88,36 @@ def _get_interactions(app_package: str):
                                                  trigger_id='de.hafas.android.db:id/button_later',
                                                  delay=1)
 
-        push_back = UseCaseInteractionElement(info="Return to main screen", delay=5, key='KEYCODE_BACK')
-
         db_interaction_elements.append(select_later)
         db_interaction_elements.append(wait_for_list)
+        push_back = UseCaseInteractionElement(info="Return to main screen", delay=5, key='KEYCODE_BACK')
         db_interaction_elements.append(push_back)
+
+        # Now the use-case is done - but we specify a different start-target so the app-state is prepared
+        # for the next run and does not already include the desired combination
+
+        post_goto_start_input = UseCaseInteractionElement(info="Von", trigger_id="de.hafas.android.db:id/input_start",
+                                                     max_wait=10)
+        post_do_start_input = UseCaseInteractionElement(info="Set start location",
+                                                   trigger_id="de.hafas.android.db:id/input_location_name",
+                                                   user_input="Berlin", max_wait=10)
+        post_select_start_input = UseCaseInteractionElement(info="Start location selection",
+                                                       trigger_text="Berlin Hbf", max_wait=30)
+        post_goto_destination_input = UseCaseInteractionElement(info="Nach",
+                                                           trigger_id="de.hafas.android.db:id/input_target",
+                                                           max_wait=10)
+        post_do_destination_input = UseCaseInteractionElement(info="Set destination location",
+                                                         trigger_id="de.hafas.android.db:id/input_location_name",
+                                                         user_input="Köln Hbf", max_wait=10)
+        post_select_destination_input = UseCaseInteractionElement(info="Destination location selection",
+                                                             trigger_text="Köln Hbf", max_wait=30)
+
+        db_interaction_elements.append(post_goto_start_input)
+        db_interaction_elements.append(post_do_start_input)
+        db_interaction_elements.append(post_select_start_input)
+        db_interaction_elements.append(post_goto_destination_input)
+        db_interaction_elements.append(post_do_destination_input)
+        db_interaction_elements.append(post_select_destination_input)
 
         return UseCaseInteraction(elements=db_interaction_elements)
 
