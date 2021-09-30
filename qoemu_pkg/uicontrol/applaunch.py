@@ -73,25 +73,39 @@ def _get_interactions(app_package: str):
                                                              trigger_text="Hamburg Hbf ZOB", max_wait=30)
         start_search = UseCaseInteractionElement(info="Start search", trigger_id="de.hafas.android.db:id/button_search",
                                                  max_wait=5)
-        wait_for_list = UseCaseInteractionElement(info="Wait for result list",
-                                                  trigger_id="de.hafas.android.db:id/empty_txt_bottom",
+
+        wait_for_list = UseCaseInteractionElement(info="Wait for result list", delay=1.0,
+                                                  delay_id="de.hafas.android.db:id/loading_text",
                                                   max_wait=30)
 
         db_interaction_elements = [goto_start_input, do_start_input, select_start_input, goto_destination_input,
                                    do_destination_input, select_destination_input, start_search, wait_for_list]
 
-        for i in range(0, 15):
+        for i in range(0, 2):
+            db_interaction_elements.append(UseCaseInteractionElement(info="swipe down", delay=0.1,
+                                                                     swipe='600 1300 600 50'))
+
+        db_interaction_elements.append(UseCaseInteractionElement(info="Select later",
+                                                 trigger_id='de.hafas.android.db:id/button_later',
+                                                 delay=1))
+
+        db_interaction_elements.append(wait_for_list)
+
+        for i in range(0, 2):
+            db_interaction_elements.append(UseCaseInteractionElement(info="swipe down", delay=0.1,
+                                                                     swipe='600 1300 600 50'))
+
+        for i in range(0, 3):
             db_interaction_elements.append(UseCaseInteractionElement(info="scroll down", delay=0.1,
                                                                      key='KEYCODE_DPAD_DOWN'))
 
-        select_later = UseCaseInteractionElement(info="Select later",
-                                                 trigger_id='de.hafas.android.db:id/button_later',
-                                                 delay=1)
+        db_interaction_elements.append(UseCaseInteractionElement(info="select an item", delay=4,
+                                                                 key='KEYCODE_ENTER'))
 
-        db_interaction_elements.append(select_later)
-        db_interaction_elements.append(wait_for_list)
-        push_back = UseCaseInteractionElement(info="Return to main screen", delay=5, key='KEYCODE_BACK')
-        db_interaction_elements.append(push_back)
+        db_interaction_elements.append(UseCaseInteractionElement(info="Return to list screen",
+                                                                 delay=5, key='KEYCODE_BACK'))
+        db_interaction_elements.append(UseCaseInteractionElement(info="Return to main screen",
+                                                                 delay=0.5, key='KEYCODE_BACK'))
 
         # Now the use-case is done - but we specify a different start-target so the app-state is prepared
         # for the next run and does not already include the desired combination
@@ -111,6 +125,9 @@ def _get_interactions(app_package: str):
                                                          user_input="Köln Hbf", max_wait=10)
         post_select_destination_input = UseCaseInteractionElement(info="Destination location selection",
                                                              trigger_text="Köln Hbf", max_wait=30)
+        post_start_search = UseCaseInteractionElement(info="Start search", trigger_id="de.hafas.android.db:id/button_search",
+                                                 max_wait=5)
+        post_return = UseCaseInteractionElement(info="Return to main screen", delay=2, key='KEYCODE_BACK')
 
         db_interaction_elements.append(post_goto_start_input)
         db_interaction_elements.append(post_do_start_input)
@@ -118,6 +135,8 @@ def _get_interactions(app_package: str):
         db_interaction_elements.append(post_goto_destination_input)
         db_interaction_elements.append(post_do_destination_input)
         db_interaction_elements.append(post_select_destination_input)
+        db_interaction_elements.append(post_start_search)
+        db_interaction_elements.append(post_return)
 
         return UseCaseInteraction(elements=db_interaction_elements)
 
