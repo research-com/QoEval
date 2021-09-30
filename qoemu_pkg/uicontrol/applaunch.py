@@ -27,16 +27,16 @@ import time
 
 from qoemu_pkg.uicontrol.usecase import UseCase, UseCaseState, UseCaseInteractionElement, UseCaseInteraction
 
-
 # Specification of app names for specific app packages (TODO: automatically find out name)
 _APP_NAMES = {'org.wikipedia': 'Wikipedia',
-              'com.zdf.android.mediathek' : 'ZDFmediathek'}
+              'com.zdf.android.mediathek': 'ZDFmediathek',
+              'de.hafas.android.db': 'DB Navigator'}
 
 _SHORT_TIME = 2  # short waiting time [s]
-_RECORDING_START_OFFSET_TIME = 1 # assumed time for guaranteeing that recording has started [s]
+_RECORDING_START_OFFSET_TIME = 1  # assumed time for guaranteeing that recording has started [s]
 _TIME_TO_SET_HOUR = "10"
 _TIME_TO_SET_MINUTE = "00"
-_RESET_ALL_APP_DATA = False   # if set to True, all cache and user data will be reset - not only the app cache
+_RESET_ALL_APP_DATA = False  # if set to True, all cache and user data will be reset - not only the app cache
 
 
 # TODO: refactor the handling of interactions - should be dynamic based on a config file
@@ -45,7 +45,8 @@ def _get_interactions(app_package: str):
         allow_push = UseCaseInteractionElement(info="Allow push notifications", trigger_text="ERLAUBEN", max_wait=2)
         # wait = UseCaseInteractionElement(info="wait some time and go to home screen", key='KEYCODE_HOME', delay=8)
         return UseCaseInteraction(elements=[allow_push])
-    if app_package.startswith("org.wikipedia"): # Wikipedia App
+
+    if app_package.startswith("org.wikipedia"):  # Wikipedia App
         search_input = UseCaseInteractionElement(info="Search input", trigger_text="Wikipedia durchsuchen",
                                                  user_input="Elbphilhar", max_wait=10)
         search_selection = UseCaseInteractionElement(info="Wikipedia search item selection",
@@ -53,6 +54,50 @@ def _get_interactions(app_package: str):
         go_back_A = UseCaseInteractionElement(info="wait and press back", delay=60, key='KEYCODE_BACK')
         go_back_B = UseCaseInteractionElement(info="return to main screen", delay=1, key='KEYCODE_BACK')
         return UseCaseInteraction(elements=[search_input, search_selection, go_back_A, go_back_B, go_back_B])
+
+    if app_package.startswith("de.hafas.android.db"):  # DB Navigator App
+        goto_start_input = UseCaseInteractionElement(info="Von", trigger_id="de.hafas.android.db:id/input_start",
+                                                     max_wait=10)
+        do_start_input = UseCaseInteractionElement(info="Set start location",
+                                                   trigger_id="de.hafas.android.db:id/input_location_name",
+                                                   user_input="München", max_wait=10)
+        select_start_input = UseCaseInteractionElement(info="Start location selection",
+                                                       trigger_text="München Hbf", max_wait=30)
+        goto_destination_input = UseCaseInteractionElement(info="Nach",
+                                                           trigger_id="de.hafas.android.db:id/input_target",
+                                                           max_wait=10)
+        do_destination_input = UseCaseInteractionElement(info="Set destination location",
+                                                         trigger_id="de.hafas.android.db:id/input_location_name",
+                                                         user_input="Hamburg Hbf", max_wait=10)
+        select_destination_input = UseCaseInteractionElement(info="Destination location selection",
+                                                             trigger_text="Hamburg Hbf ZOB", max_wait=30)
+        start_search = UseCaseInteractionElement(info="Start search", trigger_id="de.hafas.android.db:id/button_search",
+                                                 max_wait=5)
+        wait_for_list = UseCaseInteractionElement(info="Wait for result list",
+                                                  trigger_id="de.hafas.android.db:id/empty_txt_bottom",
+                                                  max_wait=30)
+
+        db_interaction_elements = [goto_start_input, do_start_input, select_start_input, goto_destination_input,
+                                   do_destination_input, select_destination_input, start_search, wait_for_list]
+
+        for i in range(0, 15):
+            db_interaction_elements.append(UseCaseInteractionElement(info="scroll down", delay=0.1,
+                                                                     key='KEYCODE_DPAD_DOWN'))
+
+        select_later = UseCaseInteractionElement(info="Select later",
+                                                 trigger_id='de.hafas.android.db:id/button_later',
+                                                 delay=1)
+
+        push_back = UseCaseInteractionElement(info="Return to main screen", delay=5, key='KEYCODE_BACK')
+
+        db_interaction_elements.append(select_later)
+        db_interaction_elements.append(wait_for_list)
+        db_interaction_elements.append(push_back)
+
+        return UseCaseInteraction(elements=db_interaction_elements)
+
+    # no interactions for this app
+    log.info(f"No interactions for {app_package} found.")
     return None
 
 
@@ -126,7 +171,7 @@ class _AppLaunch(UseCase):
         #     self._vc.traverse()
 
         if time.time() - start_time < duration:
-            time.sleep(duration-(time.time()-start_time))
+            time.sleep(duration - (time.time() - start_time))
 
         self.state = UseCaseState.EXECUTED
 

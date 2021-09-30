@@ -95,8 +95,12 @@ if __name__ == '__main__':
     # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="com.zdf.android.mediathek",
     #                                                 activity=".ui.common.MainActivity")
     # Wikipedia App
-    ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="org.wikipedia",
-                                                    activity=".main.MainActivity")
+    # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="org.wikipedia",
+    #                                                 activity=".main.MainActivity")
+    # DB Navigator App de.hafas.android.db/de.bahn.dbtickets.ui.DBNavLauncherActivity
+    ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="de.hafas.android.db",
+                            activity="de.bahn.dbtickets.ui.DBNavLauncherActivity")
+
     ui_control.prepare_use_case()
     ui_control.execute_use_case(20)
     time.sleep(5)
