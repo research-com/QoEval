@@ -624,8 +624,8 @@ def main():
     # export all (for documentation)
     # coordinator.export_all_parameter_tables()
 
-    coordinator.start(['WB'], ['B'], ['10'], # ['1','2','3','4','5','6','7','8'],
-                      generate_stimuli=True, postprocessing=True, overwrite=True)
+    coordinator.start(['AL'], ['D'],  # ['1','2','3','4','5','6','7','8'],
+                      generate_stimuli=True, postprocessing=False, overwrite=False)
 
     # coordinator.start(['VS'],['B'],['2'],generate_stimuli=True,postprocessing=False)
 

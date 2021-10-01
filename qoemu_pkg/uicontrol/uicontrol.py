@@ -92,8 +92,19 @@ if __name__ == '__main__':
     # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="de.sde.mobile",
     #                         activity=".mainactivity.MainActivity")
     # ZDF App
-    ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="com.zdf.android.mediathek",
-                                                    activity=".ui.common.MainActivity")
+    # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="com.zdf.android.mediathek",
+    #                                                 activity=".ui.common.MainActivity")
+    # Wikipedia App
+    # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="org.wikipedia",
+    #                                                 activity=".main.MainActivity")
+    # DB Navigator App
+    # ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="de.hafas.android.db",
+    #                        activity="de.bahn.dbtickets.ui.DBNavLauncherActivity")
+
+    # Youtube App app:
+    ui_control.set_use_case(UseCaseType.APP_LAUNCH, package="com.google.android.youtube",
+                           activity="com.google.android.apps.youtube.app.WatchWhileActivity")
+
 
     ui_control.prepare_use_case()
     ui_control.execute_use_case(20)

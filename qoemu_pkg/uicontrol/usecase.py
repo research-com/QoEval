@@ -26,13 +26,16 @@ class UseCaseState(Enum):
 
 @dataclass
 class UseCaseInteractionElement:
-    info: str
-    trigger_id: str = None
-    trigger_text: str = None
-    user_input: str = None
-    key: str = None
-    delay: float = 0.0
-    max_wait: float = 5.0
+    info: str                   # short information describing this interaction
+    delay: float = 0.0          # delay (time) which needs to pass until interaction starts
+    delay_id: str = None        # id which must disappear until the interaction starts
+    trigger_id: str = None      # id which starts the interaction
+    trigger_text: str = None    # text which needs to be on the screen when interaction starts
+    user_input: str = None      # user input which is to be sent when the trigger has appeared
+    key: str = None             # key to be pressed
+    swipe: str = None           # swipe action to be done after trigger has started
+    max_wait: float = 5.0       # maximum waiting time for waiting for ids
+    touch: bool = True          # should the id be touched when it was found
 
 
 @dataclass
@@ -52,7 +55,7 @@ class UseCase:
         self._vc = None
         self.state = UseCaseState.CREATED
 
-    def _touch_view_by_id(self, id: str, max_waiting_time: float = 0.5, text_input=None):
+    def _touch_view_by_id(self, id: str, max_waiting_time: float = 0.5, text_input=None, do_touch=True):
         end_time = time.time() + max_waiting_time
         while time.time() < end_time:
             # find view and touch element with specified id
@@ -61,7 +64,8 @@ class UseCase:
             if target_view:
                 # log.debug(f"View {id} found!")
                 # log.debug(target_view.__tinyStr__())
-                target_view.touch()
+                if do_touch:
+                    target_view.touch()
                 if text_input:
                     self.device.type(text_input)
                 return
@@ -69,7 +73,18 @@ class UseCase:
         log.error(f"View {id} NOT found!")
         raise RuntimeError(f"View {id} NOT found!")
 
-    def _touch_view_by_text(self, text: str, max_waiting_time: float = 0.5, text_input=None):
+    def _wait_until_id_not_found(self, id: str, max_waiting_time: float = 0.5):
+        end_time = time.time() + max_waiting_time
+        while time.time() < end_time:
+            # find view and touch element with specified id
+            self._vc.dump(window=-1, sleep=0)
+            target_view = self._vc.findViewById(id)
+            if not target_view:
+                log.info(f"id {id} has disappeared")
+                return
+        log.warning(f"View {id} did not disappear!")
+
+    def _touch_view_by_text(self, text: str, max_waiting_time: float = 0.5, text_input=None, do_touch=True):
         end_time = time.time() + max_waiting_time
         while time.time() < end_time:
             # find view and touch element with specified text
@@ -78,7 +93,8 @@ class UseCase:
             if target_view:
                 # log.debug(f"View {id} found!")
                 # log.debug(target_view.__tinyStr__())
-                target_view.touch()
+                if do_touch:
+                    target_view.touch()
                 if text_input:
                     self.device.type(text_input)
                 return
@@ -90,15 +106,21 @@ class UseCase:
         for interaction in interactions.elements:
             log.debug(f"Handling interaction: {interaction.info}")
             if interaction.delay > 0:
-                com.dtmilano.android.viewclient.sleep(interaction.delay)
+                time.sleep(interaction.delay)
             # self._vc.dump(window=-1, sleep=0)
             # self._vc.traverse()
+            if interaction.delay_id:
+                self._wait_until_id_not_found(interaction.delay_id, interaction.max_wait)
             if interaction.trigger_id:
-                self._touch_view_by_id(interaction.trigger_id, interaction.max_wait, interaction.user_input)
+                self._touch_view_by_id(interaction.trigger_id, interaction.max_wait, interaction.user_input,
+                                       do_touch=interaction.touch)
             if interaction.trigger_text:
-                self._touch_view_by_text(interaction.trigger_text, interaction.max_wait, interaction.user_input)
+                self._touch_view_by_text(interaction.trigger_text, interaction.max_wait, interaction.user_input,
+                                         do_touch=interaction.touch)
             if interaction.key:
                 self.device.press(interaction.key)
+            if interaction.swipe:
+                self.device.shell(f'input swipe {interaction.swipe}')
 
     def set_time(self, time_to_set_hour: str, time_to_set_minute: str):
         self.device.shell(f"am start -n com.android.settings/.Settings\$DateTimeSettingsActivity")

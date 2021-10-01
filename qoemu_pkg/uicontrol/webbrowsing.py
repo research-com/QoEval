@@ -43,8 +43,8 @@ def _get_interactions(url: str):
                                              user_input="Perpignan", key='KEYCODE_ENTER', delay=1)
         # click_wiki = WebInteractionElement("click on wikipedia link", None, "https://de.wikipedia.org/wiki/Perpignan",
         #                                   None, None, 5)
-        wait = UseCaseInteractionElement(info="wait some time and go to home screen", key='KEYCODE_HOME', delay=8)
-        return UseCaseInteraction(elements=[enter_search, wait])
+        # wait = UseCaseInteractionElement(info="wait some time and go to home screen", key='KEYCODE_HOME', delay=60)
+        return UseCaseInteraction(elements=[enter_search])
     return None
 
 
