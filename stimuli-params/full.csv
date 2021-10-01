@@ -311,7 +311,7 @@ WB-J-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";"Codec";"Dynamic";"Num. Rebuffering";"Rebuffering duration  [ms]";"App Package ID";Link;Assessment
-AL-A-1;"Basic set";40;350;50000;18;18;Reference;;;"Starten der Spiegel-App
+AL-A-1;"Basic set";40;350;50000;18;18;Reference;;;"Starten der ZDF Mediathek App
 Excerpt from 00:00 (min:sec) to 00:20 (min:sec).
 Resolution: Auto";app://com.zdf.android.mediathek/.ui.common.MainActivity;Throughput
 AL-A-2;"Basic set";40;350;20000;18;18;Assessment;;;;
@@ -325,7 +325,7 @@ AL-A-9;"Basic set";200;155;200;18;18;Assessment;;;;
 AL-A-10;"Basic set";205;80;100;18;18;Assessment;;;;
 ;;;;;;;;;;;
 Stimulus-ID;Assessment;"Tinit [ms]";"RUL [kbps]";"RDL [kbps]";"DUL [ms]";"DDL [ms]";"Stimulus in picture";;"Web site";Link;Assessment
-AL-B-1;"Basic set";40;350;50000;18;18;Reference;;;"Starten der ZDF Mediathek App
+AL-B-1;"Basic set";40;350;50000;18;18;Reference;;;"Starten der Spiegel App
 Excerpt from 00:00 (min:sec) to 00:20 (min:sec).
 Resolution: Auto";app://de.spiegel.android.app.spon/.activities.SplashScreenActivity;Throughput
 AL-B-2;"Basic set";40;350;20000;18;18;Assessment;;;;
