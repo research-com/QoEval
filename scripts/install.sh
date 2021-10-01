@@ -9,7 +9,7 @@ NDK_VERSION="23.0.7123448"
 
 # configuration settings
 SHELL="terminator git git-lfs"
-OS_TOOLS="net-tools htop qemu-kvm bridge-utils cpu-checker"
+OS_TOOLS="net-tools htop qemu-kvm bridge-utils cpu-checker vlc vlc-plugin-base vlc-plugin-video-output"
 MONITORING="wireshark wireshark-qt wireshark-doc"
 VIDEO_REC="ffmpeg vlc-bin wmctrl x11-utils gpac"
 REMOTE_ACCESS="openssh-server"
