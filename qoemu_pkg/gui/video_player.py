@@ -447,11 +447,11 @@ def _get_player(vlc_instance: vlc.Instance):
 
 def _get_vlc_instance():
     """Create a vlc instance"""
-    return vlc.Instance(['--no-xlib'])
     vlc_instance = vlc.Instance(['--no-xlib'])
-    raise RuntimeError("Cannot get vlc instance! If you installed vlc successfully, please check "
-                       "that vlc plugins are installed (on Ubuntu: \"sudo apt install vlc-plugin-base\") and"
-                       "that plugins are found.")
+    if not vlc_instance:
+        raise RuntimeError("Cannot get vlc instance! If you installed vlc successfully, please check "
+                           "that vlc plugins are installed (on Ubuntu: \"sudo apt install vlc-plugin-base\") and"
+                           "that plugins are found.")
     return vlc_instance
 
 
