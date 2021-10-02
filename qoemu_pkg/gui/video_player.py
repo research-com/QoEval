@@ -67,10 +67,14 @@ class VideoPlayer(tk.Tk):
 
         self.video_frames = []
 
-        for video_path in self.video_paths:
+        for i, video_path in enumerate(self.video_paths):
             video_player_frame = VideoPlayerFrame(self, video_path)
-            video_player_frame.pack(fill=tk.BOTH, expand=1, side=tk.LEFT)
+            video_player_frame.grid(row=0, column=i, sticky="news")
             self.video_frames.append(video_player_frame)
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
     def go_to_all(self):
         for frame in self.video_frames:

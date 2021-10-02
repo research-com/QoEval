@@ -85,7 +85,7 @@ class ResultsFrame(tk.Frame):
         self.button_play = tk.Button(self.frame_videos, text="Play selected videos", command=self.open_video_player)
         self.button_play.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.update()
+        self.update_display()
 
     def update_display(self):
         """Update the frame to represent the currently loaded config file"""
