@@ -39,8 +39,8 @@ if TYPE_CHECKING:
 # Date: 23-09-2015
 # """
 
-class VideoPlayer(tk.Tk):
 
+class VideoPlayer(tk.Tk):
     """Root level GUI for playing back up to two videos. Expects a "trigger image path" as first argument and up to two
     video file paths as second (and third) argument"""
 
@@ -52,8 +52,6 @@ class VideoPlayer(tk.Tk):
         self.trigger_path = os.path.expanduser(args[0])
         if not os.path.exists(self.trigger_path):
             os.makedirs(self.trigger_path)
-
-        print(self.trigger_path)
 
         self.video_paths = args[1:3]
         self.is_dual_play = True if len(self.video_paths) > 1 else False
@@ -73,7 +71,8 @@ class VideoPlayer(tk.Tk):
             self.video_frames.append(video_player_frame)
 
         self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+        if self.is_dual_play:
+            self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
     def go_to_all(self):
@@ -131,7 +130,6 @@ class VideoPlayer(tk.Tk):
 
 
 class VideoPlayerFrame(tk.Frame):
-
     """A tk Frame containing a canvas and controls for video playback"""
 
     def __init__(self, master: VideoPlayer, file_path):
@@ -149,6 +147,8 @@ class VideoPlayerFrame(tk.Frame):
 
         # root level
         self.buttons_panel = tk.Frame(self)
+        self.buttons_panel_2 = tk.Frame(self)
+        self.buttons_panel_3 = tk.Frame(self)
         self.video_panel = ttk.Frame(self)
         self.frame_slider = ttk.Frame(self)
 
@@ -156,28 +156,38 @@ class VideoPlayerFrame(tk.Frame):
         self.canvas = tk.Canvas(self.video_panel)
 
         # buttons panel
-        self.button_play_pause = tk.Button(self.buttons_panel, text="playpause", command=self.play_pause, width=3)
-        self.button_bookmark_go_to = tk.Button(self.buttons_panel, text="Go to", width=3, command=self.go_to)
-        self.bookmark_time = tk.IntVar()
-        self.bookmark_time.set(0)
-        self.button_bookmark_set = tk.Button(self.buttons_panel, text="Set", width=2, command=self.set_bookmark)
-        self.label_bookmark_desc = tk.Label(self.buttons_panel, text="Bookmark:", width=8)
-        self.label_bookmark = tk.Label(self.buttons_panel, width=7, textvariable=self.bookmark_time)
-        self.label_trigger_desc = tk.Label(self.buttons_panel, text="Trigger", width=8)
-        self.button_trigger_start = tk.Button(self.buttons_panel, text="Start", command=self.trigger_start,
-                                              width=3)
-        self.button_trigger_end = tk.Button(self.buttons_panel, text="End", command=self.trigger_end, width=3)
+        panel = self.buttons_panel
+
         self.is_controll_all_var = tk.BooleanVar()
-        self.checkbutton_control_all = tk.Checkbutton(self.buttons_panel, text="Control All   ", width=8,
+        self.checkbutton_control_all = tk.Checkbutton(panel, text="Control All   ", width=8,
                                                       variable=self.is_controll_all_var,
                                                       command=self.toggle_control_all_visual_effect)
-        self.button_second_backward = tk.Button(self.buttons_panel, text="<<<", command=self.second_backward, width=1)
-        self.button_frames_backward = tk.Button(self.buttons_panel, text="<<", command=self.frames_backward, width=1)
-        self.button_frame_backward = tk.Button(self.buttons_panel, text="<", command=self.frame_backward, width=1)
-        self.button_frame_forward = tk.Button(self.buttons_panel, text=">", command=self.frame_forward, width=1)
-        self.button_frames_forward = tk.Button(self.buttons_panel, text=">>", command=self.frames_forward, width=1)
-        self.button_second_forward = tk.Button(self.buttons_panel, text=">>>", command=self.second_forward, width=1)
-        self.button_mute = tk.Button(self.buttons_panel, text="Mute", command=self.toggle_mute, width=4)
+        self.button_play_pause = tk.Button(panel, text="playpause", command=self.play_pause, width=3)
+        self.button_second_backward = tk.Button(panel, text="<<<", command=self.second_backward, width=1)
+        self.button_frames_backward = tk.Button(panel, text="<<", command=self.frames_backward, width=1)
+        self.button_frame_backward = tk.Button(panel, text="<", command=self.frame_backward, width=1)
+        self.button_frame_forward = tk.Button(panel, text=">", command=self.frame_forward, width=1)
+        self.button_frames_forward = tk.Button(panel, text=">>", command=self.frames_forward, width=1)
+        self.button_second_forward = tk.Button(panel, text=">>>", command=self.second_forward, width=1)
+
+        if self.master.is_dual_play:
+            panel = self.buttons_panel_2
+
+        self.bookmark_time = tk.IntVar()
+        self.bookmark_time.set(0)
+        self.button_bookmark_go_to = tk.Button(panel, text="Go to", width=3, command=self.go_to)
+        self.button_bookmark_set = tk.Button(panel, text="Set", width=2, command=self.set_bookmark)
+        self.label_bookmark_desc = tk.Label(panel, text="Bookmark:", width=8)
+        self.label_bookmark = tk.Label(panel, width=7, textvariable=self.bookmark_time)
+
+        if self.master.is_dual_play:
+            panel = self.buttons_panel_3
+
+        self.button_mute = tk.Button(panel, text="Mute", command=self.toggle_mute, width=4)
+        self.label_trigger_desc = tk.Label(panel, text="Trigger", width=8)
+        self.button_trigger_start = tk.Button(panel, text="Start", command=self.trigger_start,
+                                              width=3)
+        self.button_trigger_end = tk.Button(panel, text="End", command=self.trigger_end, width=3)
 
         # slider frame
         self.timeVar = tk.DoubleVar()
@@ -205,7 +215,10 @@ class VideoPlayerFrame(tk.Frame):
         """Pack all root level widgets/frames"""
         self.video_panel.pack(fill=tk.BOTH, expand=1, side=tk.TOP)
         self.frame_slider.pack(side=tk.TOP, fill=tk.X)
-        self.buttons_panel.pack(expand=0, side=tk.TOP)
+        self.buttons_panel.pack(expand=0, side=tk.TOP, anchor=tk.W, padx=25)
+        if self.master.is_dual_play:
+            self.buttons_panel_2.pack(expand=0, side=tk.TOP, anchor=tk.W, padx=25)
+            self.buttons_panel_3.pack(expand=0, side=tk.TOP, anchor=tk.W, padx=25)
 
     def _pack_video_panel(self):
         """Pack elements of the video panel"""
@@ -213,9 +226,10 @@ class VideoPlayerFrame(tk.Frame):
 
     def _pack_buttons_panel(self):
         """Pack elements of the buttons panel"""
-        self.checkbutton_control_all.pack(side=tk.LEFT, expand=0, fill=tk.Y)
-        sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
-        sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
+        if self.master.is_dual_play:
+            self.checkbutton_control_all.pack(side=tk.LEFT, expand=0, fill=tk.Y)
+            sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
+            sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
         self.button_play_pause.pack(side=tk.LEFT, expand=0)
         self.button_second_backward.pack(side=tk.LEFT, expand=0)
         self.button_frames_backward.pack(side=tk.LEFT, expand=0)
@@ -223,16 +237,19 @@ class VideoPlayerFrame(tk.Frame):
         self.button_frame_forward.pack(side=tk.LEFT, expand=0)
         self.button_frames_forward.pack(side=tk.LEFT, expand=0)
         self.button_second_forward.pack(side=tk.LEFT, expand=0)
-        sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
-        sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
+        if not self.master.is_dual_play:
+            sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
+            sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
         self.label_bookmark_desc.pack(side=tk.LEFT, expand=0)
         self.label_bookmark.pack(side=tk.LEFT, expand=0)
         self.button_bookmark_set.pack(side=tk.LEFT, expand=0)
         self.button_bookmark_go_to.pack(side=tk.LEFT, expand=0)
-        sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
-        sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=15)
+        if not self.master.is_dual_play:
+            sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
+            sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=15)
         self.button_mute.pack(side=tk.LEFT, expand=0)
-        sep = ttk.Separator(self.buttons_panel, orient=tk.VERTICAL)
+        panel = self.buttons_panel_3 if self.master.is_dual_play else self.buttons_panel
+        sep = ttk.Separator(panel, orient=tk.VERTICAL)
         sep.pack(side=tk.LEFT, expand=0, fill=tk.Y, padx=10)
         self.label_trigger_desc.pack(side=tk.LEFT, expand=0)
         self.button_trigger_start.pack(side=tk.LEFT, expand=0)
@@ -246,7 +263,6 @@ class VideoPlayerFrame(tk.Frame):
         """Creates a visual feedback for the 'Control all' checkbox"""
         color = "grey" if self.is_controll_all_var.get() else "lightgrey"
         for child in self.buttons_panel.winfo_children():
-            # print(child)
             if type(child) is tk.Button:
                 if child != self.button_trigger_end and child != self.button_trigger_start:
                     child.configure(bg=color)
@@ -339,12 +355,13 @@ class VideoPlayerFrame(tk.Frame):
         path = self.trigger_get_filepath(is_start)
         overwrite = True
         if os.path.isfile(path):
-            overwrite = messagebox.askyesno("File already exists", f"{os.path.split(path)[1]} already exists. Overwrite?")
+            overwrite = messagebox.askyesno("File already exists",
+                                            f"{os.path.split(path)[1]} already exists. Overwrite?")
         if overwrite:
             x, y = self.player.video_get_size()
             self.player.video_take_snapshot(0, path, x, y)
 
-    def update_play_pause_button(self, is_any_player_playing: bool=None):
+    def update_play_pause_button(self, is_any_player_playing: bool = None):
         """Updates the text of the play pause button to reflect current playback status"""
         if not self.is_controll_all_var.get():
             is_playing = self.player.is_playing()

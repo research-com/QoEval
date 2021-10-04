@@ -30,7 +30,7 @@ class ResultsFrame(tk.Frame):
         # self.gui.updatable_elements.append(self)
 
         self.selected_video_paths = []
-        self.filenames =[]
+        self.filenames = []
 
         self.frame_stimuli = tk.Frame(self) # , bd=0, borderwidth=1, relief=tk.SOLID)
         self.frame_stimuli.pack(side=tk.LEFT, expand=0, fill=tk.Y)
