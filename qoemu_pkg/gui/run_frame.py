@@ -102,11 +102,13 @@ class RunFrame(tk.Frame):
                 proc.terminate()
             process.terminate()
             log.info("Sent SIGTERM to coordinator process. Waiting for it to terminate")
+            self.listbox.insert(tk.END, "Sent SIGTERM to coordinator process. Waiting for it to terminate\n")
             for proc in process.children(recursive=True):
                 proc.wait()
             # os.killpg(os.getpgid(self.coordinator_process.pid), signal.SIGTERM)
             self.coordinator_process.wait()
             log.info("Coordinator exited")
+            self.listbox.insert(tk.END, "Coordinator exited\n")
             netem.reset_device_and_ifb(self.gui.qoemu_config.net_device_name.get())
             self.enable_interface_after_coordinator()
             self.coordinator_is_running = False
@@ -115,7 +117,7 @@ class RunFrame(tk.Frame):
         """Save the current config and start the coordinator"""
         entries = self.gui.qoemu_config.gui_coordinator_stimuli.get()
         if len(entries) < 1:
-            log.info("No Parameters are selected")
+            self.listbox.insert(tk.END, "No Parameters are selected\n")
             return
         self.total_stimuli = len(entries)
         self.campaigns_finished = 0
@@ -124,6 +126,7 @@ class RunFrame(tk.Frame):
         self.post_processing_finished_str.set(f"{POST_STR}{self.post_processing_finished}/{self.total_stimuli}")
 
         log.info("Starting coordinator")
+        self.listbox.insert(tk.END, "Starting coordinator\n")
         self.disable_interface_for_coordinator()
 
         self.gui.save_config()
@@ -138,12 +141,10 @@ class RunFrame(tk.Frame):
     def monitor_coordinator(self):
         """Thread to monitor the console output of the coordinator process and display it"""
         for line in self.coordinator_process.stdout:
-            # self.listbox.insert(tk.END, "COORD: ".encode("UTF-8") + line)
             if FINISH_CAMPAIGN_LOG.encode("UTF-8") in line:
                 self.campaigns_finished += 1
                 self.campaigns_finished_str.set(f"{CAMPAIGNS_STR}{self.campaigns_finished}/{self.total_stimuli}")
             if FINISH_POST_LOG.encode("UTF-8") in line:
-                print("post finished")
                 self.post_processing_finished += 1
                 self.post_processing_finished_str.set(
                     f"{POST_STR}{self.post_processing_finished}/{self.total_stimuli}")
@@ -160,6 +161,7 @@ class RunFrame(tk.Frame):
         self.master.notebook.tab(1, state="disabled")
         self.master.notebook.tab(2, state="disabled")
         self.master.notebook.tab(3, state="disabled")
+        self.master.notebook.tab(5, state="disabled")
         for child in self.checkbox_frame.winfo_children():
             child.configure(state='disable')
 
@@ -171,6 +173,7 @@ class RunFrame(tk.Frame):
         self.master.notebook.tab(1, state="normal")
         self.master.notebook.tab(2, state="normal")
         self.master.notebook.tab(3, state="normal")
+        self.master.notebook.tab(5, state="normal")
         for child in self.checkbox_frame.winfo_children():
             child.configure(state='normal')
         self.campaigns_finished_str.set(CAMPAIGNS_STR)

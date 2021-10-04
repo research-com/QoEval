@@ -95,7 +95,8 @@ class ResultsFrame(tk.Frame):
         stimuli = set()
         for filename in self.filenames:
             split = filename.split("_")
-            stimuli.add(split[0])
+            if split[0].count('-') == 2:
+                stimuli.add(split[0])
 
         stimuli = list(stimuli)
         stimuli.sort()

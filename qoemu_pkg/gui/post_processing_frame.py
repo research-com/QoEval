@@ -49,10 +49,6 @@ class PostProcessingFrame(tk.Frame):
                                                                 min_value=0)
         self.audio_erase_start_stop_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
-        # VideoCapturePath
-        self.video_capture_path_frame = FolderFrame(self, self.gui,
-                                                    config_variable=self.gui.qoemu_config.video_capture_path)
-        self.video_capture_path_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
         # TriggerImagePath
         self.trigger_image_path_frame = FolderFrame(self, self.gui,

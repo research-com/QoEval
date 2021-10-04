@@ -178,7 +178,7 @@ class Gui(tk.Tk):
     def on_exit(self):
         """On exit. Ask to save changes"""
         if self.qoemu_config.modified_since_last_save:
-            answer = messagebox.askyesnocancel("Question", "Do you want to save the changes to the current "
+            answer = messagebox.askyesnocancel("Save changes?", "Do you want to save the changes to the current "
                                                            "configuration before closing?")
             if answer is None:
                 return

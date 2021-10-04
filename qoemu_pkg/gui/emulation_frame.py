@@ -72,6 +72,11 @@ class EmulationFrame(tk.Frame):
                                                     min_value=1, max_value=65535)
         self.exclude_ports_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
 
+        # VideoCapturePath
+        self.video_capture_path_frame = FolderFrame(self, self.gui,
+                                                    config_variable=self.gui.qoemu_config.video_capture_path)
+        self.video_capture_path_frame.pack(fill=tk.BOTH, expand=False, side="top", padx=5, pady=2)
+
         # DynamicParameterPath
         self.dynamic_parameter_file_path_frame = FolderFrame(self, self.gui,
                                                              config_variable=
