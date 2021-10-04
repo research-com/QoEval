@@ -7,6 +7,7 @@ from qoemu_pkg.gui.post_processing_frame import *
 from qoemu_pkg.gui.analysis_frame import *
 from qoemu_pkg.gui.run_frame import *
 from qoemu_pkg.configuration import *
+from qoemu_pkg.gui.results_frame import *
 from qoemu_pkg import configuration
 import qoemu_pkg.gui.tooltip_strings
 from qoemu_pkg import __version__
@@ -25,10 +26,11 @@ ANALYSIS_TAB_NAME = 'Analysis'
 RUN_TAB_NAME = 'Run'
 TAB_WIDTH = 15
 CONFIG_FILE_DESC = "Current config file:"
+RESULTS_TAB_NAME = "Results"
 
 
 class Gui(tk.Tk):
-
+    """Root level GUI"""
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
 
@@ -95,15 +97,17 @@ class Gui(tk.Tk):
         self.settings_frame = EmulationFrame(self, self)
         self.post_processing_frame = PostProcessingFrame(self, self)
         self.analysis_frame = AnalysisFrame(self, self)
-
+        self.results_frame = ResultsFrame(self, self)
 
         self.notebook.add(self.parameter_frame, text=f'{PARAMETERS_TAB_NAME: ^{TAB_WIDTH}s}')
         self.notebook.add(self.settings_frame, text=f'{EMULATION_TAB_NAME: ^20s}')
         self.notebook.add(self.post_processing_frame, text=f'{POST_PROCESSING_TAB_NAME: ^{TAB_WIDTH}s}')
         self.notebook.add(self.analysis_frame, text=f'{ANALYSIS_TAB_NAME: ^{TAB_WIDTH}s}')
         self.notebook.add(self.run_frame, text=f'{RUN_TAB_NAME: ^{TAB_WIDTH}s}')
+        self.notebook.add(self.results_frame, text=f'{RESULTS_TAB_NAME: ^{TAB_WIDTH}s}')
 
     def save_config(self):
+        """Save the current config to file"""
         path = os.path.dirname(self.qoemu_config.gui_current_config_file.get())
         if not os.path.exists(path):
             os.makedirs(path)
@@ -111,14 +115,17 @@ class Gui(tk.Tk):
         self.qoemu_config.save_to_file(self.qoemu_config.gui_current_config_file.get())
 
     def update_elements_display(self):
+        """Update all updatable elements to represent the currently loaded config"""
         for element in self.updatable_elements:
             element.update_display()
 
     def update_elements_config(self):
+        """Update the config with all currently displayed values (e.g. before saving)"""
         for element in self.updatable_elements:
             element.update_config()
 
     def load_config(self):
+        """Show filedialog and load selected config"""
         path_object = filedialog.askopenfile(initialdir=
                                              os.path.dirname(GUI_DEFAULT_CONFIG_FILE_LOCATION),
                                              filetypes=[("config files", "*.conf")])
@@ -138,11 +145,14 @@ class Gui(tk.Tk):
 
     @staticmethod
     def save_current_config_path_in_default_config(path):
+        """Save the path to the current config file in the default config,
+         so it can be loaded on next startup/coordinator run"""
         temp_config = QoEmuConfiguration(GUI_DEFAULT_CONFIG_FILE_LOCATION)
         temp_config.gui_current_config_file.set(path)
         temp_config.save_to_file(GUI_DEFAULT_CONFIG_FILE_LOCATION)
 
     def save_config_as(self):
+        """Open file dialog and save config under new filename"""
         path_object = filedialog.asksaveasfile(initialdir=
                                                os.path.dirname(GUI_DEFAULT_CONFIG_FILE_LOCATION),
                                                filetypes=[("config files", "*.conf")])
@@ -158,14 +168,15 @@ class Gui(tk.Tk):
         self.update_title()
 
     def load_default_config(self):
+        """Load the default GUI config"""
         self.qoemu_config.read_from_file(GUI_DEFAULT_CONFIG_FILE_LOCATION)
         self.current_config_path.set(GUI_DEFAULT_CONFIG_FILE_LOCATION)
         self.save_current_config_path_in_default_config(GUI_DEFAULT_CONFIG_FILE_LOCATION)
         self.update_elements_display()
         self.update_title()
 
-
     def on_exit(self):
+        """On exit. Ask to save changes"""
         if self.qoemu_config.modified_since_last_save:
             answer = messagebox.askyesnocancel("Question", "Do you want to save the changes to the current "
                                                            "configuration before closing?")
@@ -180,10 +191,12 @@ class Gui(tk.Tk):
             self.exit()
 
     def exit(self):
+        """Exit"""
         self.run_frame.terminate_coordinator()
         self.destroy()
 
     def update_title(self):
+        """Update the title to show the current config file name"""
         self.title(GUI_TITLE + " - " + os.path.split(self.current_config_path.get())[-1])
 
 

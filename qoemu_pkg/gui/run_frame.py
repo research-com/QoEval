@@ -29,6 +29,7 @@ POST_STR = "Post: "
 
 
 class RunFrame(tk.Frame):
+    """Frame for running the coordinator and displaying its console output"""
     def __init__(self, master, gui: Gui, get_checked_entries: Callable[[], List[str]]):
         super().__init__(master, background="#DCDCDC", bd=1, relief="sunken")
         self.master = master
@@ -58,19 +59,6 @@ class RunFrame(tk.Frame):
         # Button Frame
         self.button_frame = tk.Frame(self, background="#DCDCDC", bd=1, relief="sunken")
         self.button_frame.pack(fill=tk.BOTH, expand=0, side="top")
-
-        # Log level
-        # self.loglevel = tk.StringVar(self)
-        # self.loglevel.trace("w", self.change_log_level)
-        # self.loglevel.set("DEBUG")
-        #
-        # levels = ["INFO", "DEBUG"]
-        #
-        # self.label = tk.Label(master=self.button_frame, text="Log Level: ")
-        # self.label.pack(fill=tk.BOTH, expand=0, side="left")
-        #
-        # self.dropdown = tk.OptionMenu(self.button_frame, self.loglevel, *levels)
-        # self.dropdown.pack(fill=tk.BOTH, expand=0, side="left")
 
         # Run Coordinator button
         self.button_run_coordinator = tk.Button(self.button_frame, text=RUN_COORDINATOR_STR,
@@ -105,19 +93,8 @@ class RunFrame(tk.Frame):
         self.listbox.configure(yscrollcommand=listbox_scroll_v.set)
         listbox_scroll_v.pack(fill=tk.BOTH, side="right")
 
-        # Logger
-        # self.logger = getLogger()
-        # should be done in the config...
-        self.logger.addHandler(ListboxHandler(self.listbox))
-        self.logger.setLevel(logging.DEBUG)
-
-    def change_log_level(self, *args):
-        if self.loglevel.get() == "DEBUG":
-            self.logger.setLevel(logging.DEBUG)
-        if self.loglevel.get() == "INFO":
-            self.logger.setLevel(logging.INFO)
-
     def terminate_coordinator(self):
+        """Terminate the coordinator process and all its child processes"""
         if self.coordinator_is_running:
 
             process = psutil.Process(self.coordinator_process.pid)
@@ -135,6 +112,7 @@ class RunFrame(tk.Frame):
             self.coordinator_is_running = False
 
     def start_coordinator(self):
+        """Save the current config and start the coordinator"""
         entries = self.gui.qoemu_config.gui_coordinator_stimuli.get()
         if len(entries) < 1:
             log.info("No Parameters are selected")
@@ -158,6 +136,7 @@ class RunFrame(tk.Frame):
         self.update_thread.start()
 
     def monitor_coordinator(self):
+        """Thread to monitor the console output of the coordinator process and display it"""
         for line in self.coordinator_process.stdout:
             # self.listbox.insert(tk.END, "COORD: ".encode("UTF-8") + line)
             if FINISH_CAMPAIGN_LOG.encode("UTF-8") in line:
@@ -174,6 +153,7 @@ class RunFrame(tk.Frame):
         self.coordinator_is_running = False
 
     def disable_interface_for_coordinator(self):
+        """Disable the interface while the coordinator runs"""
         self.button_run_coordinator["state"] = tk.DISABLED
         self.button_stop_coordinator["state"] = tk.NORMAL
         self.master.notebook.tab(0, state="disabled")
@@ -183,8 +163,8 @@ class RunFrame(tk.Frame):
         for child in self.checkbox_frame.winfo_children():
             child.configure(state='disable')
 
-
     def enable_interface_after_coordinator(self):
+        """Re-enable interface after coordinator has finished/terminated"""
         self.button_run_coordinator["state"] = tk.NORMAL
         self.button_stop_coordinator["state"] = tk.DISABLED
         self.master.notebook.tab(0, state="normal")
@@ -196,13 +176,3 @@ class RunFrame(tk.Frame):
         self.campaigns_finished_str.set(CAMPAIGNS_STR)
         self.post_processing_finished_str.set(POST_STR)
 
-
-class ListboxHandler(Handler):
-    def __init__(self, box):
-        self._box = box
-        Handler.__init__(self)
-
-    def emit(self, record):
-        r = self.format(record) + "\n"
-        self._box.insert("end", "GUI: " + r)
-        self._box.yview(tk.END)

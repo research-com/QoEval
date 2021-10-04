@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 
 class AnalysisFrame(tk.Frame):
+    """Frame to control analysis options"""
     def __init__(self, master, gui: Gui):
         super().__init__(master, background="#DCDCDC", bd=1, relief="sunken")
         self.master = master
