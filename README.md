@@ -46,6 +46,8 @@ emulation and evaluate the results. After installing the package simply enter
 qoemu-gui
 ```
 
+A more detailed description on how to use the GUI is provided below.
+
 ### Running QoEmu - Command Line
 
 The package also installs a command-line entry point for the QoEmu commandline utility - after installing the package, you 
@@ -212,7 +214,42 @@ network emulation cannot be limited to the IP of the emulator
 
 For controlling the device, [AndroidViewClient](https://github.com/dtmilano/AndroidViewClient) is required. 
 
+## Graphical User Interface (GUI) - Manual
+The GUI is structured in tabs and are ordered from left to right to represent a typical  workflow.
 
+Created configurations can be saved and loaded using the buttons at the bottom of the GUI.
+
+
+### Parameters
+This tab is used to display the contents of a parameter file and select the stimuli which will eventually be created and post-processed.
+
+Note that the parameter file format in version 0.5.0 is not very readable due to it being converted to .csv from an .xlsx file. A better format to allow for ceating custom parameter files has yet to be implemented.
+
+### Emulation
+Settings relevant to the creation of stimuli
+
+### Post-Processing
+Settings relevant to the post-processing of stimuli
+
+### Analysis
+Settings relevant for the collection and representation of network traffic analysis data
+
+### Run
+Start the coordinator with the current settings to create and/or post-process selected stimuli. Displays log and progress of the coordinator.
+
+### Results
+View and compare the finished results. 
+
+Displays the contents of the currently selected output folder (Emulation->VideoCapturePath) grouped by stimulus-ID.
+
+Analysis graphs can be previewed and opened.
+
+A video player can be started to watch up to two selected videos simultaneously.
+
+The video player's controls include the following features
+* simultaneous control of both videos
+* bookmarking a specific point in the video(s) to easily reset playback to this point
+* creating trigger images relevant for post-processing
 
 ## Known Bugs and Problems
 The 4.15 Linux kernel as well as the 5.8.0 kernel have a bug within the netem module which 
