@@ -156,6 +156,7 @@ class VideoPlayerFrame(tk.Frame):
         self.canvas = tk.Canvas(self.video_panel)
 
         # buttons panel
+        self.button_panels = [self.buttons_panel]
         panel = self.buttons_panel
 
         self.is_controll_all_var = tk.BooleanVar()
@@ -172,6 +173,7 @@ class VideoPlayerFrame(tk.Frame):
 
         if self.master.is_dual_play:
             panel = self.buttons_panel_2
+            self.button_panels.append(panel)
 
         self.bookmark_time = tk.IntVar()
         self.bookmark_time.set(0)
@@ -182,6 +184,7 @@ class VideoPlayerFrame(tk.Frame):
 
         if self.master.is_dual_play:
             panel = self.buttons_panel_3
+            self.button_panels.append(panel)
 
         self.button_mute = tk.Button(panel, text="Mute", command=self.toggle_mute, width=4)
         self.label_trigger_desc = tk.Label(panel, text="Trigger", width=8)
@@ -262,10 +265,11 @@ class VideoPlayerFrame(tk.Frame):
     def toggle_control_all_visual_effect(self):
         """Creates a visual feedback for the 'Control all' checkbox"""
         color = "grey" if self.is_controll_all_var.get() else "lightgrey"
-        for child in self.buttons_panel.winfo_children():
-            if type(child) is tk.Button:
-                if child != self.button_trigger_end and child != self.button_trigger_start:
-                    child.configure(bg=color)
+        for panel in self.button_panels:
+            for child in panel.winfo_children():
+                if type(child) is tk.Button:
+                    if child != self.button_trigger_end and child != self.button_trigger_start:
+                        child.configure(bg=color)
 
     def set_bookmark(self, force=False):
         """Bookmarks the current time of the player / all players"""
