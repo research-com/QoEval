@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Authors:  Lars Wischhof, <wischhof@ieee.org>
+#
+# License:  LGPL 3.0 - see LICENSE file for details
 """
     Emulator control for the emulator which is part of the standard Android SDK
 """

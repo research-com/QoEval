@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Authors:  Lars Wischhof, <wischhof@ieee.org>
+#
+# License:  LGPL 3.0 - see LICENSE file for details
 import logging as log
 
 from qoemu_pkg.uicontrol.usecase import UseCaseType, UseCase

@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Authors:  Jan Andreas Krahl <krahl.jan@hm.edu>
+#
+# License:  LGPL 3.0 - see LICENSE file for details
 from __future__ import annotations
 from qoemu_pkg.gui.subframes import *
 from typing import TYPE_CHECKING
