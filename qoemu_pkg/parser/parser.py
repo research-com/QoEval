@@ -1,3 +1,10 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Authors:  Lars Wischhof, <wischhof@ieee.org>
+#           Jan Andreas Krahl <krahl.jan@hm.edu>
+#
+# License:  LGPL 3.0 - see LICENSE file for details
+
 """Module for parsing .csv stimuli-parameter files"""
 
 # TODO: Refactor to reduce redundant code when detecting url, start, end, parameter names / named tuple

@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Authors:  Jan Andreas Krahl <krahl.jan@hm.edu>
+#
+# License:  LGPL 3.0 - see LICENSE file for details
 from __future__ import annotations
 
 import os
@@ -11,33 +16,6 @@ import sys
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from qoemu_pkg.gui.gui import Gui
-
-# Parts of this code is copied from:
-# https://github.com/oaubert/python-vlc/blob/master/examples/tkvlc.py
-#
-# License:
-#
-# tkinter example for VLC Python bindings
-# Copyright (C) 2015 the VideoLAN team
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 021
-# """A simple example for VLC python bindings using tkinter.
-# Requires Python 3.4 or later.
-# Author: Patrick Fay
-# Date: 23-09-2015
-# """
 
 
 class VideoPlayer(tk.Tk):
@@ -144,6 +122,8 @@ class VideoPlayerFrame(tk.Frame):
         self.player = _get_player(self.vlc_instance)
         self.player.set_media(self.media)
         self.loaded_media_mrl = self.player.get_media().get_mrl()
+        self.was_playing_before_manual_slider_movement = False
+        self.is_manual_slider_movement = False
 
         # root level
         self.buttons_panel = tk.Frame(self)
@@ -195,10 +175,12 @@ class VideoPlayerFrame(tk.Frame):
         # slider frame
         self.timeVar = tk.DoubleVar()
         self.timeSliderLast = 0
-        self.timeSlider = tk.Scale(self.frame_slider, variable=self.timeVar, command=self.on_time,
+        self.timeSlider = tk.Scale(self.frame_slider, variable=self.timeVar, command=self.on_slider_change,
                                    from_=0, to=0, orient=tk.HORIZONTAL, length=500,
                                    showvalue=0)  # label='Time',
         self.timeSliderUpdate = time.time()
+        self.timeSlider.bind('<ButtonPress-1>', self.on_drag_slider)
+        self.timeSlider.bind('<ButtonRelease-1>', self.on_release_slider)
 
         # pack
         self._pack_root_level()
@@ -207,7 +189,19 @@ class VideoPlayerFrame(tk.Frame):
         self._pack_frame_slider()
         self._attach_player_to_canvas()
 
-        self.on_tick()
+        self.update_player()
+
+    def on_release_slider(self, *unused):
+        self.is_manual_slider_movement = False
+        if self.was_playing_before_manual_slider_movement:
+            self.was_playing_before_manual_slider_movement = False
+            self.play_pause()
+
+    def on_drag_slider(self, *unused):
+        self.is_manual_slider_movement = True
+        if self.player.is_playing():
+            self.was_playing_before_manual_slider_movement = True
+            self.play_pause()
 
     def _attach_player_to_canvas(self):
         """ Embeds the vlc player to the frames canvas"""
@@ -400,60 +394,34 @@ class VideoPlayerFrame(tk.Frame):
         else:
             self.button_mute.configure(text="Mute")
 
-    def on_time(self, *unused):
-        """Callback of the time slider. Updates the time of the player when slider was moved manually"""
-        if self.player:
-            t = self.timeVar.get()
-            if self.timeSliderLast != int(t):
-                # this is a hack. The timer updates the time slider.
-                # This change causes this rtn (the 'slider has changed' rtn)
-                # to be invoked.  I can't tell the difference between when
-                # the user has manually moved the slider and when the timer
-                # changed the slider.  But when the user moves the slider
-                # tkinter only notifies this rtn about once per second and
-                # when the slider has quit moving.
-                # Also, the tkinter notification value has no fractional
-                # seconds.  The timer update rtn saves off the last update
-                # value (rounded to integer seconds) in timeSliderLast if
-                # the notification time (sval) is the same as the last saved
-                # time timeSliderLast then we know that this notification is
-                # due to the timer changing the slider.  Otherwise the
-                # notification is due to the user changing the slider.  If
-                # the user is changing the slider then I have the timer
-                # routine wait for at least 2 seconds before it starts
-                # updating the slider again (so the timer doesn't start
-                # fighting with the user).
-                self.player.set_time(int(t * 1e1))  # milliseconds
+    def on_slider_change(self, *unused):
+        """Updates the player when the slider was moved manually"""
+        if self.is_manual_slider_movement:
+            if self.player:
+                t = self.timeVar.get()
+                self.player.set_time(int(t * 10))  # milliseconds
                 self.timeSliderUpdate = time.time()
 
                 if self.player.get_media().get_mrl() != self.loaded_media_mrl:
                     self.player.set_media(self.media)
 
-    def on_tick(self):
-        """Timer tick, update the time slider to the video time. Update buttons to reflect player state.
+    def update_player(self):
+        """Periodically updates the slider and other elements to represent current state of player
         """
-        self.update_mute_status()
         if self.player:
+            self.update_mute_status()
             self.master.update_play_buttons()
-            # since the self.player.get_length may change while
-            # playing, re-set the timeSlider to the correct range
-            t = self.player.get_length() * 1e-1  # to seconds
+            # length of video may change
+            t = self.player.get_length() * 0.1
             if t >= 0:
                 self.timeSlider.config(to=t)
-
-                t = self.player.get_time() * 1e-1  # to seconds
-                # don't change slider while user is messing with it
-                if t >= 0 and time.time() > (self.timeSliderUpdate + 2):
+                t = self.player.get_time() * 0.1
+                # move the slider to represent current time
+                if not self.is_manual_slider_movement:
                     self.timeSlider.set(t)
-                    self.timeSliderLast = int(self.timeVar.get())
-        # start the 1 second timer again
-        self.after(500, self.on_tick)
-
-        # adjust window to video aspect ratio, done periodically
-        # on purpose since the player.video_get_size() only
-        # returns non-zero sizes after playing for a while
-        # if not self._geometry:
-        #     self.OnResize()
+                    self.timeSliderLast = self.timeVar.get()
+        # schedule next update
+        self.after(200, self.update_player)
 
 
 def _get_media(vlc_instance: vlc.Instance, file_path=str):

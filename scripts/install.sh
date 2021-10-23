@@ -3,6 +3,10 @@
 # script to install the dependencies required for QoEmu
 #
 # Note: A NVIDIA graphics card is required (tested on GTX1060)
+#
+# Authors:  Lars Wischhof, <wischhof@ieee.org>
+#
+# License:  LGPL 3.0 - see LICENSE file for details
 
 # Versions
 NDK_VERSION="23.0.7123448"
