@@ -45,8 +45,8 @@ run-check-params:
   tags:
     - python3.9
   script:
-    # run the qoemu check command
-    - qoemu --parameterfile $CI_PROJECT_DIR/stimuli-params/full.csv --check-params --skipgenerate --skippostprocessing VS A ALL
+    # run the qoeval check command
+    - qoeval --parameterfile $CI_PROJECT_DIR/stimuli-params/full.csv --check-params --skipgenerate --skippostprocessing VS A ALL
 
 #pages:
 #  script:

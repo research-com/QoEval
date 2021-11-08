@@ -1,14 +1,14 @@
-# QoEmu V0.5
+# QoEval V0.5
 
 ## Installation
 
 *Note: These instructions assume that Ubuntu 21.04 is used.*
 
-Clone the repository and change to the qoemu directory.
+Clone the repository and change to the QoEval directory.
 
 ```
 git clone --recursive [URL to repo]
-cd qoemu
+cd qoeval
 ```
 
 ### git LFS required
@@ -34,51 +34,68 @@ python3.9 -m build
 Afterwards, the package can be installed using pip:
 
 ```
-pip3 install dist/qoemu-pkg-hm-0.5.0.tar.gz
+pip3 install dist/qoeval-pkg-hm-0.5.0.tar.gz
 ```
 
-### Running QoEmu - Graphical User Interface (GUI)
+### Running QoEval - Graphical User Interface (GUI)
 
-QoEmu includes a simple graphical user interface which allows to modify the emulation parameters, run the
+QoEval includes a simple graphical user interface which allows to modify the emulation parameters, run the
 emulation and evaluate the results. After installing the package simply enter
 
 ```
-qoemu-gui
+qoeval-gui
 ```
 
 A more detailed description on how to use the GUI is provided below.
 
-### Running QoEmu - Command Line
+### Running QoEval - Command Line
 
-The package also installs a command-line entry point for the QoEmu commandline utility - after installing the package, you 
-can simply launch qoemu via command-line. Stimuli type (e.g. "VS") and stimuli table id (e.g. "B") need to be 
+The package also installs a command-line entry point for the QoEval commandline utility - after installing the package, you 
+can simply launch QoEval via command-line. Stimuli type (e.g. "VS") and stimuli table id (e.g. "B") need to be 
 specified. The third parameter specified the stimuli id, use ALL to generate all stimuli within the table.
 ```
-qoemu VS B ALL
+qoeval VS B ALL
 ```
 
+## QoEval Graphical User Interface (GUI)
+The GUI is structured in tabs and are ordered from left to right to represent a typical  workflow.
 
-### Optional Additional Post-Processing Tools: Lossless Cut
-Basic postprocessing is performed by QoEmu using trigger frames to detect
-the beginning and the end of a stimuli section. If you want to apply
-additional postprocessing, a *lossless* video manipulation tool can 
-be used. We recommend https://github.com/mifi/lossless-cut.git
+Created configurations can be saved and loaded using the buttons at the bottom of the GUI.
 
-#### Remarks regarding installation of lossless-cut
-* For starting lossless-cut, see the developer-notes within the
-lossless-cut repo.
 
-* Yarn needs to be installed in a current version:
-```
-curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - 
-echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list 
-sudo apt update 
-sudo apt install yarn
-```
-* `node` needs to be updated to a recent version, e.g. by using the node version manager (nvm)
+### Parameters
+This tab is used to display the contents of a parameter file and select the stimuli which will eventually be created and post-processed.
+
+Note that the parameter file format in version 0.5.0 is not very readable due to it being converted to .csv from an .xlsx file. A better format to allow for ceating custom parameter files has yet to be implemented.
+
+### Emulation
+Settings relevant to the creation of stimuli
+
+### Post-Processing
+Settings relevant to the post-processing of stimuli
+
+### Analysis
+Settings relevant for the collection and representation of network traffic analysis data
+
+### Run
+Start the coordinator with the current settings to create and/or post-process selected stimuli. Displays log and progress of the coordinator.
+
+### Results
+View and compare the finished results. 
+
+Displays the contents of the currently selected output folder (Emulation->VideoCapturePath) grouped by stimulus-ID.
+
+Analysis graphs can be previewed and opened.
+
+A video player can be started to watch up to two selected videos simultaneously.
+
+The video player's controls include the following features
+* simultaneous control of both videos
+* bookmarking a specific point in the video(s) to easily reset playback to this point
+* creating trigger images relevant for post-processing
 
 ## Use-Case Specific Information
-Currently, the following use-case types are supported by QoEmu:
+Currently, the following use-case types are supported by QoEval:
 * **Video Streaming (VS)**
 * **Video Streaming with artificially generated Buffering (VSB)**
 * **Web Browsing (WB)**
@@ -127,30 +144,42 @@ from which you can conclude that `.mainactivity.MainActivity` is the main activi
 
 ## Hardware Device Control
 For controlling a real Android phone:
-* The phone must be connected to the qoemu host by an USB connection (used for
+* The phone must be connected to the QoEval host by an USB connection (used for
   UI control and screen capturing)
 * USB debugging mode must be enabled on the phone
-* The qoemu host must be configured to act as a wireless hotspot for the phone.
+* The QoEval host must either be configured to act as a wireless hotspot for the phone or be directly
+  connected via a high-speed Ethernet connection to an WiFi access point.
 * For audio capturing, the phone must be connected via line-out or Bluetooth
-  to the qoemu host
+  to the qoeval host
 
 ### Mobile Device Control and Screen Capturing
 For controlling the mobile device and screen capturing, the Genymobile tool *scrcpy* is used. It can be downloaded at https://github.com/Genymobile/scrcpy
 
 Follow the instructions on the Genymobile srccpy website to install and test *scrcpy*. 
 
-QoEmu has been tested with the following versions of *scrcpy*:
+QoEval has been tested with the following versions of *scrcpy*:
 v1.18
 
-### Routing WLAN Traffic of Real Device via QoEmu
-In order to enable QoEmu to emulate various networking conditions,
-we must route all data traffic of the real mobile device via QoEmu. Therefore,
-we enable the QoEmu host to act as a WLAN accesspoint and connect the
+### Routing WLAN Traffic of Real Device via QoEval - Option 1: Separate WLAN Hotspot
+In order to enable QoEval to emulate various networking conditions,
+we must route all data traffic of the real mobile device via QoEval. The straight-foward
+approach is to use a WLAN access point connected via Ethernet to the QoEval Controller PC,
+to connect the QoEval Controller PC via a second Ethernet connection to the Internet and 
+to set-up the QoEval Controller PC to route all IP traffic between these two
+interfaces (enable IP-forwarding).
+
+Within our own experimental testbed, we use this configuration in combination with
+a tp-link AC1350 EAP225 access point, supporting the IEEE 802.11ac WAVE 2 standard.
+
+### Routing WLAN Traffic of Real Device via QoEval - Option 2: QoEval Controller as Hotspot 
+A second option which does not require an additional access point is to configure
+the QoEval Controller PC itself to provide wireless Internet access. Therefore,
+we enable the QoEval host to act as a WLAN accesspoint and connect the
 mobile device to it. In this way, all traffic of the mobile device
-is routed via QoEmu and networking conditions can be emulated in the same 
+is routed via QoEval and networking conditions can be emulated in the same 
 way as it is done for an emulated device.
 
-For setting up the QoEmu host as a wireless hotspot, two options are available:
+For setting up the QoEval host as a wireless hotspot, two options are available:
 
 1) Ubuntu Network Manager: Wireless Hotspot (simple) 
 2) HostAP driver (more complex, various options)
@@ -173,12 +202,12 @@ the default connection name, can also be different - check in connection editor)
 
 *WLAN Hardware and Configuration*:
 
-QoEmu in combination with a real Android phone has mainly been tested with a Realtek based USB3 WLAN adaptor 
+QoEval in combination with a real Android phone has mainly been tested with a Realtek based USB3 WLAN adaptor 
 (0bda:b812 Realtek Semiconductor Corp. RTL88x2bu [AC1200 Techkey]). Since Ubuntu 20.10, this device is
 supported without installing any further drivers manually. However, we recommend the following module options
 `rtw_vht_enable=2 rtw_switch_usb_mode=1 rtw_power_mgnt=0`.
 
-### Old WLAN configuration (Ubuntu 20.04 and earlier)
+#### Old WLAN configuration (Ubuntu 20.04 and earlier)
 Some WLAN cards such as the 
 * Driver: [rtl88x2bu](https://github.com/morrownr/88x2bu)
   settings in ` /etc/modprobe.d/88x2bu.conf `: `options 88x2bu rtw_drv_log_level=0 rtw_led_ctrl=1 rtw_vht_enable=1 rtw_power_mgnt=0 rtw_switch_usb_mode=1`
@@ -214,42 +243,7 @@ network emulation cannot be limited to the IP of the emulator
 
 For controlling the device, [AndroidViewClient](https://github.com/dtmilano/AndroidViewClient) is required. 
 
-## Graphical User Interface (GUI) - Manual
-The GUI is structured in tabs and are ordered from left to right to represent a typical  workflow.
 
-Created configurations can be saved and loaded using the buttons at the bottom of the GUI.
-
-
-### Parameters
-This tab is used to display the contents of a parameter file and select the stimuli which will eventually be created and post-processed.
-
-Note that the parameter file format in version 0.5.0 is not very readable due to it being converted to .csv from an .xlsx file. A better format to allow for ceating custom parameter files has yet to be implemented.
-
-### Emulation
-Settings relevant to the creation of stimuli
-
-### Post-Processing
-Settings relevant to the post-processing of stimuli
-
-### Analysis
-Settings relevant for the collection and representation of network traffic analysis data
-
-### Run
-Start the coordinator with the current settings to create and/or post-process selected stimuli. Displays log and progress of the coordinator.
-
-### Results
-View and compare the finished results. 
-
-Displays the contents of the currently selected output folder (Emulation->VideoCapturePath) grouped by stimulus-ID.
-
-Analysis graphs can be previewed and opened.
-
-A video player can be started to watch up to two selected videos simultaneously.
-
-The video player's controls include the following features
-* simultaneous control of both videos
-* bookmarking a specific point in the video(s) to easily reset playback to this point
-* creating trigger images relevant for post-processing
 
 ## Known Bugs and Problems
 The 4.15 Linux kernel as well as the 5.8.0 kernel have a bug within the netem module which 
@@ -258,13 +252,13 @@ and https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1783822 for more inform
 
 *Recommendation:*
 
-Before generating QoEmu stimuli, confirm (e.g. by a bandwidth measurement app on your mobile/emulated device)
-that the measured delays are as expected/configured within QoEmu. If the delays are significantly higher
+Before generating QoEval stimuli, confirm (e.g. by a bandwidth measurement app on your mobile/emulated device)
+that the measured delays are as expected/configured within QoEval. If the delays are significantly higher
 than expected or vary to an extremely large extend, update your linux kernel and check that the WLAN
 device driver is working properly and all power-saving features have been disabled.
 
 ## Test Evironment
-qoemu reference platform is a Google Pixel 5:
+QoEval reference platform is a Google Pixel 5:
 
 * Android Version 11 (Android Security Update 5. July 2021, Google Play-Systemupdate 1. Febr. 2021)
 * Youtube App Version 15.18.39
