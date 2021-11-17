@@ -268,6 +268,7 @@ QoEval reference platform is a Google Pixel 5:
 # Acknowledgements
 We make use of a bunch of other software tools - and thank all authors of these for
 for making them publicly available. These include, but are not limited to:
+* FFmpeg https://ffmpeg.org/
 * Android View Client https://github.com/dtmilano/AndroidViewClient
 * Bufferer https://github.com/slhck/bufferer
 * Genimotion Android Emulator https://www.genymotion.com/
