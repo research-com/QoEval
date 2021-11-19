@@ -46,7 +46,7 @@ run-check-params:
     - python3.9
   script:
     # run the qoeval check command
-    - qoeval --parameterfile $CI_PROJECT_DIR/stimuli-params/full.csv --check-params --skipgenerate --skippostprocessing VS A ALL
+    - qoeval --parameterfile $CI_PROJECT_DIR/stimuli-params/example.csv --check-params --skipgenerate --skippostprocessing VS A ALL
 
 #pages:
 #  script:
