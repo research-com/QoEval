@@ -54,16 +54,16 @@ adb pull /sdcard/somedir
 
 ## Sound Chip in QoE local i7 server
 ```
-qoe-user@qoemu-01:~$ cat /proc/asound/card
+qoe-user@qoeval-01:~$ cat /proc/asound/card
 card0/ card1/ cards  
-qoe-user@qoemu-01:~$ cat /proc/asound/cards
+qoe-user@qoeval-01:~$ cat /proc/asound/cards
  0 [PCH            ]: HDA-Intel - HDA Intel PCH
                       HDA Intel PCH at 0xdf240000 irq 136
  1 [NVidia         ]: HDA-Intel - HDA NVidia
                       HDA NVidia at 0xdf080000 irq 17
-qoe-user@qoemu-01:~$ head -n 1 /proc/asound/card0/codec*
+qoe-user@qoeval-01:~$ head -n 1 /proc/asound/card0/codec*
 Codec: Realtek ALC887-VD
-qoe-user@qoemu-01:~$ 
+qoe-user@qoeval-01:~$ 
 ```
 
 Added to `/etc/modprobe.de/alsa-base.conf`: 

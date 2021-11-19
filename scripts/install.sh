@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# script to install the dependencies required for QoEmu
+# script to install the dependencies required for qoeval
 #
 # Note: A NVIDIA graphics card is required (tested on GTX1060)
 #

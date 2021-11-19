@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/qoemu.iml" filepath="$PROJECT_DIR$/.idea/qoemu.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/qoeval.iml" filepath="$PROJECT_DIR$/.idea/qoeval.iml" />
     </modules>
   </component>
 </project>
