@@ -9,7 +9,7 @@ trigger image are required. These can easily be created via the QoEval
 GUI: Simply view a recorded stimulus video and capture the start and end
 images.
 
-## Sub Folder *variable_rate*
+## Sub Folder *variable_throughput*
 This folder contains CSV files which specify time-varant QoS parameters.
 These are only used for stimuli which enable the time-variant QoS feature.
 
