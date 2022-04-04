@@ -1,5 +1,9 @@
 # QoEval V0.5
 
+For a detailed description of QoEval and examples for its application, please refer to the following journal article (open-access):
+
+**Lars Wischhof, Jan Andreas Krahl and Robert Müllner. Stimuli Generation for Quality-of-Experience Evaluation of Mobile Applications.** International Journal of Interactive Mobile Technologies (iJIM), 16(06), pp. 113–134. https://doi.org/10.3991/ijim.v16i06.28691 , Mar. 2022.
+
 ## Installation
 
 *Note: These instructions assume that Ubuntu 21.04 is used.*
